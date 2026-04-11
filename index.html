@@ -8067,16 +8067,48 @@ async function guardarNuevoUsuario(){
         if(pass) db[idx].password = pass;
         saveUsersDB(db);
 
-        // Si el nombre cambió y es el usuario logueado, actualizar sesión
-        if(nombreViejo === usuarioActual?.nombre && nombre !== nombreViejo){
-            usuarioActual.nombre = nombre;
-            localStorage.setItem("usuario", JSON.stringify(usuarioActual));
-            document.getElementById("infoNombre").textContent = nombre;
+        // Si el nombre cambió, actualizar todas las referencias en tareas e incidencias
+        if(nombreViejo !== nombre){
+            let cambios = 0;
+
+            // Actualizar tareas (asignado y realizadoPor)
+            let tareasActualizadas = false;
+            tareas.forEach(t => {
+                if(t.asignado === nombreViejo)     { t.asignado     = nombre; tareasActualizadas = true; cambios++; }
+                if(t.realizadoPor === nombreViejo) { t.realizadoPor = nombre; tareasActualizadas = true; }
+            });
+            if(tareasActualizadas) localStorage.setItem("tareas", JSON.stringify(tareas));
+
+            // Actualizar incidencias (tecnico)
+            let incActualizadas = false;
+            incidencias.forEach(i => {
+                if(i.tecnico === nombreViejo) { i.tecnico = nombre; incActualizadas = true; cambios++; }
+            });
+            if(incActualizadas) localStorage.setItem("incidencias", JSON.stringify(incidencias));
+
+            // Actualizar ppPreventivos (tecnico)
+            if(Array.isArray(ppPreventivos)){
+                let ppActualizados = false;
+                ppPreventivos.forEach(p => {
+                    if(p.tecnico === nombreViejo) { p.tecnico = nombre; ppActualizados = true; cambios++; }
+                });
+                if(ppActualizados) localStorage.setItem("ppPreventivos", JSON.stringify(ppPreventivos));
+            }
+
+            // Si es el usuario logueado, actualizar sesión
+            if(nombreViejo === usuarioActual?.nombre){
+                usuarioActual.nombre = nombre;
+                localStorage.setItem("usuario", JSON.stringify(usuarioActual));
+                document.getElementById("infoNombre").textContent = nombre;
+            }
+
+            toast.info("Referencias actualizadas", cambios + " registro" + (cambios!==1?"s":"") + " reasignado" + (cambios!==1?"s":"") + ' de "' + nombreViejo + '" → "' + nombre + '"');
         }
 
         poblarSelectsTecnicos();
         cerrarModalNuevoUsuario();
         renderGestionUsuarios();
+        renderTareas?.();
         toast.success("Usuario actualizado", `${nombreViejo !== nombre ? nombreViejo + ' → ' + nombre : nombre} — ${rol}`);
         auditRegistrar("tarea","👤","Usuario editado",`${nombreViejo !== nombre ? nombreViejo + ' → ' + nombre : nombre} · ${rol}`);
     } else {
