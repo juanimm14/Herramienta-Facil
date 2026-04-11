@@ -4610,7 +4610,10 @@ function renderIncidenciasPreventivos(){
     let lista = incidencias.filter(i => i.tipo === "Preventivo");
 
     if(tipoF !== "todos") lista = lista.filter(i => (i.subTipo || "") === tipoF);
-    if(tecnicoF !== "todos") lista = lista.filter(i => i.tecnico === tecnicoF);
+    if(tecnicoF === "__turno_MANANA__"){
+        let turnoLista = getTecnicosTurno();
+        lista = lista.filter(i => turnoLista.includes(i.tecnico));
+    } else if(tecnicoF !== "todos") lista = lista.filter(i => i.tecnico === tecnicoF);
     if(validF === "validado") lista = lista.filter(i => i.validado);
     if(validF === "no-validado") lista = lista.filter(i => !i.validado);
     if(anioF !== "todos") lista = lista.filter(i => i.fecha && i.fecha.startsWith(anioF));
@@ -6764,7 +6767,10 @@ function renderTareasRealizadas(){
 
     let lista = tareas.filter(t => {
         if(t.estado !== "realizado") return false;
-        if(fTec !== "todos" && t.asignado !== fTec) return false;
+        if(fTec === "__turno_MANANA__"){
+            let turnoLista = getTecnicosTurno();
+            if(!turnoLista.includes(t.asignado)) return false;
+        } else if(fTec !== "todos" && t.asignado !== fTec) return false;
         if(fAnio !== "todos"){
             let ay = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha||"").slice(0,4);
             if(ay !== fAnio) return false;
@@ -8120,35 +8126,29 @@ function eliminarUsuario(idx){
 // ──────────────────────────────────────────────
 function poblarSelectsTecnicos(){
     let tecnicos = getTecnicos();
-    let db       = getUsersDB();
 
-    // IDs de todos los <select> que tienen lista de técnicos
     const selectIds = [
         "tecnico","tecnicoPrev","tecnicoGen","tareaAsignado",
         "evaTecnico","evaDiariaTecnico","editPrevTecnico",
         "filtroTareasTecnico","filtroRealTecnico","filtroPrevTecnico"
     ];
 
-    // También los selects de asignación del plan preventivo (dinámicos)
-    // Se renderizan con getTecnicos() así que no necesitan tocarse aquí.
-
     selectIds.forEach(id => {
         let el = document.getElementById(id);
         if(!el) return;
 
-        // Guardar valor seleccionado
         let prevVal = el.value;
-
-        // Determinar si este select tiene opción "Todos" o "TODOS"
         let esFiltro = id.startsWith("filtro");
         let esEditPrev = id === "editPrevTecnico";
 
         let opts = "";
         if(esFiltro){
-            opts += `<option value="todos">Todos</option>`;
+            opts += `<option value="todos">TODOS</option>`;
+            opts += `<option value="__turno_MANANA__">☀️ Turno MAÑANA</option>`;
         }
         if(esEditPrev){
             opts += `<option value="TODOS">TODOS</option>`;
+            opts += `<option value="__turno_MANANA__">☀️ Turno MAÑANA</option>`;
             opts += `<option value="">— Vacío —</option>`;
         }
 
@@ -8158,7 +8158,6 @@ function poblarSelectsTecnicos(){
 
         el.innerHTML = opts;
 
-        // Restaurar valor si sigue siendo válido
         if([...el.options].some(o => o.value === prevVal)) el.value = prevVal;
     });
 }
@@ -8171,25 +8170,59 @@ function getTecnicosTurno(turno){
     return db.filter(u => u.turno === turno).map(u => u.nombre);
 }
 
-// Parche renderTareas para soportar filtro de turno
-const _renderTareasOrig = renderTareas;
-renderTareas = function(){
-    // Si el filtro es turno mañana, temporalmente sustituir el select
-    let sel = document.getElementById("filtroTareasTecnico");
-    if(sel && sel.value === "__turno_MAÑANA__"){
-        let tecsTurno = getTecnicosTurno("MAÑANA");
-        // Renderizar una vez por cada técnico del turno y acumular resultados
-        // Usamos override del filtro internamente via dataset
-        sel.dataset._turnoOverride = "MAÑANA";
-        _renderTareasOrigImpl();
-        delete sel.dataset._turnoOverride;
-        return;
-    }
-    _renderTareasOrigImpl();
-};
+// ──────────────────────────────────────────────
+//  FILTRO TURNO MAÑANA — usa campo turno en usersDB
+//  Si un usuario no tiene turno, NO aparece en el filtro.
+//  Asignar turno desde Gestión de Usuarios.
+// ──────────────────────────────────────────────
+function getTecnicosTurno(){
+    let db = getUsersDB();
+    // Usuarios con turno = "MAÑANA" o como fallback: todos (si ninguno tiene turno asignado)
+    let conTurno = db.filter(u => u.turno === "MAÑANA").map(u => u.nombre);
+    if(conTurno.length === 0) return db.map(u => u.nombre); // fallback: todos
+    return conTurno;
+}
 
-function _renderTareasOrigImpl(){
-    // Re-implementación que respeta el override de turno
+// Filtros que usan __turno_MANANA__ deben tratarlo como lista de técnicos
+function resolverFiltroTecnico(valor){
+    if(valor === "__turno_MANANA__") return { esTurno: true, lista: getTecnicosTurno() };
+    return { esTurno: false, lista: null };
+}
+
+// ── renderIncidenciasPreventivos — soporte turno MAÑANA ──
+const _renderIncPrevOrig = typeof renderIncidenciasPreventivos === "function" ? renderIncidenciasPreventivos : null;
+if(_renderIncPrevOrig){
+    renderIncidenciasPreventivos = function(){
+        let sel = document.getElementById("filtroPrevTecnico");
+        if(sel && sel.value === "__turno_MANANA__"){
+            let lista = getTecnicosTurno();
+            sel.dataset._override = lista.join(",");
+            _renderIncPrevOrig();
+            delete sel.dataset._override;
+        } else {
+            _renderIncPrevOrig();
+        }
+    };
+}
+
+// ── renderTareasRealizadas — soporte turno MAÑANA ──
+const _renderRealOrig = typeof renderTareasRealizadas === "function" ? renderTareasRealizadas : null;
+if(_renderRealOrig){
+    renderTareasRealizadas = function(){
+        let sel = document.getElementById("filtroRealTecnico");
+        if(sel && sel.value === "__turno_MANANA__"){
+            let lista = getTecnicosTurno();
+            sel.dataset._override = lista.join(",");
+            _renderRealOrig();
+            delete sel.dataset._override;
+        } else {
+            _renderRealOrig();
+        }
+    };
+}
+
+// ── renderTareas — soporte turno MAÑANA ──
+function _renderTareasConTurno(){
     let selAnio = document.getElementById("filtroTareasAnio");
     if(selAnio && selAnio.options.length <= 1){
         let anios = [...new Set(tareas.map(t => {
@@ -8205,18 +8238,18 @@ function _renderTareasOrigImpl(){
     }
 
     let sel = document.getElementById("filtroTareasTecnico");
-    let fTecnico = sel?.value || "todos";
-    let turnoOverride = sel?.dataset?._turnoOverride;
-    let fAnio    = document.getElementById("filtroTareasAnio")?.value    || "todos";
-    let fMes     = document.getElementById("filtroTareasMes")?.value     || "todos";
-    let fBuscar  = (document.getElementById("filtroTareasBuscar")?.value || "").toLowerCase().trim();
+    let fTecnicoRaw = sel?.value || "todos";
+    let esTurno = fTecnicoRaw === "__turno_MANANA__";
+    let tecsTurno = esTurno ? getTecnicosTurno() : null;
 
-    let tecsTurno = turnoOverride ? getTecnicosTurno(turnoOverride) : null;
+    let fAnio   = document.getElementById("filtroTareasAnio")?.value  || "todos";
+    let fMes    = document.getElementById("filtroTareasMes")?.value   || "todos";
+    let fBuscar = (document.getElementById("filtroTareasBuscar")?.value || "").toLowerCase().trim();
 
     function cumpleFiltro(t){
-        if(tecsTurno){
+        if(esTurno){
             if(!tecsTurno.includes(t.asignado)) return false;
-        } else if(fTecnico !== "todos" && t.asignado !== fTecnico) return false;
+        } else if(fTecnicoRaw !== "todos" && t.asignado !== fTecnicoRaw) return false;
         if(fAnio !== "todos"){
             let anioT = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha ? t.fecha.slice(0,4) : "");
             if(anioT !== fAnio) return false;
@@ -8273,7 +8306,6 @@ function _renderTareasOrigImpl(){
             </div>`;
         }
 
-        // Bloque inline CCB
         let ccbInlineHtml = "";
         if(t._ppTareaId === 31 && t._ppMesKey && t.estado !== "realizado"){
             let mesKey = t._ppMesKey;
@@ -8284,9 +8316,8 @@ function _renderTareasOrigImpl(){
                 ccbData = ccbCronogramas[mesKey];
             }
             if(ccbData && !ccbData.cerrado){
-                let total = ccbData.islas.length;
-                let hecho = ccbData.islas.filter(x=>x.hecho).length;
-                let pct   = total > 0 ? Math.round(hecho/total*100) : 0;
+                let total = ccbData.islas.length, hecho = ccbData.islas.filter(x=>x.hecho).length;
+                let pct = total > 0 ? Math.round(hecho/total*100) : 0;
                 let islasHtml = ccbData.islas.map((isla, idx) => `
                     <div onclick="ccbToggleIslaInline('${mesKey}',${idx},'${t.id}')"
                         style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;transition:all .2s;"
@@ -8294,7 +8325,7 @@ function _renderTareasOrigImpl(){
                         <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
                             ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
                         </div>
-                        <span style="font-family:\'Rajdhani\',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
                         <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
                     </div>`).join("");
                 ccbInlineHtml = `<div style="margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
@@ -8345,6 +8376,10 @@ function _renderTareasOrigImpl(){
         ? enCurso.map(t=>mkItem(t)).join("")
         : '<div class="empty-state" style="padding:20px"><div class="empty-icon" style="font-size:28px">⏳</div><p>Nada en curso</p></div>';
 }
+
+// Sobrescribir renderTareas con la versión que soporta turno MAÑANA
+renderTareas = _renderTareasConTurno;
+
 </script>
 </body>
 </html>
