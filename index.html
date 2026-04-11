@@ -8381,5 +8381,107 @@ function _renderTareasConTurno(){
 renderTareas = _renderTareasConTurno;
 
 </script>
+
+<!-- ═══ MODAL ¿QUIÉN REALIZÓ LA TAREA? ═══ -->
+<div id="modalQuienRealizo" class="modal">
+    <div class="modal-box" style="max-width:370px;">
+        <div class="modal-title">✔ ¿Quién realizó la tarea?</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Seleccioná el técnico que completó la tarea antes de cerrarla.</p>
+        <div class="form-group">
+            <label class="form-label">Técnico</label>
+            <select id="selectQuienRealizo" class="form-select"></select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" id="btnConfirmarCierre" onclick="confirmarCierreTarea()">✔ Confirmar cierre</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalQuienRealizo').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────
+//  CIERRE DE TAREA CON SELECCIÓN DE TÉCNICO
+// ──────────────────────────────────────────────────────────────
+let _tareaACerrarId = null;
+
+function pedirQuienRealizo(id) {
+    _tareaACerrarId = id;
+
+    let tecnicos = getTecnicos();
+    let sel = document.getElementById("selectQuienRealizo");
+
+    // Opciones especiales primero, luego técnicos individuales
+    sel.innerHTML =
+        `<option value="__turno_MANANA__">☀️ Turno mañana</option>` +
+        `<option value="__todos__">👥 Todos</option>` +
+        tecnicos.map(n => `<option value="${n}">${n}</option>`).join("");
+
+    // Pre-seleccionar el técnico asignado si existe
+    let t = tareas.find(x => x.id === id);
+    if (t && t.asignado) {
+        let match = [...sel.options].find(o => o.value === t.asignado);
+        if (match) sel.value = t.asignado;
+    }
+
+    document.getElementById("modalQuienRealizo").classList.add("open");
+}
+
+function confirmarCierreTarea() {
+    if (_tareaACerrarId === null) return;
+
+    let id  = _tareaACerrarId;
+    let sel = document.getElementById("selectQuienRealizo");
+    let val = sel.value;
+
+    let t = tareas.find(x => x.id === id);
+    if (!t) { document.getElementById("modalQuienRealizo").classList.remove("open"); return; }
+
+    // Asignar quién realizó
+    if (val === "__turno_MANANA__") {
+        t.realizadoPor = "Turno mañana";
+    } else if (val === "__todos__") {
+        t.realizadoPor = "Todos";
+    } else {
+        t.realizadoPor = val;
+        t.asignado     = val; // también actualizamos asignado
+    }
+
+    // Cerrar la tarea
+    t.estado       = "realizado";
+    t.finalizadoEn = Date.now();
+    t.done         = true;
+    if (!t.iniciadoEn) t.iniciadoEn = t.finalizadoEn;
+
+    ppRegistrarEnHistorial?.(t);
+
+    localStorage.setItem("tareas", JSON.stringify(tareas));
+
+    auditRegistrar?.("tarea", "✔",
+        `Tarea "${t.desc}" cerrada`,
+        `Realizada por: ${t.realizadoPor}`);
+
+    document.getElementById("modalQuienRealizo").classList.remove("open");
+    _tareaACerrarId = null;
+
+    renderTareas?.();
+    renderDashboard?.();
+
+    toast?.success("Tarea cerrada ✅", `Realizada por: ${t.realizadoPor}`);
+}
+
+// ── Interceptar los botones "Marcar realizada" en renderTareas ──
+// Reemplazamos avanzarTarea para tareas en-curso: mostramos el modal
+const _avanzarConCierre_orig = avanzarTarea;
+avanzarTarea = function(id) {
+    let t = tareas.find(x => x.id === id);
+    if (t && t.estado === "en-curso") {
+        // Mostrar modal de selección de técnico en vez de cerrar directo
+        pedirQuienRealizo(id);
+    } else {
+        _avanzarConCierre_orig(id);
+    }
+};
+</script>
+
 </body>
 </html>
