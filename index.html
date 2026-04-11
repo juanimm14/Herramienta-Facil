@@ -129,15 +129,7 @@ async function _cargarDatosFirebase() {
         }
     });
 
-    // Poblar el select de login con los usuarios de usersDB
-    let loginSel = document.getElementById("usuario");
-    if(loginSel){
-        let db = JSON.parse(_localStorageOrig.getItem("usersDB") || "null");
-        if(!db || db.length === 0){
-            db = CONFIG_DEFAULTS?.tecnicos?.map(n => ({ nombre: n })) || [];
-        }
-        loginSel.innerHTML = db.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join("");
-    }
+    // (campo usuario ahora es input de texto libre, no requiere poblar)
 }
 
 // ─── Listeners en tiempo real (multi-dispositivo) ─────────────
@@ -168,13 +160,7 @@ function _activarListenersTiempoReal() {
                 poblarSelectsTecnicos?.();
             }
             // Actualizar select de login si está visible
-            if(_cache["usersDB"] && document.getElementById("loginDiv")?.style.display !== "none"){
-                let loginSel = document.getElementById("usuario");
-                if(loginSel){
-                    let db = _cache["usersDB"];
-                    loginSel.innerHTML = db.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join("");
-                }
-            }
+            // (campo usuario es input de texto, no requiere actualización dinámica)
         } catch(e) { /* variables aún no declaradas en la primera carga */ }
     };
 
@@ -1428,10 +1414,8 @@ body {
     <div class="login-box">
         <div class="login-logo">HERRAMIENTA FÁCIL</div>
         <p class="login-sub">Sistema de Gestión de Incidencias</p>
-        <label>Seleccioná tu usuario</label>
-        <select id="usuario">
-            <option>Cargando...</option>
-        </select>
+        <label>Escribí tu usuario</label>
+        <input type="text" id="usuario" placeholder="Tu nombre de usuario" autocomplete="off">
         <label>Contraseña</label>
         <div class="input-pass-wrap">
             <input type="password" id="loginPassword" placeholder="Tu contraseña (opcional)">
@@ -6072,6 +6056,16 @@ document.getElementById("loginDiv").innerHTML += `<div id="fbLoadingOverlay" sty
     <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;"></div>
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+
+// Si Firebase no responde en 3 segundos, mostrar login igual
+setTimeout(() => {
+    let overlay = document.getElementById("fbLoadingOverlay");
+    if (overlay) {
+        overlay.remove();
+        document.getElementById("loginDiv").style.display = "flex";
+        document.getElementById("app").style.display = "none";
+    }
+}, 3000);
 
 _auth.onAuthStateChanged(async (firebaseUser) => {
     let overlay = document.getElementById("fbLoadingOverlay");
