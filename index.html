@@ -3238,9 +3238,9 @@ async function login(){
         return;
     }
 
-    // El email de Firebase Auth es: nombre@herramientafacil.local
+    // El email de Firebase Auth es: nombre@herramientafacil.app
     // (o el email real si el usuario lo configuró en su perfil)
-    let email = rec.email && rec.email.includes("@") ? rec.email : `${user.toLowerCase()}@herramientafacil.local`;
+    let email = rec.email && rec.email.includes("@") ? rec.email : `${user.toLowerCase()}@herramientafacil.app`;
 
     try {
         await _auth.signInWithEmailAndPassword(email, pass || "sinpassword");
@@ -8121,7 +8121,7 @@ async function guardarNuevoUsuario(){
         db.push({ nombre, rol, password: pass, email });
         saveUsersDB(db);
         // Crear usuario en Firebase Auth
-        let fbEmail = email && email.includes("@") ? email : `${nombre.toLowerCase()}@herramientafacil.local`;
+        let fbEmail = email && email.includes("@") ? email : `${nombre.toLowerCase()}@herramientafacil.app`;
         try {
             await _auth.createUserWithEmailAndPassword(fbEmail, pass || "sinpassword");
         } catch(e){ /* puede fallar si ya existe en Firebase, no es crítico */ }
