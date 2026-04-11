@@ -128,6 +128,16 @@ async function _cargarDatosFirebase() {
             _localStorageOrig.setItem(doc.id, JSON.stringify(doc.data().data));
         }
     });
+
+    // Poblar el select de login con los usuarios de usersDB
+    let loginSel = document.getElementById("usuario");
+    if(loginSel){
+        let db = JSON.parse(_localStorageOrig.getItem("usersDB") || "null");
+        if(!db || db.length === 0){
+            db = CONFIG_DEFAULTS?.tecnicos?.map(n => ({ nombre: n })) || [];
+        }
+        loginSel.innerHTML = db.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join("");
+    }
 }
 
 // ─── Listeners en tiempo real (multi-dispositivo) ─────────────
@@ -155,6 +165,15 @@ function _activarListenersTiempoReal() {
                 renderDashboard?.();
                 renderCorrectivos?.();
                 renderTareas?.();
+                poblarSelectsTecnicos?.();
+            }
+            // Actualizar select de login si está visible
+            if(_cache["usersDB"] && document.getElementById("loginDiv")?.style.display !== "none"){
+                let loginSel = document.getElementById("usuario");
+                if(loginSel){
+                    let db = _cache["usersDB"];
+                    loginSel.innerHTML = db.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join("");
+                }
             }
         } catch(e) { /* variables aún no declaradas en la primera carga */ }
     };
@@ -1411,12 +1430,7 @@ body {
         <p class="login-sub">Sistema de Gestión de Incidencias</p>
         <label>Seleccioná tu usuario</label>
         <select id="usuario">
-            <option>Juan</option>
-            <option>Pedro</option>
-            <option>Pablo</option>
-            <option>Mauricio</option>
-            <option>Dionisio</option>
-            <option>Adrian</option>
+            <option>Cargando...</option>
         </select>
         <label>Contraseña</label>
         <div class="input-pass-wrap">
@@ -1500,6 +1514,9 @@ body {
 
             <button class="menu-btn" id="nav-historialCambios" onclick="mostrar('historialCambios')" style="display:none;">
                 <span class="icon">🕵️</span> Historial
+            </button>
+            <button class="menu-btn" id="nav-gestionUsuarios" onclick="mostrar('gestionUsuarios')" style="display:none;">
+                <span class="icon">👥</span> Gestionar Usuarios
             </button>
         </div>
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
@@ -2146,6 +2163,34 @@ body {
                 </div>
             </div>
 
+            <!-- ═══ GESTIÓN DE USUARIOS (ADMIN) ═══ -->
+            <div id="gestionUsuarios" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">👥 Gestión de Usuarios</div>
+                        <div class="page-subtitle">Agregar, editar o eliminar usuarios del sistema</div>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn-primary" onclick="abrirModalNuevoUsuario()">➕ Nuevo Usuario</button>
+                    </div>
+                </div>
+                <div class="card-box" style="padding:0;overflow:hidden;">
+                    <table class="data-table" id="tablaUsuarios">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Rol</th>
+                                <th>Turno</th>
+                                <th>Email</th>
+                                <th>Contraseña</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyUsuarios"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- ═══ MANTENIMIENTO GENERAL ISLAS ═══ -->
             <div id="mantenimientoIslas" class="section">
 
@@ -2748,6 +2793,50 @@ body {
     </div>
 </div>
 
+<!-- ═══ MODAL NUEVO / EDITAR USUARIO (ADMIN) ═══ -->
+<div id="modalNuevoUsuario" class="modal">
+    <div class="modal-box">
+        <div class="modal-title">👤 <span id="tituloModalUsuario">Nuevo Usuario</span></div>
+        <input type="hidden" id="usuarioEditandoNombre">
+        <div class="form-group">
+            <label class="form-label">Nombre de Usuario</label>
+            <input type="text" id="nuevoUsuarioNombre" class="form-input" placeholder="Ej: Carlos">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Rol</label>
+            <select id="nuevoUsuarioRol" class="form-select">
+                <option value="Tecnico">Técnico</option>
+                <option value="Admin">Admin</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Turno</label>
+            <select id="nuevoUsuarioTurno" class="form-select">
+                <option value="">Sin turno asignado</option>
+                <option value="MAÑANA">Turno MAÑANA</option>
+                <option value="TARDE">Turno TARDE</option>
+                <option value="NOCHE">Turno NOCHE</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Correo electrónico <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
+            <input type="email" id="nuevoUsuarioEmail" class="form-input" placeholder="usuario@correo.com">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Contraseña</label>
+            <div class="input-pass-wrap">
+                <input type="password" id="nuevoUsuarioPass" class="form-input" placeholder="Dejar vacío para sin contraseña">
+                <button class="eye-btn" type="button" onclick="togglePassVis('nuevoUsuarioPass',this)">👁</button>
+            </div>
+        </div>
+        <div id="nuevoUsuarioError" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none;"></div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="guardarNuevoUsuario()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalNuevoUsuario()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <div id="modalVistaIslas" class="modal">
     <div class="modal-box wide">
         <div class="modal-title" style="justify-content:space-between;">
@@ -3144,7 +3233,7 @@ function getUsersDB(){
     if(raw) return JSON.parse(raw);
     // defaults: Juan = Admin, resto = Tecnico. Sin contraseña por defecto.
     let defaults = CONFIG_DEFAULTS.tecnicos.map(n => ({
-        nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: ""
+        nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: "", turno: ""
     }));
     _fbSet("usersDB", defaults);
     return defaults;
@@ -3222,9 +3311,16 @@ function iniciarApp(){
     let btnEditHist = document.getElementById("btnEditarIslasHistorial");
     if(btnEditHist) btnEditHist.style.display = usuarioActual.rol === "Admin" ? "flex" : "none";
 
+    // Menús exclusivos de Admin
+    let navGU = document.getElementById("nav-gestionUsuarios");
+    if(navGU) navGU.style.display = usuarioActual.rol === "Admin" ? "flex" : "none";
+
     // Botón y sección de carteles solo para Admin
     mostrarBotonCartelesAdmin();
     renderCartelesDashboard();
+
+    // Poblar todos los selects de técnico dinámicamente
+    poblarSelectsTecnicos();
 
     cargarAnios();
     renderDashboard();
@@ -3366,6 +3462,7 @@ function mostrar(sec){
     if(sec === 'fuera-servicio') renderFds();
     if(sec === 'carteles') renderCartelesAdmin();
     if(sec === 'plan-preventivo') ppIniciar();
+    if(sec === 'gestionUsuarios'){ if(usuarioActual?.rol!=="Admin"){ mostrar('dashboard'); return; } renderGestionUsuarios(); }
     // Cerrar sidebar en mobile
     document.querySelector('.sidebar')?.classList.remove('open');
     document.getElementById('sidebarOverlay')?.classList.remove('open');
@@ -7876,6 +7973,386 @@ function ccbCerrarControl(){
     auditRegistrar("preventivo","🔧",`CCB cerrado — ${mesKey}`,`${hecho}/${total} islas · Técnico: ${usuarioActual?.nombre}`);
     renderDashboard();
     ppRenderMes(ppTabActivo);
+}
+
+// ══════════════════════════════════════════════
+//  GESTIÓN DE USUARIOS — ADMIN
+// ══════════════════════════════════════════════
+
+function renderGestionUsuarios(){
+    let db = getUsersDB();
+    let tbody = document.getElementById("tbodyUsuarios");
+    if(!tbody) return;
+
+    if(db.length === 0){
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted);">Sin usuarios registrados</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = db.map((u, idx) => {
+        let rolBadge = u.rol === "Admin"
+            ? `<span class="pill" style="background:rgba(0,212,168,.15);color:var(--accent);">Admin</span>`
+            : `<span class="pill" style="background:rgba(79,142,255,.15);color:var(--accent2);">Técnico</span>`;
+        let turnoBadge = u.turno
+            ? `<span class="pill" style="background:rgba(255,201,71,.15);color:var(--yellow);">${u.turno}</span>`
+            : `<span style="color:var(--muted);font-size:12px;">—</span>`;
+        let passDisplay = u.password
+            ? `<span style="font-size:12px;color:var(--muted);">••••••</span>`
+            : `<span style="font-size:11px;color:var(--muted);font-style:italic;">Sin contraseña</span>`;
+        let esSelf = u.nombre === usuarioActual?.nombre;
+        return `<tr>
+            <td style="font-weight:600;">${u.nombre} ${esSelf ? '<span style="font-size:10px;color:var(--accent);font-weight:700;">(vos)</span>' : ''}</td>
+            <td>${rolBadge}</td>
+            <td>${turnoBadge}</td>
+            <td style="font-size:12px;color:var(--muted);">${u.email || '—'}</td>
+            <td>${passDisplay}</td>
+            <td class="tbl-actions" onclick="event.stopPropagation()">
+                <button onclick="abrirEditarUsuario(${idx})" title="Editar">✏️</button>
+                ${!esSelf ? `<button class="del" onclick="eliminarUsuario(${idx})" title="Eliminar">🗑️</button>` : ''}
+            </td>
+        </tr>`;
+    }).join("");
+}
+
+function abrirModalNuevoUsuario(){
+    document.getElementById("tituloModalUsuario").textContent = "Nuevo Usuario";
+    document.getElementById("usuarioEditandoNombre").value = "";
+    document.getElementById("nuevoUsuarioNombre").value = "";
+    document.getElementById("nuevoUsuarioRol").value = "Tecnico";
+    document.getElementById("nuevoUsuarioTurno").value = "";
+    document.getElementById("nuevoUsuarioEmail").value = "";
+    document.getElementById("nuevoUsuarioPass").value = "";
+    document.getElementById("nuevoUsuarioError").style.display = "none";
+    document.getElementById("nuevoUsuarioNombre").disabled = false;
+    document.getElementById("modalNuevoUsuario").classList.add("open");
+}
+
+function abrirEditarUsuario(idx){
+    let db = getUsersDB();
+    let u = db[idx];
+    if(!u) return;
+    document.getElementById("tituloModalUsuario").textContent = "Editar Usuario";
+    document.getElementById("usuarioEditandoNombre").value = u.nombre;
+    document.getElementById("nuevoUsuarioNombre").value = u.nombre;
+    document.getElementById("nuevoUsuarioNombre").disabled = true; // no se puede cambiar el nombre
+    document.getElementById("nuevoUsuarioRol").value = u.rol || "Tecnico";
+    document.getElementById("nuevoUsuarioTurno").value = u.turno || "";
+    document.getElementById("nuevoUsuarioEmail").value = u.email || "";
+    document.getElementById("nuevoUsuarioPass").value = "";
+    document.getElementById("nuevoUsuarioError").style.display = "none";
+    document.getElementById("modalNuevoUsuario").classList.add("open");
+}
+
+function cerrarModalNuevoUsuario(){
+    document.getElementById("modalNuevoUsuario").classList.remove("open");
+}
+
+async function guardarNuevoUsuario(){
+    let errEl = document.getElementById("nuevoUsuarioError");
+    errEl.style.display = "none";
+
+    let editando = document.getElementById("usuarioEditandoNombre").value.trim();
+    let nombre   = document.getElementById("nuevoUsuarioNombre").value.trim();
+    let rol      = document.getElementById("nuevoUsuarioRol").value;
+    let turno    = document.getElementById("nuevoUsuarioTurno").value;
+    let email    = document.getElementById("nuevoUsuarioEmail").value.trim();
+    let pass     = document.getElementById("nuevoUsuarioPass").value;
+
+    if(!nombre){ errEl.textContent = "El nombre es obligatorio"; errEl.style.display = "block"; return; }
+
+    let db = getUsersDB();
+
+    if(editando){
+        // Editar usuario existente
+        let idx = db.findIndex(u => u.nombre === editando);
+        if(idx === -1){ errEl.textContent = "Usuario no encontrado"; errEl.style.display = "block"; return; }
+        db[idx].rol   = rol;
+        db[idx].turno = turno;
+        db[idx].email = email;
+        if(pass) db[idx].password = pass;
+        saveUsersDB(db);
+        poblarSelectsTecnicos();
+        cerrarModalNuevoUsuario();
+        renderGestionUsuarios();
+        toast.success("Usuario actualizado", `${nombre} — ${rol}${turno ? ' · Turno ' + turno : ''}`);
+        auditRegistrar("tarea","👤","Usuario editado",`${nombre} → ${rol}${turno ? ' · ' + turno : ''}`);
+    } else {
+        // Nuevo usuario
+        if(db.find(u => u.nombre === nombre)){
+            errEl.textContent = "Ya existe un usuario con ese nombre";
+            errEl.style.display = "block";
+            return;
+        }
+        db.push({ nombre, rol, turno, password: pass, email });
+        saveUsersDB(db);
+        // Crear usuario en Firebase Auth
+        let fbEmail = email && email.includes("@") ? email : `${nombre.toLowerCase()}@herramientafacil.local`;
+        try {
+            await _auth.createUserWithEmailAndPassword(fbEmail, pass || "sinpassword");
+            await _auth.signInWithEmailAndPassword(
+                usuarioActual?.email && usuarioActual.email.includes("@")
+                    ? usuarioActual.email
+                    : `${usuarioActual.nombre.toLowerCase()}@herramientafacil.local`,
+                "sinpassword"
+            ).catch(()=>{});
+        } catch(e){ /* puede fallar si ya existe en Firebase, no es crítico */ }
+
+        poblarSelectsTecnicos();
+        cerrarModalNuevoUsuario();
+        renderGestionUsuarios();
+        toast.success("Usuario creado ✅", `${nombre} — ${rol}${turno ? ' · Turno ' + turno : ''}`);
+        auditRegistrar("tarea","👤","Usuario creado",`${nombre} · ${rol}${turno ? ' · ' + turno : ''}`);
+    }
+}
+
+function eliminarUsuario(idx){
+    let db = getUsersDB();
+    let u  = db[idx];
+    if(!u) return;
+    if(u.nombre === usuarioActual?.nombre){ toast.warning("No permitido","No podés eliminar tu propio usuario"); return; }
+    if(!confirm(`¿Eliminar el usuario "${u.nombre}"? Esta acción no se puede deshacer.`)) return;
+    db.splice(idx, 1);
+    saveUsersDB(db);
+    poblarSelectsTecnicos();
+    renderGestionUsuarios();
+    toast.success("Usuario eliminado", u.nombre);
+    auditRegistrar("tarea","🗑️","Usuario eliminado", u.nombre);
+}
+
+// ──────────────────────────────────────────────
+//  POBLAR TODOS LOS SELECTS DE TÉCNICO
+//  dinámicamente desde usersDB
+// ──────────────────────────────────────────────
+function poblarSelectsTecnicos(){
+    let tecnicos = getTecnicos();
+    let db       = getUsersDB();
+
+    // IDs de todos los <select> que tienen lista de técnicos
+    const selectIds = [
+        "tecnico","tecnicoPrev","tecnicoGen","tareaAsignado",
+        "evaTecnico","evaDiariaTecnico","editPrevTecnico",
+        "filtroTareasTecnico","filtroRealTecnico","filtroPrevTecnico"
+    ];
+
+    // También los selects de asignación del plan preventivo (dinámicos)
+    // Se renderizan con getTecnicos() así que no necesitan tocarse aquí.
+
+    selectIds.forEach(id => {
+        let el = document.getElementById(id);
+        if(!el) return;
+
+        // Guardar valor seleccionado
+        let prevVal = el.value;
+
+        // Determinar si este select tiene opción "Todos" o "TODOS"
+        let esFiltro = id.startsWith("filtro");
+        let esEditPrev = id === "editPrevTecnico";
+
+        let opts = "";
+        if(esFiltro){
+            opts += `<option value="todos">Todos</option>`;
+            // Opción Turno MAÑANA
+            opts += `<option value="__turno_MAÑANA__">☀️ Turno MAÑANA</option>`;
+        }
+        if(esEditPrev){
+            opts += `<option value="TODOS">TODOS</option>`;
+            opts += `<option value="">— Vacío —</option>`;
+        }
+
+        tecnicos.forEach(n => {
+            let u    = db.find(x => x.nombre === n);
+            let label = u?.turno ? `${n} (${u.turno})` : n;
+            opts += `<option value="${n}">${label}</option>`;
+        });
+
+        el.innerHTML = opts;
+
+        // Restaurar valor si sigue siendo válido
+        if([...el.options].some(o => o.value === prevVal)) el.value = prevVal;
+    });
+}
+
+// ──────────────────────────────────────────────
+//  FILTRO POR TURNO MAÑANA
+// ──────────────────────────────────────────────
+function getTecnicosTurno(turno){
+    let db = getUsersDB();
+    return db.filter(u => u.turno === turno).map(u => u.nombre);
+}
+
+// Parche renderTareas para soportar filtro de turno
+const _renderTareasOrig = renderTareas;
+renderTareas = function(){
+    // Si el filtro es turno mañana, temporalmente sustituir el select
+    let sel = document.getElementById("filtroTareasTecnico");
+    if(sel && sel.value === "__turno_MAÑANA__"){
+        let tecsTurno = getTecnicosTurno("MAÑANA");
+        // Renderizar una vez por cada técnico del turno y acumular resultados
+        // Usamos override del filtro internamente via dataset
+        sel.dataset._turnoOverride = "MAÑANA";
+        _renderTareasOrigImpl();
+        delete sel.dataset._turnoOverride;
+        return;
+    }
+    _renderTareasOrigImpl();
+};
+
+function _renderTareasOrigImpl(){
+    // Re-implementación que respeta el override de turno
+    let selAnio = document.getElementById("filtroTareasAnio");
+    if(selAnio && selAnio.options.length <= 1){
+        let anios = [...new Set(tareas.map(t => {
+            if(t.creadoEn) return new Date(t.creadoEn).getFullYear();
+            if(t.fecha) return t.fecha.slice(0,4);
+            return null;
+        }).filter(Boolean))].sort((a,b)=>b-a);
+        anios.forEach(a => {
+            let opt = document.createElement("option");
+            opt.value = a; opt.textContent = a;
+            selAnio.appendChild(opt);
+        });
+    }
+
+    let sel = document.getElementById("filtroTareasTecnico");
+    let fTecnico = sel?.value || "todos";
+    let turnoOverride = sel?.dataset?._turnoOverride;
+    let fAnio    = document.getElementById("filtroTareasAnio")?.value    || "todos";
+    let fMes     = document.getElementById("filtroTareasMes")?.value     || "todos";
+    let fBuscar  = (document.getElementById("filtroTareasBuscar")?.value || "").toLowerCase().trim();
+
+    let tecsTurno = turnoOverride ? getTecnicosTurno(turnoOverride) : null;
+
+    function cumpleFiltro(t){
+        if(tecsTurno){
+            if(!tecsTurno.includes(t.asignado)) return false;
+        } else if(fTecnico !== "todos" && t.asignado !== fTecnico) return false;
+        if(fAnio !== "todos"){
+            let anioT = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha ? t.fecha.slice(0,4) : "");
+            if(anioT !== fAnio) return false;
+        }
+        if(fMes !== "todos"){
+            let mesT = t.fecha ? t.fecha.slice(5,7) : "";
+            if(mesT !== fMes) return false;
+        }
+        if(fBuscar){
+            let haystack = (t.desc + " " + t.asignado + " " + (t.notas||"")).toLowerCase();
+            if(!haystack.includes(fBuscar)) return false;
+        }
+        return true;
+    }
+
+    function sortMisTareasArriba(lista){
+        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => b.id - a.id);
+        return lista.sort((a,b) => {
+            let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
+            let bMia = b.asignado === usuarioActual?.nombre ? 0 : 1;
+            if(aMia !== bMia) return aMia - bMia;
+            return b.id - a.id;
+        });
+    }
+
+    let pendientes = sortMisTareasArriba(tareas.filter(t => t.estado === "pendiente" && cumpleFiltro(t)));
+    let enCurso    = sortMisTareasArriba(tareas.filter(t => t.estado === "en-curso"  && cumpleFiltro(t)));
+
+    let esTecnico = usuarioActual?.rol !== "Admin";
+    let miNombre  = usuarioActual?.nombre;
+    const TECNICOS_LIST = getTecnicos();
+
+    function mkItem(t){
+        let dur = calcularDuracion(t);
+        let acciones = "";
+        let ppBadge = t._ppMesKey ? `<span style="font-size:10px;background:rgba(79,142,255,.2);border:1px solid var(--accent2);color:var(--accent2);padding:1px 7px;border-radius:5px;font-weight:700;">📅 PREV</span>` : "";
+        let miTareaBadge = (esTecnico && t.asignado === miNombre) ? `<span style="font-size:10px;background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);padding:1px 7px;border-radius:5px;font-weight:700;">👤 MÍA</span>` : "";
+        let reasignar = `<select onchange="reasignarTarea(${t.id}, this.value)"
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:11px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .2s;"
+            title="Reasignar técnico">
+            ${TECNICOS_LIST.map(n=>`<option value="${n}" ${t.asignado===n?'selected':''}>${n}</option>`).join("")}
+        </select>`;
+
+        if(t.estado === "pendiente"){
+            acciones = `<div class="tarea-actions">
+                <button class="btn-task-action" onclick="avanzarTarea(${t.id})">▶ Tomar tarea</button>
+                <button class="btn-task-action" onclick="abrirDetalleTarea(${t.id})" style="border-color:var(--accent2);color:var(--accent2);">💬 Detalle</button>
+            </div>`;
+        } else if(t.estado === "en-curso"){
+            acciones = `<div class="tarea-actions">
+                <button class="btn-task-action close" onclick="avanzarTarea(${t.id})">✔ Marcar realizada</button>
+                <button class="btn-task-action" onclick="volverTarea(${t.id})">↩ Pausar</button>
+                <button class="btn-task-action" onclick="abrirDetalleTarea(${t.id})" style="border-color:var(--accent2);color:var(--accent2);">💬 Detalle</button>
+            </div>`;
+        }
+
+        // Bloque inline CCB
+        let ccbInlineHtml = "";
+        if(t._ppTareaId === 31 && t._ppMesKey && t.estado !== "realizado"){
+            let mesKey = t._ppMesKey;
+            let ccbData = ccbCronogramas[mesKey] || null;
+            if(!ccbData && ccbIslasConfig.length > 0){
+                ccbCronogramas[mesKey] = { islas: ccbIslasConfig.map(id => ({ id, hecho: false })), nota: "", cerrado: false, fechaCierre: null };
+                ccbGuardarStorage();
+                ccbData = ccbCronogramas[mesKey];
+            }
+            if(ccbData && !ccbData.cerrado){
+                let total = ccbData.islas.length;
+                let hecho = ccbData.islas.filter(x=>x.hecho).length;
+                let pct   = total > 0 ? Math.round(hecho/total*100) : 0;
+                let islasHtml = ccbData.islas.map((isla, idx) => `
+                    <div onclick="ccbToggleIslaInline('${mesKey}',${idx},'${t.id}')"
+                        style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;transition:all .2s;"
+                        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'">
+                        <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
+                            ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
+                        </div>
+                        <span style="font-family:\'Rajdhani\',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
+                        <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
+                    </div>`).join("");
+                ccbInlineHtml = `<div style="margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--white);">🔧 Islas a controlar</span>
+                        <span style="font-size:12px;font-weight:700;color:var(--accent);">${hecho}/${total} · ${pct}%</span>
+                    </div>
+                    <div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border);">
+                        <div style="width:${pct}%;height:100%;background:${pct===100?'var(--accent)':'var(--accent2)'};border-radius:3px;transition:width .4s;"></div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;">${islasHtml}</div>
+                </div>`;
+            } else if(ccbData && ccbData.cerrado){
+                ccbInlineHtml = `<div style="margin-top:10px;padding:10px 14px;background:rgba(0,212,168,.08);border:1px solid var(--accent);border-radius:10px;font-size:13px;color:var(--accent);font-weight:600;">✅ Control completado · ${ccbData.islas.filter(x=>x.hecho).length}/${ccbData.islas.length} islas · ${ccbData.fechaCierre}</div>`;
+            }
+        }
+
+        let esMiTarea = esTecnico && t.asignado === miNombre;
+        return `<div class="tarea-row" style="${esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
+            <div class="item-main" style="width:100%">
+                <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
+                    <div class="tarea-text ${t.estado==='realizado'?'done-text':''}" style="flex:1;">${t.desc}</div>
+                    <div style="display:flex;gap:6px;align-items:center;">${miTareaBadge}${ppBadge}<span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
+                    ${reasignar}
+                    ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
+                    ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
+                </div>
+                ${ccbInlineHtml}
+                ${acciones}
+            </div>
+            ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
+        </div>`;
+    }
+
+    let contP = document.getElementById("listaTareasPendientes");
+    let contC = document.getElementById("listaTareasEnCurso");
+    if(!contP) return;
+
+    document.getElementById("cntPend").textContent = pendientes.length;
+    document.getElementById("cntCurso").textContent = enCurso.length;
+
+    contP.innerHTML = pendientes.length
+        ? pendientes.map(t=>mkItem(t)).join("")
+        : '<div class="empty-state" style="padding:20px"><div class="empty-icon" style="font-size:28px">✅</div><p>Sin tareas pendientes</p></div>';
+    contC.innerHTML = enCurso.length
+        ? enCurso.map(t=>mkItem(t)).join("")
+        : '<div class="empty-state" style="padding:20px"><div class="empty-icon" style="font-size:28px">⏳</div><p>Nada en curso</p></div>';
 }
 </script>
 </body>
