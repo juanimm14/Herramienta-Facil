@@ -3225,12 +3225,16 @@ function getUserRecord(nombre){
 //  AUTH — Firebase Authentication
 // ──────────────────────────────────────────────
 async function login(){
-    let user = document.getElementById("usuario").value;
-    let pass = document.getElementById("loginPassword").value;
+    let user = (document.getElementById("usuario").value || "").trim();
+    let pass  = document.getElementById("loginPassword").value;
     let errEl = document.getElementById("loginError");
     errEl.style.display = "none";
 
-    // Buscar el registro del usuario en usersDB para obtener email y rol
+    if(!user){ errEl.textContent = "Escribí tu usuario"; errEl.style.display = "block"; return; }
+
+    // Cargar datos de Firestore si todavía no se cargaron
+    if(!_cache["usersDB"]) await _cargarDatosFirebase();
+
     let rec = getUserRecord(user);
     if(!rec){
         errEl.textContent = "Usuario no encontrado";
@@ -3238,35 +3242,21 @@ async function login(){
         return;
     }
 
-    // El email de Firebase Auth es: nombre@herramientafacil.app
-    // (o el email real si el usuario lo configuró en su perfil)
-    let email = rec.email && rec.email.includes("@") ? rec.email : `${user.toLowerCase()}@herramientafacil.app`;
-
-    try {
-        await _auth.signInWithEmailAndPassword(email, pass || "sinpassword");
-        // signInWithEmailAndPassword dispara onAuthStateChanged → iniciarApp
-    } catch(e) {
-        // Si el usuario no existe en Firebase Auth todavía, lo creamos
-        if(e.code === "auth/user-not-found" || e.code === "auth/invalid-credential" || e.code === "auth/invalid-email"){
-            try {
-                await _auth.createUserWithEmailAndPassword(email, pass || "sinpassword");
-                // onAuthStateChanged → iniciarApp
-            } catch(e2) {
-                errEl.textContent = "Error al crear usuario: " + e2.message;
-                errEl.style.display = "block";
-            }
-        } else if(e.code === "auth/wrong-password") {
-            errEl.textContent = "Contraseña incorrecta";
-            errEl.style.display = "block";
-        } else {
-            errEl.textContent = e.message;
-            errEl.style.display = "block";
-        }
+    // Verificar contraseña (si el usuario no tiene, cualquier valor pasa)
+    if(rec.password && rec.password !== "" && rec.password !== pass){
+        errEl.textContent = "Contraseña incorrecta";
+        errEl.style.display = "block";
+        return;
     }
+
+    usuarioActual = { nombre: rec.nombre, rol: rec.rol };
+    localStorage.setItem("usuario", JSON.stringify(usuarioActual));
+    _activarListenersTiempoReal();
+    iniciarApp();
 }
 
 async function logout(){
-    await _auth.signOut();
+    usuarioActual = null;
     localStorage.removeItem("usuario");
     location.reload();
 }
@@ -6050,48 +6040,24 @@ function crearCartelBarajadora(){
 //  INIT — Firebase Auth listener
 // ──────────────────────────────────────────────
 // Mostrar spinner de carga mientras Firebase inicializa
-document.getElementById("loginDiv").innerHTML += `<div id="fbLoadingOverlay" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px;">
-    <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;color:var(--accent);">HERRAMIENTA FÁCIL</div>
-    <div style="color:var(--muted);font-size:13px;">Conectando con Firebase…</div>
-    <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;"></div>
-</div>
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
-
-// Si Firebase no responde en 3 segundos, mostrar login igual
-setTimeout(() => {
-    let overlay = document.getElementById("fbLoadingOverlay");
-    if (overlay) {
-        overlay.remove();
-        document.getElementById("loginDiv").style.display = "flex";
-        document.getElementById("app").style.display = "none";
+// ── Inicio: cargar datos y mostrar login ──────────────────────
+(async () => {
+    // Intentar retomar sesión guardada
+    let sesion = localStorage.getItem("usuario");
+    if(sesion){
+        try {
+            usuarioActual = JSON.parse(sesion);
+            await _cargarDatosFirebase();
+            _activarListenersTiempoReal();
+            iniciarApp();
+            return;
+        } catch(e){ /* sesión inválida, mostrar login */ }
     }
-}, 3000);
-
-_auth.onAuthStateChanged(async (firebaseUser) => {
-    let overlay = document.getElementById("fbLoadingOverlay");
-    if (firebaseUser) {
-        // Usuario autenticado — cargar datos de Firestore antes de iniciar
-        await _cargarDatosFirebase();
-        _activarListenersTiempoReal();
-
-        // Determinar nombre y rol desde usersDB o email
-        let nombre = firebaseUser.email.split("@")[0];
-        // Capitalizar primera letra
-        nombre = nombre.charAt(0).toUpperCase() + nombre.slice(1);
-        let rec = getUserRecord(nombre);
-        let rol = rec ? rec.rol : (nombre === "Juan" ? "Admin" : "Tecnico");
-        usuarioActual = { nombre, rol, uid: firebaseUser.uid };
-        localStorage.setItem("usuario", JSON.stringify(usuarioActual));
-
-        if (overlay) overlay.remove();
-        iniciarApp();
-    } else {
-        // No autenticado — mostrar login
-        if (overlay) overlay.remove();
-        document.getElementById("loginDiv").style.display = "flex";
-        document.getElementById("app").style.display = "none";
-    }
-});
+    // Sin sesión — precargar datos en background y mostrar login
+    _cargarDatosFirebase().catch(()=>{});
+    document.getElementById("loginDiv").style.display = "flex";
+    document.getElementById("app").style.display = "none";
+})();
 
 // ══════════════════════════════════════════════════════════
 //  MÓDULO: PLAN DE MANTENIMIENTO PREVENTIVO
@@ -8120,11 +8086,6 @@ async function guardarNuevoUsuario(){
         }
         db.push({ nombre, rol, password: pass, email });
         saveUsersDB(db);
-        // Crear usuario en Firebase Auth
-        let fbEmail = email && email.includes("@") ? email : `${nombre.toLowerCase()}@herramientafacil.app`;
-        try {
-            await _auth.createUserWithEmailAndPassword(fbEmail, pass || "sinpassword");
-        } catch(e){ /* puede fallar si ya existe en Firebase, no es crítico */ }
 
         poblarSelectsTecnicos();
         cerrarModalNuevoUsuario();
