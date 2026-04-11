@@ -3050,8 +3050,25 @@ body {
 // ──────────────────────────────────────────────
 let incidencias = JSON.parse(localStorage.getItem("incidencias")) || [];
 
-// ── CCB globals (deben declararse temprano para que renderTareas pueda usarlos) ──
-const CCB_ISLAS_DEFAULT = [110,116,119,124,125,126,141,143,146,155,179,180,219,220,221,222];
+// ──────────────────────────────────────────────
+//  CONFIGURACIÓN GLOBAL — se guarda en Firestore
+//  como documento "config" con campos:
+//    tecnicos: ["Juan","Pedro",...]
+//    ccbIslasDefault: [110,116,...]
+// ──────────────────────────────────────────────
+const CONFIG_DEFAULTS = {
+    tecnicos: ["Juan","Pedro","Pablo","Mauricio","Dionisio","Adrian"],
+    ccbIslasDefault: [110,116,119,124,125,126,141,143,146,155,179,180,219,220,221,222]
+};
+
+// Devuelve la lista de técnicos desde usersDB (Firestore) o el default
+function getTecnicos(){
+    let db = getUsersDB();
+    if(db && db.length > 0) return db.map(u => u.nombre);
+    return CONFIG_DEFAULTS.tecnicos;
+}
+
+const CCB_ISLAS_DEFAULT = CONFIG_DEFAULTS.ccbIslasDefault;
 let ccbCronogramas = JSON.parse(localStorage.getItem("ccbCronogramas")) || {};
 let ccbIslasConfig = JSON.parse(localStorage.getItem("ccbIslasConfig")) || [...CCB_ISLAS_DEFAULT];
 
@@ -3100,6 +3117,8 @@ let tareaEditando = null;
 function generarListaDefault(){
     let arr = [];
     for(let i=100;i<=180;i++) arr.push({ id: i, slots: 8 });
+    // Guardar en Firestore la primera vez
+    _fbSet("islasActivas", arr);
     return arr;
 }
 
@@ -3124,10 +3143,10 @@ function getUsersDB(){
     let raw = localStorage.getItem("usersDB");
     if(raw) return JSON.parse(raw);
     // defaults: Juan = Admin, resto = Tecnico. Sin contraseña por defecto.
-    let defaults = ["Juan","Pedro","Pablo","Mauricio","Dionisio","Adrian"].map(n => ({
+    let defaults = CONFIG_DEFAULTS.tecnicos.map(n => ({
         nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: ""
     }));
-    localStorage.setItem("usersDB", JSON.stringify(defaults));
+    _fbSet("usersDB", defaults);
     return defaults;
 }
 
@@ -3634,7 +3653,7 @@ function renderDashboard(){
     if(usuarioActual?.rol === "Admin"){
         document.getElementById("boxDesempeno").style.display = "grid";
         document.getElementById("boxCalificaciones").style.display = "block";
-        let tecnicos = ["Juan","Pedro","Pablo","Mauricio","Dionisio","Adrian"];
+        let tecnicos = getTecnicos();
         let maxVal = 1;
         let counts = tecnicos.map(t => {
             let n = correctivos.filter(i => i.tecnico === t).length;
@@ -4110,7 +4129,7 @@ function renderTareas(){
     let esTecnico = usuarioActual?.rol !== "Admin";
     let miNombre  = usuarioActual?.nombre;
 
-    const TECNICOS_LIST = ["Juan","Pedro","Pablo","Mauricio","Dionisio","Adrian"];
+    const TECNICOS_LIST = getTecnicos();
 
     function mkItem(t, esRealizada){
         let dur = calcularDuracion(t);
@@ -5995,7 +6014,7 @@ _auth.onAuthStateChanged(async (firebaseUser) => {
 const PP_MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const PP_MESES_CORTO = ["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
 
-const PP_TECNICOS = ["TODOS","Juan","Pedro","Pablo","Mauricio","Dionisio","Adrian"];
+const PP_TECNICOS = ["TODOS",...getTecnicos()];
 
 // Tareas base extraídas del PDF del plan
 const PP_TAREAS_BASE = [
@@ -6681,7 +6700,7 @@ function renderTareasRealizadas(){
         return;
     }
 
-    const TECNICOS_LIST = ["Juan","Pedro","Pablo","Mauricio","Dionisio","Adrian"];
+    const TECNICOS_LIST = getTecnicos();
     cont.innerHTML = lista.map(t => {
         let dur = calcularDuracion(t);
         let ppBadge = t._ppMesKey ? `<span style="font-size:10px;background:rgba(79,142,255,.2);border:1px solid var(--accent2);color:var(--accent2);padding:1px 7px;border-radius:5px;font-weight:700;">📅 PREV</span>` : "";
@@ -7113,7 +7132,7 @@ function ppMgiProgramar(mesKey){
 function ppMgiGenerarDias(cronExistente){
     let cant = Math.min(10, Math.max(1, parseInt(document.getElementById("ppMgiCantDias").value) || 1));
     let container = document.getElementById("ppMgiDiasContainer");
-    let tecnicos = ["Juan","Pedro","Pablo","Mauricio","Dionisio","Adrian"];
+    let tecnicos = getTecnicos();
     let hoy = new Date().toISOString().split("T")[0];
     let islasDisp = cargarIslas();
 
@@ -7453,7 +7472,7 @@ function cerrarModalMgiPlan(){
 function mgiGenerarDias(){
     let cant = Math.min(10, Math.max(1, parseInt(document.getElementById("mgiPlanCantDias").value) || 1));
     let container = document.getElementById("mgiPlanDiasContainer");
-    let tecnicos = ["Juan","Pedro","Pablo","Mauricio","Dionisio","Adrian"];
+    let tecnicos = getTecnicos();
     let hoy = new Date().toISOString().split("T")[0];
 
     let html = "";
