@@ -1414,8 +1414,10 @@ body {
     <div class="login-box">
         <div class="login-logo">HERRAMIENTA FÁCIL</div>
         <p class="login-sub">Sistema de Gestión de Incidencias</p>
-        <label>Escribí tu usuario</label>
-        <input type="text" id="usuario" placeholder="Tu nombre de usuario" autocomplete="off">
+        <label>Seleccioná tu usuario</label>
+        <select id="usuario">
+            <option value="">Cargando...</option>
+        </select>
         <label>Contraseña</label>
         <div class="input-pass-wrap">
             <input type="password" id="loginPassword" placeholder="Tu contraseña (opcional)">
@@ -3230,7 +3232,7 @@ async function login(){
     let errEl = document.getElementById("loginError");
     errEl.style.display = "none";
 
-    if(!user){ errEl.textContent = "Escribí tu usuario"; errEl.style.display = "block"; return; }
+    if(!user){ errEl.textContent = "Seleccioná tu usuario"; errEl.style.display = "block"; return; }
 
     // Siempre recargar desde Firestore para tener los datos más actualizados
     try { await _cargarDatosFirebase(); } catch(e){ /* continuar con cache local */ }
@@ -6056,11 +6058,21 @@ function crearCartelBarajadora(){
             return;
         } catch(e){ /* sesión inválida, mostrar login */ }
     }
-    // Sin sesión — precargar datos en background y mostrar login
-    _cargarDatosFirebase().catch(()=>{});
+    // Sin sesión — cargar datos y llenar el select de login
     document.getElementById("loginDiv").style.display = "flex";
     document.getElementById("app").style.display = "none";
+    _cargarDatosFirebase().then(() => {
+        _llenarSelectLogin();
+    }).catch(()=>{ _llenarSelectLogin(); });
 })();
+
+function _llenarSelectLogin(){
+    let sel = document.getElementById("usuario");
+    if(!sel) return;
+    let db = getUsersDB();
+    if(!db || db.length === 0) return;
+    sel.innerHTML = db.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join("");
+}
 
 // ══════════════════════════════════════════════════════════
 //  MÓDULO: PLAN DE MANTENIMIENTO PREVENTIVO
