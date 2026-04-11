@@ -2678,6 +2678,8 @@ body {
         <div class="form-group">
             <label class="form-label">Asignado a</label>
             <select id="tareaAsignado" class="form-select">
+                <option value="__turno_MANANA__">☀️ Turno mañana</option>
+                <option value="__todos__">👥 Todos</option>
                 <option>Juan</option><option>Pedro</option><option>Pablo</option>
                 <option>Mauricio</option><option>Dionisio</option><option>Adrian</option>
             </select>
@@ -8150,6 +8152,10 @@ function poblarSelectsTecnicos(){
             opts += `<option value="TODOS">TODOS</option>`;
             opts += `<option value="__turno_MANANA__">☀️ Turno MAÑANA</option>`;
             opts += `<option value="">— Vacío —</option>`;
+        }
+        if(id === "tareaAsignado"){
+            opts += `<option value="__turno_MANANA__">☀️ Turno mañana</option>`;
+            opts += `<option value="__todos__">👥 Todos</option>`;
         }
 
         tecnicos.forEach(n => {
