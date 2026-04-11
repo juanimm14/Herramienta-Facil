@@ -3232,12 +3232,15 @@ async function login(){
 
     if(!user){ errEl.textContent = "Escribí tu usuario"; errEl.style.display = "block"; return; }
 
-    // Cargar datos de Firestore si todavía no se cargaron
-    if(!_cache["usersDB"]) await _cargarDatosFirebase();
+    // Siempre recargar desde Firestore para tener los datos más actualizados
+    try { await _cargarDatosFirebase(); } catch(e){ /* continuar con cache local */ }
 
-    let rec = getUserRecord(user);
+    // Buscar usuario sin distinguir mayúsculas/minúsculas
+    let db = getUsersDB();
+    let rec = db.find(u => u.nombre.trim().toLowerCase() === user.toLowerCase());
+
     if(!rec){
-        errEl.textContent = "Usuario no encontrado";
+        errEl.textContent = "Usuario no encontrado. Verificá el nombre.";
         errEl.style.display = "block";
         return;
     }
