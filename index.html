@@ -1597,10 +1597,13 @@ body {
                 <!-- DESEMPEÑO Y CALIFICACIONES — Solo Admin -->
                 <div class="grid2" style="margin-top:16px;display:none;" id="boxDesempeno">
                     <div class="card-box">
-                        <div class="card-box-title">Desempeño por Técnico</div>
+                        <div class="card-box-title">📊 Correctivos por Técnico</div>
                         <div id="desempeno"></div>
                     </div>
-                    <div class="card-box" id="cardActividadExtra" style="display:none;"></div>
+                    <div class="card-box">
+                        <div class="card-box-title">✅ Tareas Realizadas por Técnico</div>
+                        <div id="dashTareasRealizadasTec"></div>
+                    </div>
                 </div>
 
                 <!-- HORAS Y PREVENTIVOS — Solo Admin -->
@@ -3799,6 +3802,33 @@ function renderDashboard(){
                 <div class="perf-count">${x.n}</div>
             </div>
         `).join("") : '<div class="empty-state"><div class="empty-icon">📊</div><p>Sin datos</p></div>';
+
+        // ── TAREAS REALIZADAS POR TÉCNICO ──
+        let todasRealizadas = tareas.filter(t => t.estado === "realizado");
+        let conteoTareas = {};
+        tecnicos.forEach(t => conteoTareas[t] = 0);
+        todasRealizadas.forEach(t => {
+            let tecs = t.realizadoPor
+                ? t.realizadoPor.split(", ").map(s => s.trim())
+                : (t.asignado ? [t.asignado] : []);
+            tecs.forEach(nombre => {
+                if(conteoTareas.hasOwnProperty(nombre)) conteoTareas[nombre]++;
+            });
+        });
+        let tareasCounts = tecnicos
+            .map(t => ({ t, n: conteoTareas[t]||0 }))
+            .filter(x => x.n > 0)
+            .sort((a,b) => b.n - a.n);
+        let maxTareas = tareasCounts.length ? tareasCounts[0].n : 1;
+
+        document.getElementById("dashTareasRealizadasTec").innerHTML = tareasCounts.length
+            ? tareasCounts.map(x => `
+                <div class="perf-bar-row">
+                    <div class="perf-name">${x.t.split(" ")[0]}</div>
+                    <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.n/maxTareas*100)}%;background:#4f8eff;"></div></div>
+                    <div class="perf-count" style="color:#4f8eff;">${x.n}</div>
+                </div>`).join("")
+            : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin tareas realizadas</p></div>';
 
         // ── HORAS TRABAJADAS Y PROMEDIO POR TÉCNICO ──
         let tareasRealizadas = tareas.filter(t => t.estado === "realizado" && t.iniciadoEn && t.finalizadoEn);
