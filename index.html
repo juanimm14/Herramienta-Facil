@@ -1597,10 +1597,13 @@ body {
                 <!-- DESEMPEÑO Y CALIFICACIONES — Solo Admin -->
                 <div class="grid2" style="margin-top:16px;display:none;" id="boxDesempeno">
                     <div class="card-box">
-                        <div class="card-box-title">Desempeño por Técnico</div>
+                        <div class="card-box-title">📊 Correctivos por Técnico</div>
                         <div id="desempeno"></div>
                     </div>
-                    <div class="card-box" id="cardActividadExtra" style="display:none;"></div>
+                    <div class="card-box">
+                        <div class="card-box-title">✅ Tareas Realizadas por Técnico</div>
+                        <div id="desempenoTareas"></div>
+                    </div>
                 </div>
 
               
@@ -3782,6 +3785,33 @@ function renderDashboard(){
                 <div class="perf-count">${x.n}</div>
             </div>
         `).join("") : '<div class="empty-state"><div class="empty-icon">📊</div><p>Sin datos</p></div>';
+
+        // Tareas realizadas por técnico (considera realizadoPor con múltiples técnicos)
+        let tareasRealizadas = tareas.filter(t => t.estado === "realizado");
+        let conteoTareas = {};
+        tecnicos.forEach(t => conteoTareas[t] = 0);
+        tareasRealizadas.forEach(t => {
+            // Si tiene realizadoPor, usarlo (puede tener varios técnicos separados por ", ")
+            let tecs = t.realizadoPor
+                ? t.realizadoPor.split(", ").map(s => s.trim())
+                : (t.asignado ? [t.asignado] : []);
+            tecs.forEach(nombre => {
+                if(conteoTareas.hasOwnProperty(nombre)) conteoTareas[nombre]++;
+            });
+        });
+        let tareasCounts = tecnicos
+            .map(t => ({ t, n: conteoTareas[t] || 0 }))
+            .filter(x => x.n > 0)
+            .sort((a, b) => b.n - a.n);
+        let maxTareas = tareasCounts.length > 0 ? tareasCounts[0].n : 1;
+
+        document.getElementById("desempenoTareas").innerHTML = tareasCounts.length ? tareasCounts.map(x => `
+            <div class="perf-bar-row">
+                <div class="perf-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${x.t}">${x.t.split(" ")[0]}</div>
+                <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.n/maxTareas*100)}%;background:var(--accent2);"></div></div>
+                <div class="perf-count" style="color:var(--accent2);">${x.n}</div>
+            </div>
+        `).join("") : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin tareas realizadas</p></div>';
 
         // Ratings correctivos
         renderRatingsDash("dashRatingCorrectivos", correctivos, "correctivo");
@@ -6821,14 +6851,10 @@ function renderTareasRealizadas(){
 
     let lista = tareas.filter(t => {
         if(t.estado !== "realizado") return false;
-        // Armar lista de todos los técnicos que participaron en la tarea
-        let tecsTarea = [t.asignado, ...(t.realizadoPor ? t.realizadoPor.split(", ") : [])].filter(Boolean);
         if(fTec === "__turno_MANANA__"){
             let turnoLista = getTecnicosTurno();
-            if(!tecsTarea.some(tc => turnoLista.includes(tc))) return false;
-        } else if(fTec !== "todos"){
-            if(!tecsTarea.includes(fTec)) return false;
-        }
+            if(!turnoLista.includes(t.asignado)) return false;
+        } else if(fTec !== "todos" && t.asignado !== fTec) return false;
         if(fAnio !== "todos"){
             let ay = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha||"").slice(0,4);
             if(ay !== fAnio) return false;
@@ -6838,7 +6864,7 @@ function renderTareasRealizadas(){
             if(my !== fMes) return false;
         }
         if(fBus){
-            let h = (t.desc+" "+t.asignado+" "+(t.realizadoPor||"")+" "+(t.notas||"")).toLowerCase();
+            let h = (t.desc+" "+t.asignado+" "+(t.notas||"")).toLowerCase();
             if(!h.includes(fBus)) return false;
         }
         return true;
@@ -6870,7 +6896,7 @@ function renderTareasRealizadas(){
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;">
-                <span style="font-size:12px;color:var(--accent2);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>
+                <span style="font-size:12px;color:var(--accent2);">👤 ${mostrarAsignado(t.asignado)}</span>
                 ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
                 ${comentarios.length > 0 ? `<span style="font-size:11px;color:var(--muted);">💬 ${comentarios.length} comentario${comentarios.length>1?"s":""}</span>` : ""}
             </div>
@@ -8346,13 +8372,9 @@ function _renderTareasConTurno(){
     let fBuscar = (document.getElementById("filtroTareasBuscar")?.value || "").toLowerCase().trim();
 
     function cumpleFiltro(t){
-        // Armar lista de todos los técnicos que participaron
-        let tecsTarea = [t.asignado, ...(t.realizadoPor ? t.realizadoPor.split(", ") : [])].filter(Boolean);
         if(esTurno){
-            if(!tecsTarea.some(tc => tecsTurno.includes(tc))) return false;
-        } else if(fTecnicoRaw !== "todos"){
-            if(!tecsTarea.includes(fTecnicoRaw)) return false;
-        }
+            if(!tecsTurno.includes(t.asignado)) return false;
+        } else if(fTecnicoRaw !== "todos" && t.asignado !== fTecnicoRaw) return false;
         if(fAnio !== "todos"){
             let anioT = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha ? t.fecha.slice(0,4) : "");
             if(anioT !== fAnio) return false;
@@ -8362,7 +8384,7 @@ function _renderTareasConTurno(){
             if(mesT !== fMes) return false;
         }
         if(fBuscar){
-            let haystack = (t.desc + " " + t.asignado + " " + (t.realizadoPor||"") + " " + (t.notas||"")).toLowerCase();
+            let haystack = (t.desc + " " + t.asignado + " " + (t.notas||"")).toLowerCase();
             if(!haystack.includes(fBuscar)) return false;
         }
         return true;
