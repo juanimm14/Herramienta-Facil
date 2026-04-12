@@ -3140,7 +3140,7 @@ const CONFIG_DEFAULTS = {
 // Devuelve la lista de técnicos desde usersDB (Firestore) o el default
 function getTecnicos(){
     let db = getUsersDB();
-    if(db && db.length > 0) return db.map(u => u.nombre);
+    if(db && db.length > 0) return db.filter(u => u.rol !== "Visita").map(u => u.nombre);
     return CONFIG_DEFAULTS.tecnicos;
 }
 
@@ -8262,7 +8262,7 @@ function poblarSelectsTecnicos(){
 // ──────────────────────────────────────────────
 function getTecnicosTurno(turno){
     let db = getUsersDB();
-    return db.filter(u => u.turno === turno).map(u => u.nombre);
+    return db.filter(u => u.turno === turno && u.rol !== "Visita").map(u => u.nombre);
 }
 
 // ──────────────────────────────────────────────
@@ -8273,8 +8273,8 @@ function getTecnicosTurno(turno){
 function getTecnicosTurno(){
     let db = getUsersDB();
     // Usuarios con turno = "MAÑANA" o como fallback: todos (si ninguno tiene turno asignado)
-    let conTurno = db.filter(u => u.turno === "MAÑANA").map(u => u.nombre);
-    if(conTurno.length === 0) return db.map(u => u.nombre); // fallback: todos
+    let conTurno = db.filter(u => u.turno === "MAÑANA" && u.rol !== "Visita").map(u => u.nombre);
+    if(conTurno.length === 0) return db.filter(u => u.rol !== "Visita").map(u => u.nombre); // fallback: todos
     return conTurno;
 }
 
