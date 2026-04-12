@@ -4340,7 +4340,15 @@ function renderTareas(){
     let fBuscar  = (document.getElementById("filtroTareasBuscar")?.value || "").toLowerCase().trim();
 
     function cumpleFiltro(t){
-        if(fTecnico !== "todos" && t.asignado !== fTecnico) return false;
+        if(fTecnico !== "todos"){
+            let tecsList = t.realizadoPor
+                ? t.realizadoPor.split(", ").map(s => s.trim())
+                : (t.asignado ? [mostrarAsignado(t.asignado)] : []);
+            // También verificar por valor bruto (asignado)
+            let matchAsignado = t.asignado === fTecnico;
+            let matchRealizado = tecsList.some(nombre => nombre === fTecnico || nombre === mostrarAsignado(fTecnico));
+            if(!matchAsignado && !matchRealizado) return false;
+        }
         if(fAnio !== "todos"){
             let anioT = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha ? t.fecha.slice(0,4) : "");
             if(anioT !== fAnio) return false;
@@ -4350,7 +4358,7 @@ function renderTareas(){
             if(mesT !== fMes) return false;
         }
         if(fBuscar){
-            let haystack = (t.desc + " " + t.asignado + " " + (t.notas||"")).toLowerCase();
+            let haystack = (t.desc + " " + t.asignado + " " + (t.realizadoPor||"") + " " + (t.notas||"")).toLowerCase();
             if(!haystack.includes(fBuscar)) return false;
         }
         return true;
@@ -4390,7 +4398,7 @@ function renderTareas(){
                 <option value="__turno_MANANA__" ${t.asignado==="__turno_MANANA__"?"selected":""}>☀️ Turno mañana</option>
                 <option value="__todos__" ${t.asignado==="__todos__"?"selected":""}>👥 Todos</option>
                 ${TECNICOS_LIST.map(n=>`<option value="${n}" ${t.asignado===n?'selected':''}>${n}</option>`).join("")}
-            </select>` : `<span style="font-size:12px;color:var(--muted);">${mostrarAsignado(t.asignado)}</span>`;
+            </select>` : `<span style="font-size:12px;color:var(--muted);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>`;
 
         if(t.estado === "pendiente"){
             acciones = `<div class="tarea-actions">
@@ -8479,7 +8487,7 @@ function _renderTareasConTurno(){
             if(mesT !== fMes) return false;
         }
         if(fBuscar){
-            let haystack = (t.desc + " " + t.asignado + " " + (t.notas||"")).toLowerCase();
+            let haystack = (t.desc + " " + t.asignado + " " + (t.realizadoPor||"") + " " + (t.notas||"")).toLowerCase();
             if(!haystack.includes(fBuscar)) return false;
         }
         return true;
