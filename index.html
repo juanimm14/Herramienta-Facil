@@ -1597,12 +1597,25 @@ body {
                 <!-- DESEMPEÑO Y CALIFICACIONES — Solo Admin -->
                 <div class="grid2" style="margin-top:16px;display:none;" id="boxDesempeno">
                     <div class="card-box">
-                        <div class="card-box-title">📊 Correctivos por Técnico</div>
+                        <div class="card-box-title">Desempeño por Técnico</div>
                         <div id="desempeno"></div>
                     </div>
+                    <div class="card-box" id="cardActividadExtra" style="display:none;"></div>
+                </div>
+
+                <!-- HORAS Y PREVENTIVOS — Solo Admin -->
+                <div class="grid3" style="margin-top:16px;display:none;" id="boxHorasPreventivos">
                     <div class="card-box">
-                        <div class="card-box-title">✅ Tareas Realizadas por Técnico</div>
-                        <div id="desempenoTareas"></div>
+                        <div class="card-box-title">⏱ Horas Trabajadas por Técnico</div>
+                        <div id="dashHorasTecnico"></div>
+                    </div>
+                    <div class="card-box">
+                        <div class="card-box-title">📈 Promedio por Tarea</div>
+                        <div id="dashPromedioPorTarea"></div>
+                    </div>
+                    <div class="card-box">
+                        <div class="card-box-title">🔧 Preventivos por Técnico</div>
+                        <div id="dashPreventivosTecnico"></div>
                     </div>
                 </div>
 
@@ -3769,6 +3782,7 @@ function renderDashboard(){
     // Desempeño (solo Admin)
     if(usuarioActual?.rol === "Admin"){
         document.getElementById("boxDesempeno").style.display = "grid";
+        document.getElementById("boxHorasPreventivos").style.display = "grid";
         document.getElementById("boxCalificaciones").style.display = "block";
         let tecnicos = getTecnicos();
         let maxVal = 1;
@@ -3786,32 +3800,83 @@ function renderDashboard(){
             </div>
         `).join("") : '<div class="empty-state"><div class="empty-icon">📊</div><p>Sin datos</p></div>';
 
-        // Tareas realizadas por técnico (considera realizadoPor con múltiples técnicos)
-        let tareasRealizadas = tareas.filter(t => t.estado === "realizado");
-        let conteoTareas = {};
-        tecnicos.forEach(t => conteoTareas[t] = 0);
+        // ── HORAS TRABAJADAS Y PROMEDIO POR TÉCNICO ──
+        let tareasRealizadas = tareas.filter(t => t.estado === "realizado" && t.iniciadoEn && t.finalizadoEn);
+        // Acumular minutos y cantidad por técnico (considera realizadoPor con múltiples)
+        let horasPorTec = {}, cantPorTec = {};
+        tecnicos.forEach(t => { horasPorTec[t] = 0; cantPorTec[t] = 0; });
         tareasRealizadas.forEach(t => {
-            // Si tiene realizadoPor, usarlo (puede tener varios técnicos separados por ", ")
+            let mins = Math.round((t.finalizadoEn - t.iniciadoEn) / 60000);
+            if(mins <= 0) return;
             let tecs = t.realizadoPor
                 ? t.realizadoPor.split(", ").map(s => s.trim())
                 : (t.asignado ? [t.asignado] : []);
             tecs.forEach(nombre => {
-                if(conteoTareas.hasOwnProperty(nombre)) conteoTareas[nombre]++;
+                if(horasPorTec.hasOwnProperty(nombre)){
+                    horasPorTec[nombre] += mins;
+                    cantPorTec[nombre]++;
+                }
             });
         });
-        let tareasCounts = tecnicos
-            .map(t => ({ t, n: conteoTareas[t] || 0 }))
-            .filter(x => x.n > 0)
-            .sort((a, b) => b.n - a.n);
-        let maxTareas = tareasCounts.length > 0 ? tareasCounts[0].n : 1;
 
-        document.getElementById("desempenoTareas").innerHTML = tareasCounts.length ? tareasCounts.map(x => `
-            <div class="perf-bar-row">
-                <div class="perf-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${x.t}">${x.t.split(" ")[0]}</div>
-                <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.n/maxTareas*100)}%;background:var(--accent2);"></div></div>
-                <div class="perf-count" style="color:var(--accent2);">${x.n}</div>
-            </div>
-        `).join("") : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin tareas realizadas</p></div>';
+        function fmtMins(m){
+            if(m < 60) return `${m}m`;
+            let h = Math.floor(m/60), rem = m%60;
+            return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+        }
+
+        let horasData = tecnicos
+            .map(t => ({ t, mins: horasPorTec[t]||0, cant: cantPorTec[t]||0 }))
+            .filter(x => x.mins > 0)
+            .sort((a,b) => b.mins - a.mins);
+        let maxMins = horasData.length ? horasData[0].mins : 1;
+
+        document.getElementById("dashHorasTecnico").innerHTML = horasData.length
+            ? horasData.map(x => `
+                <div class="perf-bar-row">
+                    <div class="perf-name" title="${x.t}">${x.t.split(" ")[0]}</div>
+                    <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.mins/maxMins*100)}%;background:#ffc947;"></div></div>
+                    <div class="perf-count" style="color:#ffc947;width:54px;font-size:11px;">${fmtMins(x.mins)}</div>
+                </div>`).join("")
+            : '<div class="empty-state"><div class="empty-icon">⏱</div><p>Sin datos de duración</p></div>';
+
+        // Promedio por tarea
+        let promData = tecnicos
+            .map(t => ({ t, avg: cantPorTec[t] > 0 ? Math.round(horasPorTec[t] / cantPorTec[t]) : 0, cant: cantPorTec[t]||0 }))
+            .filter(x => x.cant > 0)
+            .sort((a,b) => b.avg - a.avg);
+        let maxAvg = promData.length ? promData[0].avg : 1;
+
+        document.getElementById("dashPromedioPorTarea").innerHTML = promData.length
+            ? promData.map(x => `
+                <div class="perf-bar-row">
+                    <div class="perf-name" title="${x.t}">${x.t.split(" ")[0]}</div>
+                    <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.avg/maxAvg*100)}%;background:#4f8eff;"></div></div>
+                    <div class="perf-count" style="color:#4f8eff;width:54px;font-size:11px;">${fmtMins(x.avg)}</div>
+                </div>`).join("")
+            : '<div class="empty-state"><div class="empty-icon">📈</div><p>Sin datos</p></div>';
+
+        // ── PREVENTIVOS POR TÉCNICO ──
+        let prevPorTec = {};
+        tecnicos.forEach(t => prevPorTec[t] = 0);
+        preventivos.forEach(p => {
+            let tec = p.tecnico;
+            if(tec && prevPorTec.hasOwnProperty(tec)) prevPorTec[tec]++;
+        });
+        let prevData = tecnicos
+            .map(t => ({ t, n: prevPorTec[t]||0 }))
+            .filter(x => x.n > 0)
+            .sort((a,b) => b.n - a.n);
+        let maxPrev = prevData.length ? prevData[0].n : 1;
+
+        document.getElementById("dashPreventivosTecnico").innerHTML = prevData.length
+            ? prevData.map(x => `
+                <div class="perf-bar-row">
+                    <div class="perf-name" title="${x.t}">${x.t.split(" ")[0]}</div>
+                    <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.n/maxPrev*100)}%;background:#00d4a8;"></div></div>
+                    <div class="perf-count" style="color:#00d4a8;">${x.n}</div>
+                </div>`).join("")
+            : '<div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos</p></div>';
 
         // Ratings correctivos
         renderRatingsDash("dashRatingCorrectivos", correctivos, "correctivo");
