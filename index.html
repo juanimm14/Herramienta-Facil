@@ -6821,10 +6821,14 @@ function renderTareasRealizadas(){
 
     let lista = tareas.filter(t => {
         if(t.estado !== "realizado") return false;
+        // Armar lista de todos los técnicos que participaron en la tarea
+        let tecsTarea = [t.asignado, ...(t.realizadoPor ? t.realizadoPor.split(", ") : [])].filter(Boolean);
         if(fTec === "__turno_MANANA__"){
             let turnoLista = getTecnicosTurno();
-            if(!turnoLista.includes(t.asignado)) return false;
-        } else if(fTec !== "todos" && t.asignado !== fTec) return false;
+            if(!tecsTarea.some(tc => turnoLista.includes(tc))) return false;
+        } else if(fTec !== "todos"){
+            if(!tecsTarea.includes(fTec)) return false;
+        }
         if(fAnio !== "todos"){
             let ay = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha||"").slice(0,4);
             if(ay !== fAnio) return false;
@@ -6834,7 +6838,7 @@ function renderTareasRealizadas(){
             if(my !== fMes) return false;
         }
         if(fBus){
-            let h = (t.desc+" "+t.asignado+" "+(t.notas||"")).toLowerCase();
+            let h = (t.desc+" "+t.asignado+" "+(t.realizadoPor||"")+" "+(t.notas||"")).toLowerCase();
             if(!h.includes(fBus)) return false;
         }
         return true;
@@ -6866,7 +6870,7 @@ function renderTareasRealizadas(){
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;">
-                <span style="font-size:12px;color:var(--accent2);">👤 ${mostrarAsignado(t.asignado)}</span>
+                <span style="font-size:12px;color:var(--accent2);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>
                 ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
                 ${comentarios.length > 0 ? `<span style="font-size:11px;color:var(--muted);">💬 ${comentarios.length} comentario${comentarios.length>1?"s":""}</span>` : ""}
             </div>
@@ -8342,9 +8346,13 @@ function _renderTareasConTurno(){
     let fBuscar = (document.getElementById("filtroTareasBuscar")?.value || "").toLowerCase().trim();
 
     function cumpleFiltro(t){
+        // Armar lista de todos los técnicos que participaron
+        let tecsTarea = [t.asignado, ...(t.realizadoPor ? t.realizadoPor.split(", ") : [])].filter(Boolean);
         if(esTurno){
-            if(!tecsTurno.includes(t.asignado)) return false;
-        } else if(fTecnicoRaw !== "todos" && t.asignado !== fTecnicoRaw) return false;
+            if(!tecsTarea.some(tc => tecsTurno.includes(tc))) return false;
+        } else if(fTecnicoRaw !== "todos"){
+            if(!tecsTarea.includes(fTecnicoRaw)) return false;
+        }
         if(fAnio !== "todos"){
             let anioT = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha ? t.fecha.slice(0,4) : "");
             if(anioT !== fAnio) return false;
@@ -8354,7 +8362,7 @@ function _renderTareasConTurno(){
             if(mesT !== fMes) return false;
         }
         if(fBuscar){
-            let haystack = (t.desc + " " + t.asignado + " " + (t.notas||"")).toLowerCase();
+            let haystack = (t.desc + " " + t.asignado + " " + (t.realizadoPor||"") + " " + (t.notas||"")).toLowerCase();
             if(!haystack.includes(fBuscar)) return false;
         }
         return true;
