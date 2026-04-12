@@ -2794,6 +2794,7 @@ body {
             <select id="nuevoUsuarioRol" class="form-select">
                 <option value="Tecnico">Técnico</option>
                 <option value="Admin">Admin</option>
+                <option value="Visita">Visita (solo lectura)</option>
             </select>
         </div>
         <div class="form-group">
@@ -3282,6 +3283,15 @@ async function logout(){
     location.reload();
 }
 
+// ── Helper: verificar si es Visita y bloquear acción ──
+function esVisita(mostrarMsg = true){
+    if(usuarioActual?.rol === "Visita"){
+        if(mostrarMsg) toast.warning("Acceso restringido", "El rol Visita es solo de lectura.");
+        return true;
+    }
+    return false;
+}
+
 function iniciarApp(){
     document.getElementById("loginDiv").style.display = "none";
     document.getElementById("app").style.display = "block";
@@ -3289,6 +3299,7 @@ function iniciarApp(){
     const rolEl = document.getElementById("infoRol");
     rolEl.textContent = usuarioActual.rol;
     if(usuarioActual.rol === "Tecnico") rolEl.classList.add("tecnico");
+    if(usuarioActual.rol === "Visita") rolEl.style.cssText += ";background:var(--yellow);color:var(--bg);";
 
     // La visibilidad de Admin vs Usuario se maneja en renderDashboard()
 
@@ -3301,6 +3312,25 @@ function iniciarApp(){
     // Menús exclusivos de Admin
     let navGU = document.getElementById("nav-gestionUsuarios");
     if(navGU) navGU.style.display = usuarioActual.rol === "Admin" ? "flex" : "none";
+
+    // Ocultar TODOS los botones de acción para Visita
+    if(usuarioActual.rol === "Visita"){
+        // Ocultar action-bars (botones Nueva Incidencia, Nueva Tarea, etc.)
+        document.querySelectorAll(".action-bar").forEach(bar => bar.style.display = "none");
+        // Ocultar cards de preventivos (son clicables para cargar)
+        document.querySelectorAll(".prev-card").forEach(card => {
+            card.style.pointerEvents = "none";
+            card.style.opacity = "0.5";
+        });
+        // Agregar banner de solo lectura en topbar
+        let chip = document.querySelector(".user-chip");
+        if(chip){
+            let badge = document.createElement("span");
+            badge.style.cssText = "font-size:10px;background:rgba(255,201,71,.15);border:1px solid var(--yellow);color:var(--yellow);padding:2px 8px;border-radius:8px;font-weight:700;letter-spacing:.5px;";
+            badge.textContent = "SOLO LECTURA";
+            chip.appendChild(badge);
+        }
+    }
 
     // Botón y sección de carteles solo para Admin
     mostrarBotonCartelesAdmin();
@@ -3823,6 +3853,7 @@ function toggleResolucion(){
 }
 
 function abrirModalCorrectivo(){
+    if(esVisita()) return;
     indiceEditando = null;
     document.getElementById("tituloModalCorrectivo").textContent = "Nueva Incidencia";
     document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
@@ -3845,6 +3876,7 @@ function cerrarModalCorrectivo(){
 }
 
 function guardarCorrectivo(){
+    if(esVisita()) return;
     let estadoVal = document.getElementById("estadoIncidencia").value;
     if(estadoVal === "Pendiente") estadoVal = "En Curso";
     let rating = getRating("starCorrectivo");
@@ -3893,6 +3925,7 @@ function editarIncidencia(index){
 }
 
 function eliminarIncidencia(index){
+    if(esVisita()) return;
     if(!confirm("¿Eliminar esta incidencia? Esta acción no se puede deshacer.")) return;
     incidencias.splice(index, 1);
     localStorage.setItem("incidencias", JSON.stringify(incidencias));
@@ -3990,6 +4023,7 @@ function cargarMeses(){
 //  TAREAS
 // ──────────────────────────────────────────────
 function abrirModalTarea(){
+    if(esVisita()) return;
     tareaEditando = null;
     document.getElementById("tituloModalTarea").textContent = "Nueva Tarea";
     document.getElementById("tareaDesc").value = "";
@@ -4005,6 +4039,7 @@ function cerrarModalTarea(){
 }
 
 function guardarTarea(){
+    if(esVisita()) return;
     let desc = document.getElementById("tareaDesc").value.trim();
     if(!desc){ alert("Ingresá la descripción de la tarea"); return; }
     let estado = document.getElementById("tareaEstado").value;
@@ -4140,6 +4175,7 @@ function mostrarAlertas(){
     }
 }
 function eliminarTarea(id){
+    if(esVisita()) return;
     if(!confirm("¿Eliminar esta tarea?")) return;
     tareas = tareas.filter(t => t.id !== id);
     localStorage.setItem("tareas", JSON.stringify(tareas));
@@ -4364,6 +4400,7 @@ function reasignarTarea(id, nuevoTecnico){
 //  PREVENTIVOS — ISLAS
 // ──────────────────────────────────────────────
 function abrirModalLIMPIEZADEISLAS(){
+    if(esVisita()) return;
     document.getElementById("modalLIMPIEZADEISLAS").classList.add("open");
     document.getElementById("fechaPrev").value = new Date().toISOString().split("T")[0];
     // Pre-seleccionar técnico logueado
@@ -4820,6 +4857,7 @@ function getEquiposGen(tipo){
 }
 
 function abrirModalGenerico(tipo){
+    if(esVisita()) return;
     tipoGenActual = tipo;
     let cfg = PREV_CONFIG[tipo];
     document.getElementById("tituloModalGenerico").textContent = cfg.titulo;
@@ -4879,6 +4917,7 @@ function renderCheckEquiposGen(tipo){
 }
 
 function guardarGenerico(){
+    if(esVisita()) return;
     let cfg = PREV_CONFIG[tipoGenActual];
     let checks = document.querySelectorAll("#checkEquiposGen input:checked");
     let seleccionados = [...checks].map(c => c.value);
@@ -5114,6 +5153,7 @@ let evaIncidencias = JSON.parse(localStorage.getItem("evaIncidencias")) || [];
 let evaDiarios = JSON.parse(localStorage.getItem("evaDiarios")) || [];
 
 function abrirModalEvaNuevaIncidencia(){
+    if(esVisita()) return;
     document.getElementById("evaFecha").value = new Date().toISOString().split("T")[0];
     // Pre-seleccionar técnico logueado
     let selTecEva = document.getElementById("evaTecnico");
@@ -5144,6 +5184,7 @@ function actualizarDetallesEva(){
 }
 
 function guardarEvaIncidencia(){
+    if(esVisita()) return;
     let checks = document.querySelectorAll(".evaKioscoCheck:checked");
     let seleccionados = [...checks].map(c => c.value);
     if(seleccionados.length === 0){ alert("Seleccioná al menos un kiosco"); return; }
@@ -5171,6 +5212,7 @@ function guardarEvaIncidencia(){
 }
 
 function abrirModalEvaEstadoDiario(){
+    if(esVisita()) return;
     document.getElementById("evaDiariaFecha").value = new Date().toISOString().split("T")[0];
     let cont = document.getElementById("evaDiariaKioscos");
     cont.innerHTML = ["EVA 1","EVA 2","EVA 3","EVA 4"].map((kiosco,i) => {
@@ -5201,6 +5243,7 @@ function cerrarModalEvaEstadoDiario(){
 }
 
 function guardarEvaDiaria(){
+    if(esVisita()) return;
     let fecha = document.getElementById("evaDiariaFecha").value;
     let tecnico = document.getElementById("evaDiariaTecnico").value;
     let kioscos = {};
@@ -5338,6 +5381,7 @@ function abrirDetalleEvaIncidencia(id){
 }
 
 function eliminarEvaIncidencia(id){
+    if(esVisita()) return;
     if(!confirm("¿Eliminar esta incidencia EVA?")) return;
     evaIncidencias = evaIncidencias.filter(e => String(e.id) !== String(id));
     localStorage.setItem("evaIncidencias", JSON.stringify(evaIncidencias));
@@ -5478,6 +5522,7 @@ let contadorasData = JSON.parse(localStorage.getItem("contadorasData")) || [];
 let fdsData = JSON.parse(localStorage.getItem("fdsData")) || [];
 
 function abrirModalContadoraNuevaIncidencia(){
+    if(esVisita()) return;
     document.getElementById("cntFecha").value = new Date().toISOString().split("T")[0];
     document.getElementById("cntEquipo").value = "";
     document.getElementById("cntNota").value = "";
@@ -5490,6 +5535,7 @@ function cerrarModalContadoraNuevaIncidencia(){
     document.getElementById("modalContadoraNuevaIncidencia").classList.remove("open");
 }
 function guardarContadoraIncidencia(){
+    if(esVisita()) return;
     let equipo = document.getElementById("cntEquipo").value.trim();
     if(!equipo){ alert("Ingresá el equipo"); return; }
     let obj = {
@@ -5510,6 +5556,7 @@ function guardarContadoraIncidencia(){
 }
 
 function abrirModalContadoraPreventivo(){
+    if(esVisita()) return;
     document.getElementById("cntPrevFecha").value = new Date().toISOString().split("T")[0];
     document.getElementById("cntPrevEquipos").value = "";
     document.getElementById("cntPrevNota").value = "";
@@ -5521,6 +5568,7 @@ function cerrarModalContadoraPreventivo(){
     document.getElementById("modalContadoraPreventivo").classList.remove("open");
 }
 function guardarContadoraPreventivo(){
+    if(esVisita()) return;
     let equipos = document.getElementById("cntPrevEquipos").value.trim();
     if(!equipos){ alert("Ingresá los equipos"); return; }
     let obj = {
@@ -5571,6 +5619,7 @@ function renderContadoras(){
 }
 
 function eliminarContadoraItem(id){
+    if(esVisita()) return;
     if(!confirm("¿Eliminar?")) return;
     contadorasData = contadorasData.filter(c => String(c.id) !== String(id));
     localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
@@ -5583,6 +5632,7 @@ function eliminarContadoraItem(id){
 let fdsEditando = null;
 
 function abrirModalFds(){
+    if(esVisita()) return;
     fdsEditando = null;
     document.getElementById("tituloModalFds").textContent = "Registrar Fuera de Servicio";
     document.getElementById("fdsNAdmin").value = "";
@@ -5603,6 +5653,7 @@ function cerrarModalFds(){
 }
 
 function guardarFds(){
+    if(esVisita()) return;
     let nAdmin = document.getElementById("fdsNAdmin").value.trim();
     let isla = document.getElementById("fdsIsla").value.trim();
     let fabricante = document.getElementById("fdsFabricante").value.trim();
@@ -5697,6 +5748,7 @@ function editarFds(idx){
 }
 
 function eliminarFds(idx){
+    if(esVisita()) return;
     if(!confirm("¿Eliminar este FDS?")) return;
     fdsData.splice(idx, 1);
     localStorage.setItem("fdsData", JSON.stringify(fdsData));
@@ -5858,6 +5910,7 @@ function mostrarBotonCartelesAdmin(){
 }
 
 function abrirModalNuevoCartel(){
+    if(esVisita()) return;
     cartelEditandoId = null;
     document.getElementById("tituloModalCartel").textContent = "📌 Nuevo Cartel";
     document.getElementById("cartelTitulo").value = "";
@@ -5935,6 +5988,7 @@ function editarCartel(id){
 }
 
 function eliminarCartel(id){
+    if(esVisita()) return;
     if(!confirm("¿Eliminar este cartel? Esta acción no se puede deshacer.")) return;
     cartelesData = cartelesData.filter(c => c.id !== id);
     localStorage.setItem("cartelesData", JSON.stringify(cartelesData));
@@ -6036,6 +6090,7 @@ function renderCartelesDashboard(){
 //  CARTEL RÁPIDO — LIMPIAR BARAJADORA
 // ──────────────────────────────────────────────
 function crearCartelBarajadora(){
+    if(esVisita()) return;
     let hoy = new Date().toISOString().split("T")[0];
     let existe = cartelesData.find(c => c.titulo === "🃏 Limpiar Barajadora" && c.activo);
     if(existe){
@@ -6235,6 +6290,7 @@ function ppToggleMes(tareaIdx, mesIdx){
 }
 
 function ppAgregarTarea(){
+    if(esVisita()) return;
     let input = document.getElementById("ppNuevaTareaInput");
     let nombre = input.value.trim();
     if(!nombre){ alert("Escribí el nombre de la tarea"); return; }
@@ -6509,6 +6565,7 @@ function ppRenderMes(mesIdx){
 }
 
 function ppGenerarMes(){
+    if(esVisita()) return;
     if(ppTabActivo === "todos") return;
     let mesKey = `${new Date().getFullYear()}-${ppTabActivo}`;
     delete ppPreventivos[mesKey];
@@ -6536,6 +6593,7 @@ function ppCambiarEstado(mesKey, idx, estado){
 }
 
 function ppEnviarATareas(){
+    if(esVisita()) return;
     if(ppTabActivo === "todos") return;
     let mesKey = `${new Date().getFullYear()}-${ppTabActivo}`;
     let prevs = ppPreventivos[mesKey] || [];
@@ -7984,6 +8042,8 @@ function renderGestionUsuarios(){
     tbody.innerHTML = db.map((u, idx) => {
         let rolBadge = u.rol === "Admin"
             ? `<span class="pill" style="background:rgba(0,212,168,.15);color:var(--accent);">Admin</span>`
+            : u.rol === "Visita"
+            ? `<span class="pill" style="background:rgba(255,201,71,.15);color:var(--yellow);">Visita</span>`
             : `<span class="pill" style="background:rgba(79,142,255,.15);color:var(--accent2);">Técnico</span>`;
         let passDisplay = u.password
             ? `<span style="font-size:12px;color:var(--muted);">••••••</span>`
