@@ -3223,6 +3223,14 @@ function getUserRecord(nombre){
     return getUsersDB().find(u => u.nombre === nombre);
 }
 
+function mostrarAsignado(val){
+    if(!val || val === "__turno_MANANA__") return "☀️ Turno mañana";
+    if(val === "__todos__") return "👥 Todos";
+    return val;
+}
+
+
+
 // ──────────────────────────────────────────────
 //  AUTH — Firebase Authentication
 // ──────────────────────────────────────────────
@@ -3644,7 +3652,7 @@ function renderDashboard(){
                 <div class="item-dot ${t.estado==="realizado"?"green":t.estado==="en-curso"?"blue":"yellow"}"></div>
                 <div class="item-main">
                     <div>${t.desc}</div>
-                    <div class="item-meta">${t.asignado} · ${t.fecha||""}</div>
+                    <div class="item-meta">${mostrarAsignado(t.asignado)} · ${t.fecha||""}</div>
                 </div>
                 <span class="tarea-estado ${t.estado}">${t.estado==="en-curso"?"En Curso":t.estado==="realizado"?"Realizado":"Pendiente"}</span>
             </div>
@@ -4211,7 +4219,7 @@ function renderTareas(){
                 style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:11px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .2s;"
                 title="Reasignar técnico">
                 ${TECNICOS_LIST.map(n=>`<option value="${n}" ${t.asignado===n?'selected':''}>${n}</option>`).join("")}
-            </select>` : `<span style="font-size:12px;color:var(--muted);">${t.asignado}</span>`;
+            </select>` : `<span style="font-size:12px;color:var(--muted);">${mostrarAsignado(t.asignado)}</span>`;
 
         if(t.estado === "pendiente"){
             acciones = `<div class="tarea-actions">
@@ -5351,7 +5359,7 @@ function abrirDetalleTarea(id){
             <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
                 <span class="tarea-estado ${t.estado}">${estadoLabel}</span>
                 <span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span>
-                <span style="font-size:12px;color:var(--muted);">👤 ${t.asignado}</span>
+                <span style="font-size:12px;color:var(--muted);">👤 ${mostrarAsignado(t.asignado)}</span>
                 ${t.fecha ? `<span style="font-size:12px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
             </div>
             ${t.notas ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><b style="color:var(--white);">Notas:</b> ${t.notas}</div>` : ""}
@@ -6789,7 +6797,7 @@ function renderTareasRealizadas(){
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;">
-                <span style="font-size:12px;color:var(--accent2);">👤 ${t.asignado}</span>
+                <span style="font-size:12px;color:var(--accent2);">👤 ${mostrarAsignado(t.asignado)}</span>
                 ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
                 ${comentarios.length > 0 ? `<span style="font-size:11px;color:var(--muted);">💬 ${comentarios.length} comentario${comentarios.length>1?"s":""}</span>` : ""}
             </div>
@@ -7141,7 +7149,7 @@ avanzarTarea = function(id){
     if(t && estadoAntes !== t.estado){
         auditRegistrar("tarea","▶",
             `Tarea "${t.desc}" → ${t.estado==="en-curso"?"En Curso":"Realizado"}`,
-            `Asignada a: ${t.asignado}`);
+            `Asignada a: ${mostrarAsignado(t.asignado)}`);
     }
 };
 
@@ -7154,7 +7162,7 @@ volverTarea = function(id){
     if(t && estadoAntes !== t.estado){
         auditRegistrar("tarea","↩",
             `Tarea "${t.desc}" volvió a ${t.estado==="pendiente"?"Pendiente":"En Curso"}`,
-            `Asignada a: ${t.asignado}`);
+            `Asignada a: ${mostrarAsignado(t.asignado)}`);
     }
 };
 
