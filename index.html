@@ -5375,7 +5375,7 @@ function abrirDetalleTarea(id){
         if(t.estado === "pendiente"){
             accionesEl.innerHTML += `<button class="btn-task-action" onclick="avanzarTarea(${t.id});abrirDetalleTarea(${t.id})">▶ Tomar tarea</button>`;
         } else if(t.estado === "en-curso"){
-            accionesEl.innerHTML += `<button class="btn-task-action close" onclick="avanzarTarea(${t.id});cerrarModalTareaDetalle();renderTareas();">✔ Marcar realizada</button>`;
+            accionesEl.innerHTML += `<button class="btn-task-action close" onclick="abrirQuienRealizo(${t.id})">✔ Marcar realizada</button>`;
             accionesEl.innerHTML += `<button class="btn-task-action" onclick="volverTarea(${t.id});abrirDetalleTarea(${t.id})">⏸ Pausar</button>`;
         } else if(t.estado === "realizado"){
             accionesEl.innerHTML += `<button class="btn-task-action" style="border-color:var(--yellow);color:var(--yellow);" onclick="volverTarea(${t.id});abrirDetalleTarea(${t.id})">↩ Reabrir tarea</button>`;
@@ -8502,6 +8502,103 @@ avanzarTarea = function(id) {
         _avanzarConCierre_orig(id);
     }
 };
+</script>
+
+
+<!-- ═══ MODAL QUIÉN REALIZÓ (multi-técnico) ═══ -->
+<div id="modalQuienRealizoMulti" class="modal">
+    <div class="modal-box" style="max-width:370px;">
+        <div class="modal-title">👥 ¿Quién realizó la tarea?</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Elegí hasta 3 técnicos que la realizaron.</p>
+        <div class="form-group">
+            <label class="form-label">Técnico 1</label>
+            <select id="qrTec1" class="form-select"></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico 2 <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
+            <select id="qrTec2" class="form-select"></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico 3 <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
+            <select id="qrTec3" class="form-select"></select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="confirmarQuienRealizoMulti()">✔ Confirmar y cerrar tarea</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalQuienRealizoMulti').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let _qrTareaId = null;
+
+function abrirQuienRealizo(id){
+    _qrTareaId = id;
+    let tecnicos = getTecnicos();
+    let opciones = '<option value="">— Ninguno —</option>' +
+        '<option value="__turno_MANANA__">☀️ Turno mañana</option>' +
+        '<option value="__todos__">👥 Todos</option>' +
+        tecnicos.map(n => `<option value="${n}">${n}</option>`).join("");
+
+    ["qrTec1","qrTec2","qrTec3"].forEach((sid, i) => {
+        let el = document.getElementById(sid);
+        el.innerHTML = opciones;
+        el.value = "";
+    });
+
+    // Pre-seleccionar técnico asignado en el primer select
+    let t = tareas.find(x => x.id === id);
+    if(t && t.asignado){
+        let s1 = document.getElementById("qrTec1");
+        let match = [...s1.options].find(o => o.value === t.asignado);
+        if(match) s1.value = t.asignado;
+    }
+
+    document.getElementById("modalQuienRealizoMulti").classList.add("open");
+}
+
+function confirmarQuienRealizoMulti(){
+    if(_qrTareaId === null) return;
+    let id = _qrTareaId;
+
+    let vals = ["qrTec1","qrTec2","qrTec3"]
+        .map(sid => document.getElementById(sid).value)
+        .filter(v => v && v !== "");
+
+    if(vals.length === 0){
+        toast.warning("Seleccioná al menos un técnico", "");
+        return;
+    }
+
+    // Eliminar duplicados
+    vals = [...new Set(vals)];
+
+    let t = tareas.find(x => x.id === id);
+    if(!t) return;
+
+    // Armar texto legible
+    let nombres = vals.map(v => mostrarAsignado(v));
+    t.realizadoPor = nombres.join(", ");
+    t.asignado = vals[0]; // el primero como asignado principal
+
+    // Cerrar la tarea
+    t.estado = "realizado";
+    t.finalizadoEn = Date.now();
+    if(!t.iniciadoEn) t.iniciadoEn = t.finalizadoEn;
+    t.done = true;
+
+    ppRegistrarEnHistorial?.(t);
+    localStorage.setItem("tareas", JSON.stringify(tareas));
+    auditRegistrar?.("tarea","✔", `Tarea "${t.desc}" cerrada`, `Realizada por: ${t.realizadoPor}`);
+
+    document.getElementById("modalQuienRealizoMulti").classList.remove("open");
+    cerrarModalTareaDetalle();
+    _qrTareaId = null;
+
+    renderTareas?.();
+    renderDashboard?.();
+    toast.success("Tarea cerrada ✅", `Realizada por: ${t.realizadoPor}`);
+}
 </script>
 
 </body>
