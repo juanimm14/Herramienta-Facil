@@ -6957,7 +6957,13 @@ function renderTareasRealizadas(){
         if(fTec === "__turno_MANANA__"){
             let turnoLista = getTecnicosTurno();
             if(!turnoLista.includes(t.asignado)) return false;
-        } else if(fTec !== "todos" && t.asignado !== fTec) return false;
+        } else if(fTec !== "todos"){
+            let matchAsignado = t.asignado === fTec;
+            let matchRealizado = t.realizadoPor
+                ? t.realizadoPor.split(", ").map(s=>s.trim()).some(n => n === fTec || n === mostrarAsignado(fTec))
+                : false;
+            if(!matchAsignado && !matchRealizado) return false;
+        }
         if(fAnio !== "todos"){
             let ay = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha||"").slice(0,4);
             if(ay !== fAnio) return false;
@@ -6967,7 +6973,7 @@ function renderTareasRealizadas(){
             if(my !== fMes) return false;
         }
         if(fBus){
-            let h = (t.desc+" "+t.asignado+" "+(t.notas||"")).toLowerCase();
+            let h = (t.desc+" "+t.asignado+" "+(t.realizadoPor||"")+" "+(t.notas||"")).toLowerCase();
             if(!h.includes(fBus)) return false;
         }
         return true;
@@ -6999,7 +7005,7 @@ function renderTareasRealizadas(){
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;">
-                <span style="font-size:12px;color:var(--accent2);">👤 ${mostrarAsignado(t.asignado)}</span>
+                <span style="font-size:12px;color:var(--accent2);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>
                 ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
                 ${comentarios.length > 0 ? `<span style="font-size:11px;color:var(--muted);">💬 ${comentarios.length} comentario${comentarios.length>1?"s":""}</span>` : ""}
             </div>
