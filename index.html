@@ -2801,6 +2801,14 @@ body {
             <input type="email" id="nuevoUsuarioEmail" class="form-input" placeholder="usuario@correo.com">
         </div>
         <div class="form-group">
+            <label class="form-label">Turno <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
+            <select id="nuevoUsuarioTurno" class="form-select">
+                <option value="">— Sin turno —</option>
+                <option value="MAÑANA">☀️ Mañana</option>
+                <option value="TARDE">🌙 Tarde</option>
+            </select>
+        </div>
+        <div class="form-group">
             <label class="form-label">Contraseña</label>
             <div class="input-pass-wrap">
                 <input type="password" id="nuevoUsuarioPass" class="form-input" placeholder="Dejar vacío para sin contraseña">
@@ -7995,16 +8003,21 @@ function renderGestionUsuarios(){
 }
 
 function abrirModalNuevoUsuario(){
-    document.getElementById("tituloModalUsuario").textContent = "Nuevo Usuario";
-    document.getElementById("usuarioEditandoNombre").value = "";
-    document.getElementById("nuevoUsuarioNombre").value = "";
-    document.getElementById("nuevoUsuarioRol").value = "Tecnico";
-    document.getElementById("nuevoUsuarioTurno").value = "";
-    document.getElementById("nuevoUsuarioEmail").value = "";
-    document.getElementById("nuevoUsuarioPass").value = "";
-    document.getElementById("nuevoUsuarioError").style.display = "none";
-    document.getElementById("nuevoUsuarioNombre").disabled = false;
-    document.getElementById("modalNuevoUsuario").classList.add("open");
+    try {
+        document.getElementById("tituloModalUsuario").textContent = "Nuevo Usuario";
+        document.getElementById("usuarioEditandoNombre").value = "";
+        document.getElementById("nuevoUsuarioNombre").value = "";
+        document.getElementById("nuevoUsuarioNombre").disabled = false;
+        document.getElementById("nuevoUsuarioRol").value = "Tecnico";
+        document.getElementById("nuevoUsuarioEmail").value = "";
+        document.getElementById("nuevoUsuarioPass").value = "";
+        let turnoEl = document.getElementById("nuevoUsuarioTurno"); if(turnoEl) turnoEl.value = "";
+        document.getElementById("nuevoUsuarioError").style.display = "none";
+        document.getElementById("modalNuevoUsuario").classList.add("open");
+    } catch(e) {
+        console.error("Error abriendo modal usuario:", e);
+        alert("Error al abrir el formulario: " + e.message);
+    }
 }
 
 function abrirEditarUsuario(idx){
@@ -8018,6 +8031,7 @@ function abrirEditarUsuario(idx){
     document.getElementById("nuevoUsuarioRol").value = u.rol || "Tecnico";
     document.getElementById("nuevoUsuarioEmail").value = u.email || "";
     document.getElementById("nuevoUsuarioPass").value = "";
+    let tEl = document.getElementById("nuevoUsuarioTurno"); if(tEl) tEl.value = u.turno || "";
     document.getElementById("nuevoUsuarioError").style.display = "none";
     document.getElementById("modalNuevoUsuario").classList.add("open");
 }
@@ -8035,6 +8049,7 @@ async function guardarNuevoUsuario(){
     let rol      = document.getElementById("nuevoUsuarioRol").value;
     let email    = document.getElementById("nuevoUsuarioEmail").value.trim();
     let pass     = document.getElementById("nuevoUsuarioPass").value;
+    let turno    = (document.getElementById("nuevoUsuarioTurno")?.value) || "";
 
     if(!nombre){ errEl.textContent = "El nombre es obligatorio"; errEl.style.display = "block"; return; }
 
@@ -8057,6 +8072,7 @@ async function guardarNuevoUsuario(){
         db[idx].rol    = rol;
         db[idx].email  = email;
         if(pass) db[idx].password = pass;
+        db[idx].turno = turno;
         saveUsersDB(db);
 
         // Si el nombre cambió, actualizar todas las referencias en tareas e incidencias
@@ -8110,7 +8126,7 @@ async function guardarNuevoUsuario(){
             errEl.style.display = "block";
             return;
         }
-        db.push({ nombre, rol, password: pass, email });
+        db.push({ nombre, rol, password: pass, email, turno });
         saveUsersDB(db);
 
         poblarSelectsTecnicos();
