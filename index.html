@@ -4218,6 +4218,8 @@ function renderTareas(){
             <select onchange="reasignarTarea(${t.id}, this.value)"
                 style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:11px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .2s;"
                 title="Reasignar técnico">
+                <option value="__turno_MANANA__" ${t.asignado==="__turno_MANANA__"?"selected":""}>☀️ Turno mañana</option>
+                <option value="__todos__" ${t.asignado==="__todos__"?"selected":""}>👥 Todos</option>
                 ${TECNICOS_LIST.map(n=>`<option value="${n}" ${t.asignado===n?'selected':''}>${n}</option>`).join("")}
             </select>` : `<span style="font-size:12px;color:var(--muted);">${mostrarAsignado(t.asignado)}</span>`;
 
@@ -8306,7 +8308,9 @@ function _renderTareasConTurno(){
         let reasignar = `<select onchange="reasignarTarea(${t.id}, this.value)"
             style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:11px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .2s;"
             title="Reasignar técnico">
-            ${TECNICOS_LIST.map(n=>`<option value="${n}" ${t.asignado===n?'selected':''}>${n}</option>`).join("")}
+            <option value="__turno_MANANA__" ${t.asignado==="__turno_MANANA__"?"selected":""}>☀️ Turno mañana</option>
+                <option value="__todos__" ${t.asignado==="__todos__"?"selected":""}>👥 Todos</option>
+                ${TECNICOS_LIST.map(n=>`<option value="${n}" ${t.asignado===n?'selected':''}>${n}</option>`).join("")}
         </select>`;
 
         if(t.estado === "pendiente"){
