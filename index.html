@@ -6060,15 +6060,16 @@ function crearCartelBarajadora(){
     // Intentar retomar sesión guardada
     let sesion = localStorage.getItem("usuario");
     if(sesion){
-        try {
-            usuarioActual = JSON.parse(sesion);
-            await _cargarDatosFirebase();
+        try { usuarioActual = JSON.parse(sesion); } catch(e){ usuarioActual = null; }
+        if(usuarioActual && usuarioActual.nombre){
+            // Cargar datos de Firestore — si falla, igual entramos con cache local
+            try { await _cargarDatosFirebase(); } catch(e){}
             _activarListenersTiempoReal();
             iniciarApp();
             return;
-        } catch(e){ /* sesión inválida, mostrar login */ }
+        }
     }
-    // Sin sesión — cargar datos y llenar el select de login
+    // Sin sesión — mostrar login y cargar usuarios en background
     document.getElementById("loginDiv").style.display = "flex";
     document.getElementById("app").style.display = "none";
     _cargarDatosFirebase().then(() => {
