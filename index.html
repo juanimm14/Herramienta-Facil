@@ -88,7 +88,9 @@ const _FB_KEYS = new Set([
     "ppPreventivos","ppTareas",
     "evaIncidencias","evaDiarios",
     "fdsData","contadorasData","cartelesData",
-    "auditLog","usersDB"
+    "auditLog","usersDB",
+    "equiposAVP","equiposChipper","equiposPC",
+    "equiposCilindros","equiposRA","equiposEVA"
 ]);
 
 localStorage.setItem = function(clave, valor) {
@@ -132,6 +134,26 @@ async function _cargarDatosFirebase() {
     // Marcar que la carga inicial completó — a partir de aquí getUsersDB()
     // y cargarIslas() pueden escribir defaults sin riesgo de pisar datos reales.
     window._fbCargaCompleta = true;
+
+    // Recargar TODAS las variables globales desde el cache ya poblado
+    // (las variables se inicializan al cargar el script con localStorage vacío,
+    //  aquí las actualizamos con los datos reales de Firestore)
+    try {
+        if (_cache["incidencias"])    incidencias    = _cache["incidencias"];
+        if (_cache["tareas"])         tareas         = _cache["tareas"];
+        if (_cache["ccbCronogramas"]) ccbCronogramas = _cache["ccbCronogramas"];
+        if (_cache["ccbIslasConfig"]) ccbIslasConfig = _cache["ccbIslasConfig"];
+        if (_cache["mgiCronogramas"]) mgiCronogramas = _cache["mgiCronogramas"];
+        if (_cache["mgiPlanes"])      mgiPlanes      = _cache["mgiPlanes"];
+        if (_cache["ppPreventivos"])  ppPreventivos  = _cache["ppPreventivos"];
+        if (_cache["ppTareas"])       ppTareas       = _cache["ppTareas"];
+        if (_cache["evaIncidencias"]) evaIncidencias = _cache["evaIncidencias"];
+        if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
+        if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
+        if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
+        if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
+        if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
+    } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
 
     // Recargar islasActivas desde el cache ya poblado (puede haber quedado [] antes)
     try {
