@@ -130,8 +130,18 @@ async function _cargarDatosFirebase() {
     });
 
     // Marcar que la carga inicial completó — a partir de aquí getUsersDB()
-    // puede escribir defaults sin riesgo de pisar datos reales de Firestore.
+    // y cargarIslas() pueden escribir defaults sin riesgo de pisar datos reales.
     window._fbCargaCompleta = true;
+
+    // Recargar islasActivas desde el cache ya poblado (puede haber quedado [] antes)
+    try {
+        if (_cache["islasActivas"]) {
+            islasActivas = _cache["islasActivas"];
+        } else {
+            // Firestore no tiene islas aún — generar y guardar defaults ahora sí es seguro
+            islasActivas = generarListaDefault();
+        }
+    } catch(e) { /* islasActivas aún no declarada — se inicializará con cargarIslas() */ }
 
     // (campo usuario ahora es input de texto libre, no requiere poblar)
 }
@@ -3216,15 +3226,22 @@ let tareaEditando = null;
 function generarListaDefault(){
     let arr = [];
     for(let i=100;i<=180;i++) arr.push({ id: i, slots: 8 });
-    // Guardar en Firestore la primera vez
-    _fbSet("islasActivas", arr);
+    // Solo guardar en Firestore si la carga inicial ya completó
+    // (evita pisar datos reales cuando Firebase aún no respondió)
+    if(window._fbCargaCompleta) {
+        _fbSet("islasActivas", arr);
+    }
     return arr;
 }
 
 // Migrar formato viejo (array de números) al nuevo (array de objetos)
 function cargarIslas(){
     let raw = localStorage.getItem("islasActivas");
-    if(!raw) return generarListaDefault();
+    if(!raw) {
+        // Si Firebase aún no cargó, devolver array vacío temporal sin escribir nada
+        if(!window._fbCargaCompleta) return [];
+        return generarListaDefault();
+    }
     let parsed = JSON.parse(raw);
     if(parsed.length > 0 && typeof parsed[0] === "number"){
         // Migrar
