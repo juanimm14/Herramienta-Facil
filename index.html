@@ -136,8 +136,6 @@ async function _cargarDatosFirebase() {
     window._fbCargaCompleta = true;
 
     // Recargar TODAS las variables globales desde el cache ya poblado
-    // (las variables se inicializan al cargar el script con localStorage vacío,
-    //  aquí las actualizamos con los datos reales de Firestore)
     try {
         if (_cache["incidencias"])    incidencias    = _cache["incidencias"];
         if (_cache["tareas"])         tareas         = _cache["tareas"];
@@ -160,7 +158,6 @@ async function _cargarDatosFirebase() {
         if (_cache["islasActivas"]) {
             islasActivas = _cache["islasActivas"];
         } else {
-            // Firestore no tiene islas aún — generar y guardar defaults ahora sí es seguro
             islasActivas = generarListaDefault();
         }
     } catch(e) { /* islasActivas aún no declarada — se inicializará con cargarIslas() */ }
@@ -1450,17 +1447,15 @@ body {
     <div class="login-box">
         <div class="login-logo">HERRAMIENTA FÁCIL</div>
         <p class="login-sub">Sistema de Gestión de Incidencias</p>
-        <label>Seleccioná tu usuario</label>
-        <select id="usuario">
-            <option value="">Cargando...</option>
-        </select>
+        <label>Email</label>
+        <input type="text" id="loginEmail" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')login()">
         <label>Contraseña</label>
         <div class="input-pass-wrap">
-            <input type="password" id="loginPassword" placeholder="Tu contraseña (opcional)">
+            <input type="password" id="loginPassword" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')login()">
             <button class="eye-btn" type="button" onclick="togglePassVis('loginPassword',this)">👁</button>
         </div>
-        <div id="loginError" style="color:var(--red);font-size:12px;margin-top:-12px;margin-bottom:12px;display:none;">Contraseña incorrecta</div>
-        <button class="btn-login" onclick="login()">INGRESAR →</button>
+        <div id="loginError" style="color:var(--red);font-size:12px;margin-top:-12px;margin-bottom:12px;display:none;">Error al ingresar</div>
+        <button class="btn-login" id="btnLogin" onclick="login()">INGRESAR →</button>
         <p style="margin-top:14px;font-size:12px;color:var(--muted);">¿Olvidaste tu contraseña? Contactá al Admin</p>
     </div>
 </div>
@@ -3314,40 +3309,40 @@ function mostrarAsignado(val){
 //  AUTH — Firebase Authentication
 // ──────────────────────────────────────────────
 async function login(){
-    let user = (document.getElementById("usuario").value || "").trim();
+    let email = (document.getElementById("loginEmail").value || "").trim();
     let pass  = document.getElementById("loginPassword").value;
     let errEl = document.getElementById("loginError");
+    let btn   = document.getElementById("btnLogin");
     errEl.style.display = "none";
 
-    if(!user){ errEl.textContent = "Seleccioná tu usuario"; errEl.style.display = "block"; return; }
+    if(!email){ errEl.textContent = "Ingresá tu email"; errEl.style.display = "block"; return; }
+    if(!pass){  errEl.textContent = "Ingresá tu contraseña"; errEl.style.display = "block"; return; }
 
-    // Siempre recargar desde Firestore para tener los datos más actualizados
-    try { await _cargarDatosFirebase(); } catch(e){ /* continuar con cache local */ }
+    btn.textContent = "Ingresando...";
+    btn.disabled = true;
 
-    // Buscar usuario sin distinguir mayúsculas/minúsculas
-    let db = getUsersDB();
-    let rec = db.find(u => u.nombre.trim().toLowerCase() === user.toLowerCase());
-
-    if(!rec){
-        errEl.textContent = "Usuario no encontrado. Verificá el nombre.";
+    try {
+        // 1. Autenticar con Firebase Auth
+        await _auth.signInWithEmailAndPassword(email, pass);
+        // El listener onAuthStateChanged toma el control desde acá
+    } catch(e) {
+        btn.textContent = "INGRESAR →";
+        btn.disabled = false;
+        let msg = "Error al ingresar";
+        if(e.code === "auth/user-not-found" || e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"){
+            msg = "Email o contraseña incorrectos";
+        } else if(e.code === "auth/too-many-requests"){
+            msg = "Demasiados intentos. Intentá más tarde.";
+        } else if(e.code === "auth/invalid-email"){
+            msg = "Email inválido";
+        }
+        errEl.textContent = msg;
         errEl.style.display = "block";
-        return;
     }
-
-    // Verificar contraseña (si el usuario no tiene, cualquier valor pasa)
-    if(rec.password && rec.password !== "" && rec.password !== pass){
-        errEl.textContent = "Contraseña incorrecta";
-        errEl.style.display = "block";
-        return;
-    }
-
-    usuarioActual = { nombre: rec.nombre, rol: rec.rol };
-    localStorage.setItem("usuario", JSON.stringify(usuarioActual));
-    _activarListenersTiempoReal();
-    iniciarApp();
 }
 
 async function logout(){
+    await _auth.signOut();
     usuarioActual = null;
     localStorage.removeItem("usuario");
     location.reload();
@@ -6303,34 +6298,35 @@ function crearCartelBarajadora(){
 // ──────────────────────────────────────────────
 // Mostrar spinner de carga mientras Firebase inicializa
 // ── Inicio: cargar datos y mostrar login ──────────────────────
-(async () => {
-    // Intentar retomar sesión guardada
-    let sesion = localStorage.getItem("usuario");
-    if(sesion){
-        try { usuarioActual = JSON.parse(sesion); } catch(e){ usuarioActual = null; }
-        if(usuarioActual && usuarioActual.nombre){
-            // Cargar datos de Firestore — si falla, igual entramos con cache local
-            try { await _cargarDatosFirebase(); } catch(e){}
-            _activarListenersTiempoReal();
-            iniciarApp();
-            return;
-        }
-    }
-    // Sin sesión — mostrar login y cargar usuarios en background
-    document.getElementById("loginDiv").style.display = "flex";
-    document.getElementById("app").style.display = "none";
-    _cargarDatosFirebase().then(() => {
-        _llenarSelectLogin();
-    }).catch(()=>{ _llenarSelectLogin(); });
-})();
+// ─── Firebase Auth listener — maneja sesión automáticamente ──
+_auth.onAuthStateChanged(async (firebaseUser) => {
+    if(firebaseUser){
+        // Usuario autenticado — cargar datos y arrancar app
+        try { await _cargarDatosFirebase(); } catch(e){}
+        _activarListenersTiempoReal();
 
-function _llenarSelectLogin(){
-    let sel = document.getElementById("usuario");
-    if(!sel) return;
-    let db = getUsersDB();
-    if(!db || db.length === 0) return;
-    sel.innerHTML = db.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join("");
-}
+        // Buscar el perfil (nombre + rol) en usersDB usando el email
+        let db = getUsersDB();
+        let rec = db.find(u => (u.email || "").toLowerCase() === firebaseUser.email.toLowerCase());
+        if(rec){
+            usuarioActual = { nombre: rec.nombre, rol: rec.rol };
+        } else {
+            // Fallback: usar email como nombre si no está en usersDB
+            usuarioActual = { nombre: firebaseUser.email, rol: "Tecnico" };
+        }
+        localStorage.setItem("usuario", JSON.stringify(usuarioActual));
+
+        // Restaurar estado del botón si venía de login manual
+        let btn = document.getElementById("btnLogin");
+        if(btn){ btn.textContent = "INGRESAR →"; btn.disabled = false; }
+
+        iniciarApp();
+    } else {
+        // Sin sesión — mostrar login
+        document.getElementById("loginDiv").style.display = "flex";
+        document.getElementById("app").style.display = "none";
+    }
+});
 
 // ══════════════════════════════════════════════════════════
 //  MÓDULO: PLAN DE MANTENIMIENTO PREVENTIVO
