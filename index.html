@@ -129,6 +129,10 @@ async function _cargarDatosFirebase() {
         }
     });
 
+    // Marcar que la carga inicial completó — a partir de aquí getUsersDB()
+    // puede escribir defaults sin riesgo de pisar datos reales de Firestore.
+    window._fbCargaCompleta = true;
+
     // (campo usuario ahora es input de texto libre, no requiere poblar)
 }
 
@@ -3237,6 +3241,14 @@ let islasActivas = cargarIslas();
 function getUsersDB(){
     let raw = localStorage.getItem("usersDB");
     if(raw) return JSON.parse(raw);
+    // Si el cache de Firebase ya cargó pero no tiene usersDB, recién ahí usar defaults
+    // _fbCargaCompleta evita pisar Firestore mientras la carga inicial no terminó
+    if(!window._fbCargaCompleta) {
+        // Aún cargando desde Firestore — devolver defaults temporalmente SIN guardar
+        return CONFIG_DEFAULTS.tecnicos.map(n => ({
+            nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: "", turno: ""
+        }));
+    }
     // defaults: Juan = Admin, resto = Tecnico. Sin contraseña por defecto.
     let defaults = CONFIG_DEFAULTS.tecnicos.map(n => ({
         nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: "", turno: ""
