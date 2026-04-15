@@ -2430,9 +2430,9 @@ body {
         <input type="hidden" id="pchkConfMesKey">
         <input type="hidden" id="pchkConfTareaId">
         <div class="form-group">
-            <label class="form-label">Agregar isla (número)</label>
+            <label class="form-label" id="pchkConfInputLabel">Agregar isla (número o texto)</label>
             <div style="display:flex;gap:10px;">
-                <input type="number" id="pchkNuevaIsla" class="form-input" placeholder="Ej: 110" style="width:120px;" min="1">
+                <input type="text" id="pchkNuevaIsla" class="form-input" placeholder="Ej: 110" style="width:160px;" onkeydown="if(event.key==='Enter') pchkAgregarIsla()">
                 <button onclick="pchkAgregarIsla()"
                     style="padding:10px 18px;background:rgba(0,212,168,.15);border:1px solid var(--accent);border-radius:9px;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;"
                     onmouseover="this.style.background='rgba(0,212,168,.3)'"
@@ -8533,6 +8533,9 @@ function pchkSetData(tid, mesKey, val){
     pchkGuardarStorage();
 }
 
+// IDs que usan etiquetas de texto en lugar de números de isla
+const PCHK_TEXT_IDS = new Set([1, 2, 5]);
+
 // ── Abrir configuración Admin ──────────────────────────────
 function pchkAbrirConfigurar(mesKey, tid){
     let esAdmin = usuarioActual?.rol === "Admin";
@@ -8543,6 +8546,18 @@ function pchkAbrirConfigurar(mesKey, tid){
     document.getElementById("pchkConfMesKey").value   = mesKey;
     document.getElementById("pchkConfTareaId").value  = tid;
     document.getElementById("pchkConfTitulo").textContent = `⚙️ Configurar Islas — ${meta.label}`;
+
+    let isTexto = PCHK_TEXT_IDS.has(tid);
+    let inp = document.getElementById("pchkNuevaIsla");
+    let lbl = document.getElementById("pchkConfInputLabel");
+    if(isTexto){
+        inp.placeholder = "Ej: RA 5, RA 6...";
+        lbl.textContent = "Agregar mesa (texto libre)";
+    } else {
+        inp.placeholder = "Ej: 110";
+        lbl.textContent = "Agregar isla (número)";
+    }
+
     _pchkIslasTemp = [...pchkGetConfig(tid)];
     pchkRenderIslasList();
     document.getElementById("modalPchkConfigurar").classList.add("open");
@@ -8555,8 +8570,14 @@ function pchkRenderIslasList(){
         cont.innerHTML = `<span style="color:var(--muted);font-size:13px;font-style:italic;">Sin islas configuradas. Agregá una arriba.</span>`;
         return;
     }
-    cont.innerHTML = _pchkIslasTemp.sort((a,b)=>a-b).map(id => `
-        <span onclick="pchkQuitarIsla(${id})"
+    // Ordenar: números primero, luego texto
+    let sorted = [..._pchkIslasTemp].sort((a,b) => {
+        let na = parseFloat(a), nb = parseFloat(b);
+        if(!isNaN(na) && !isNaN(nb)) return na - nb;
+        return String(a).localeCompare(String(b));
+    });
+    cont.innerHTML = sorted.map(id => `
+        <span onclick="pchkQuitarIsla('${String(id).replace(/'/g,"\\'")}')"
             style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;padding:5px 12px;border-radius:8px;background:rgba(79,142,255,.15);border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;transition:all .15s;user-select:none;"
             onmouseover="this.style.background='rgba(255,77,109,.2)';this.style.borderColor='var(--red)';this.style.color='var(--red)'"
             onmouseout="this.style.background='rgba(79,142,255,.15)';this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'"
@@ -8567,16 +8588,21 @@ function pchkRenderIslasList(){
 
 function pchkAgregarIsla(){
     let inp = document.getElementById("pchkNuevaIsla");
-    let val = parseInt(inp.value);
-    if(!val || val < 1){ toast.warning("Valor inválido","Ingresá un número de isla válido."); return; }
-    if(_pchkIslasTemp.includes(val)){ toast.warning("Isla duplicada",`La isla ${val} ya está en la lista.`); return; }
+    let tid = parseInt(document.getElementById("pchkConfTareaId").value);
+    let raw = inp.value.trim();
+    if(!raw){ toast.warning("Valor inválido","Ingresá un valor para agregar."); return; }
+    // Para IDs numéricos, convertir a número; para texto libre, mantener string
+    let val = PCHK_TEXT_IDS.has(tid) ? raw : (parseInt(raw) || null);
+    if(!val || (typeof val === "number" && val < 1)){ toast.warning("Valor inválido","Ingresá un número de isla válido."); return; }
+    if(_pchkIslasTemp.some(x => String(x) === String(val))){ toast.warning("Duplicado",`"${val}" ya está en la lista.`); return; }
     _pchkIslasTemp.push(val);
     inp.value = "";
+    inp.focus();
     pchkRenderIslasList();
 }
 
 function pchkQuitarIsla(id){
-    _pchkIslasTemp = _pchkIslasTemp.filter(x => x !== id);
+    _pchkIslasTemp = _pchkIslasTemp.filter(x => String(x) !== String(id));
     pchkRenderIslasList();
 }
 
@@ -8585,7 +8611,11 @@ function pchkGuardarConfiguracion(){
     let mesKey = document.getElementById("pchkConfMesKey").value;
     let tid    = parseInt(document.getElementById("pchkConfTareaId").value);
 
-    pchkIslasConfig[tid] = [..._pchkIslasTemp].sort((a,b)=>a-b);
+    pchkIslasConfig[tid] = [..._pchkIslasTemp].sort((a,b) => {
+        let na = parseFloat(a), nb = parseFloat(b);
+        if(!isNaN(na) && !isNaN(nb)) return na - nb;
+        return String(a).localeCompare(String(b));
+    });
     pchkGuardarConfig();
 
     let dataExist = pchkGetData(tid, mesKey);
