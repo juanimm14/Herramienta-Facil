@@ -84,6 +84,7 @@ const _localStorageOrig = {
 const _FB_KEYS = new Set([
     "incidencias","tareas","islasActivas",
     "ccbCronogramas","ccbIslasConfig",
+    "pchkCronogramas","pchkIslasConfig",
     "mgiCronogramas","mgiPlanes",
     "ppPreventivos","ppTareas",
     "evaIncidencias","evaDiarios",
@@ -141,6 +142,8 @@ async function _cargarDatosFirebase() {
         if (_cache["tareas"])         tareas         = _cache["tareas"];
         if (_cache["ccbCronogramas"]) ccbCronogramas = _cache["ccbCronogramas"];
         if (_cache["ccbIslasConfig"]) ccbIslasConfig = _cache["ccbIslasConfig"];
+        if (_cache["pchkCronogramas"]) pchkCronogramas = _cache["pchkCronogramas"];
+        if (_cache["pchkIslasConfig"]) pchkIslasConfig = _cache["pchkIslasConfig"];
         if (_cache["mgiCronogramas"]) mgiCronogramas = _cache["mgiCronogramas"];
         if (_cache["mgiPlanes"])      mgiPlanes      = _cache["mgiPlanes"];
         if (_cache["ppPreventivos"])  ppPreventivos  = _cache["ppPreventivos"];
@@ -175,6 +178,8 @@ function _activarListenersTiempoReal() {
             if (_cache["islasActivas"])   islasActivas   = _cache["islasActivas"];
             if (_cache["ccbCronogramas"]) ccbCronogramas = _cache["ccbCronogramas"];
             if (_cache["ccbIslasConfig"]) ccbIslasConfig = _cache["ccbIslasConfig"];
+            if (_cache["pchkCronogramas"]) pchkCronogramas = _cache["pchkCronogramas"];
+            if (_cache["pchkIslasConfig"]) pchkIslasConfig = _cache["pchkIslasConfig"];
             if (_cache["mgiCronogramas"]) mgiCronogramas = _cache["mgiCronogramas"];
             if (_cache["mgiPlanes"])      mgiPlanes      = _cache["mgiPlanes"];
             if (_cache["ppPreventivos"])  ppPreventivos  = _cache["ppPreventivos"];
@@ -2415,6 +2420,74 @@ body {
     </div>
 </div>
 
+<!-- ═══ MODAL PCHK — CONFIGURAR ISLAS (sistema genérico, solo Admin) ═══ -->
+<div id="modalPchkConfigurar" class="modal">
+    <div class="modal-box wide" style="max-width:680px;max-height:92vh;overflow-y:auto;">
+        <div class="modal-title" id="pchkConfTitulo">⚙️ Configurar Islas</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">
+            Definí qué islas forman parte del control. Los técnicos no pueden modificar esta lista.
+        </div>
+        <input type="hidden" id="pchkConfMesKey">
+        <input type="hidden" id="pchkConfTareaId">
+        <div class="form-group">
+            <label class="form-label">Agregar isla (número)</label>
+            <div style="display:flex;gap:10px;">
+                <input type="number" id="pchkNuevaIsla" class="form-input" placeholder="Ej: 110" style="width:120px;" min="1">
+                <button onclick="pchkAgregarIsla()"
+                    style="padding:10px 18px;background:rgba(0,212,168,.15);border:1px solid var(--accent);border-radius:9px;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;"
+                    onmouseover="this.style.background='rgba(0,212,168,.3)'"
+                    onmouseout="this.style.background='rgba(0,212,168,.15)'"
+                >+ Agregar</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Islas configuradas (clic para eliminar)</label>
+            <div id="pchkIslasList" style="display:flex;flex-wrap:wrap;gap:8px;min-height:48px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;"></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">💡 Hacé clic sobre una isla para eliminarla de la lista.</div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="pchkGuardarConfiguracion()">✅ Guardar y Abrir Checklist</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalPchkConfigurar').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL PCHK — CHECKLIST TÉCNICO (sistema genérico) ═══ -->
+<div id="modalPchkChecklist" class="modal">
+    <div class="modal-box" style="max-width:560px;max-height:94vh;overflow-y:auto;">
+        <div class="modal-title" id="pchkChecklistTitulo">🔧 Control de Islas</div>
+        <div id="pchkChecklistInfo" style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--muted);"></div>
+        <div style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-size:12px;font-weight:700;color:var(--white);">Progreso</span>
+                <span id="pchkProgText" style="font-size:12px;font-weight:700;color:var(--accent);">0 / 0</span>
+            </div>
+            <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;border:1px solid var(--border);">
+                <div id="pchkProgBar" style="height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width .3s;"></div>
+            </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;">Islas a controlar</div>
+        <div id="pchkChecklistIslas" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;padding-right:4px;"></div>
+        <div class="form-group" style="margin-top:16px;">
+            <label class="form-label">📝 Notas / Observaciones</label>
+            <textarea id="pchkChecklistNota" class="form-textarea" placeholder="Observaciones del control..." style="min-height:70px;"></textarea>
+        </div>
+        <div id="pchkBtnAdmin" style="display:none;margin-bottom:10px;">
+            <button onclick="pchkAbrirConfigurar(document.getElementById('pchkChecklistMesKey').value, parseInt(document.getElementById('pchkChecklistTareaId').value))"
+                style="width:100%;padding:9px;background:rgba(255,201,71,.08);border:1px dashed var(--yellow);border-radius:8px;color:var(--yellow);cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;"
+                onmouseover="this.style.background='rgba(255,201,71,.16)'"
+                onmouseout="this.style.background='rgba(255,201,71,.08)'"
+            >⚙️ Editar lista de islas (Admin)</button>
+        </div>
+        <input type="hidden" id="pchkChecklistMesKey">
+        <input type="hidden" id="pchkChecklistTareaId">
+        <div class="modal-footer">
+            <button class="btn-modal-save" id="pchkBtnCerrar" onclick="pchkCerrarControl()" style="background:var(--red);">⛔ Cerrar como Completo</button>
+            <button class="btn-modal-cancel" onclick="pchkGuardarParcial()">💾 Guardar y Continuar Después</button>
+        </div>
+    </div>
+</div>
+
 <div id="modalMgiPlan" class="modal">
     <div class="modal-box wide" style="max-width:720px;max-height:92vh;overflow-y:auto;">
         <div class="modal-title">🏭 Crear Plan de Mantenimiento de Islas</div>
@@ -4526,6 +4599,59 @@ function renderTareas(){
             }
         }
 
+        // ── Bloque inline PCHK genérico (tareaIds 30,32-38) ──
+        let pchkInlineHtml = "";
+        if(PCHK_META && PCHK_META[t._ppTareaId] && t._ppMesKey && t.estado !== "realizado"){
+            let tid = t._ppTareaId;
+            let mesKey = t._ppMesKey;
+            let meta = PCHK_META[tid];
+            let pchkData = pchkGetData(tid, mesKey);
+            if(!pchkData && pchkGetConfig(tid).length > 0){
+                pchkSetData(tid, mesKey, {
+                    islas: pchkGetConfig(tid).map(id => ({ id, hecho: false })),
+                    nota: "", cerrado: false, fechaCierre: null
+                });
+                pchkData = pchkGetData(tid, mesKey);
+            }
+            if(pchkData && !pchkData.cerrado){
+                let total = pchkData.islas.length;
+                let hecho = pchkData.islas.filter(x=>x.hecho).length;
+                let pct   = total > 0 ? Math.round(hecho/total*100) : 0;
+                let islasHtml = pchkData.islas.map((isla, idx) => `
+                    <div onclick="pchkToggleIslaInline('${mesKey}',${tid},${idx})"
+                        style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;transition:all .2s;"
+                        onmouseover="this.style.borderColor='var(--accent)'"
+                        onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'">
+                        <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
+                            ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
+                        </div>
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
+                        <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
+                    </div>`).join("");
+                pchkInlineHtml = `
+                <div style="margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--white);">${meta.emoji} Islas a controlar</span>
+                        <span style="font-size:12px;font-weight:700;color:var(--accent);">${hecho}/${total} · ${pct}%</span>
+                    </div>
+                    <div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border);">
+                        <div style="width:${pct}%;height:100%;background:${pct===100?'var(--accent)':'var(--accent2)'};border-radius:3px;transition:width .4s;"></div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;">${islasHtml}</div>
+                </div>`;
+            } else if(pchkData && pchkData.cerrado){
+                pchkInlineHtml = `
+                <div style="margin-top:10px;padding:10px 14px;background:rgba(0,212,168,.08);border:1px solid var(--accent);border-radius:10px;font-size:13px;color:var(--accent);font-weight:600;">
+                    ✅ Control completado · ${pchkData.islas.filter(x=>x.hecho).length}/${pchkData.islas.length} islas · ${pchkData.fechaCierre}
+                </div>`;
+            } else {
+                pchkInlineHtml = `
+                <div style="margin-top:10px;padding:10px 14px;background:rgba(255,201,71,.06);border:1px dashed var(--yellow);border-radius:10px;font-size:12px;color:var(--yellow);">
+                    ⚠️ El Admin aún no configuró las islas para este control.
+                </div>`;
+            }
+        }
+
         let esMiTarea = esTecnico && t.asignado === miNombre;
         return `
         <div class="tarea-row" style="${esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
@@ -4544,6 +4670,7 @@ function renderTareas(){
                     ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
                 </div>
                 ${ccbInlineHtml}
+                ${pchkInlineHtml}
                 ${acciones}
             </div>
             ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
@@ -4794,6 +4921,14 @@ const TIPO_LABELS_PREV = {
     "plan": "Mant. General de Islas",
     "mantenimiento-islas": "Mant. Islas",
     "control-cooler-botonera": "Control Cooler Botonera",
+    "pchk-30": "Control Remaches Stacker Viridian",
+    "pchk-32": "Control Cooler Fuentes Aristocrat",
+    "pchk-33": "Control Botones/Calcos Aristocrat",
+    "pchk-34": "Control Cooler Placas y CPU Aristocrat",
+    "pchk-35": "Control Botones PLAY Ainsworth",
+    "pchk-36": "Mant. Preventivo INTERBLOCK",
+    "pchk-37": "Control Cooler Monitor BCM",
+    "pchk-38": "Mant. Preventivo BCM",
     avp: "Filtros AVP",
     stacker: "Stackers",
     chipper: "Chipper",
@@ -6610,6 +6745,7 @@ function ppRenderMes(mesIdx){
     cont.innerHTML = prevs.map((p,i) => {
         let esMGI = p.tareaId === 6;
         let esCCB = p.tareaId === 31;
+        let esPCHK = PCHK_META && !!PCHK_META[p.tareaId];
         let cronograma = esMGI ? (mgiCronogramas[mesKey] || null) : null;
 
         // ── Botón / checklist Control Cooler Botonera Aristocrat (tareaId 31) ──
@@ -6649,6 +6785,49 @@ function ppRenderMes(mesIdx){
                         onmouseover="this.style.background='rgba(79,142,255,.16)'"
                         onmouseout="this.style.background='rgba(79,142,255,.08)'"
                     >🔧 Iniciar Control Cooler Botonera</button>
+                </div>`;
+            }
+        }
+
+        // ── Bloque PCHK (checklist genérico de islas) ──
+        let pchkHtml = "";
+        if(esPCHK){
+            let tid = p.tareaId;
+            let meta = PCHK_META[tid];
+            let pchkData = pchkGetData(tid, mesKey);
+            if(pchkData){
+                let total = pchkData.islas.length;
+                let hecho = pchkData.islas.filter(x=>x.hecho).length;
+                let pct   = total > 0 ? Math.round(hecho/total*100) : 0;
+                let color = pchkData.cerrado ? 'rgba(0,212,168,.3)' : 'var(--border)';
+                pchkHtml = `
+                <div style="margin-top:12px;background:var(--bg3);border:1px solid ${color};border-radius:8px;padding:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+                        <div style="font-size:12px;font-weight:700;color:var(--white);">${meta.emoji} ${meta.label} · <span style="color:var(--muted);font-weight:400;">${hecho}/${total} islas ${pchkData.cerrado?'· ✅ Cerrado':''}</span></div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:60px;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
+                            </div>
+                            <span style="font-size:11px;color:var(--muted);">${pct}%</span>
+                            ${!pchkData.cerrado ? `<button onclick="pchkAbrirChecklist('${mesKey}',${tid})"
+                                style="background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;font-size:11px;padding:2px 8px;"
+                                onmouseover="this.style.background='rgba(0,212,168,.25)'"
+                                onmouseout="this.style.background='rgba(0,212,168,.1)'"
+                               >📋 Ver Checklist</button>` : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                        ${pchkData.islas.map(x=>`<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:${x.hecho?'rgba(0,212,168,.15)':'rgba(79,142,255,.08)'};border:1px solid ${x.hecho?'var(--accent)':'var(--border)'};color:${x.hecho?'var(--accent)':'var(--muted)'};margin:1px;">${x.hecho?'✓ ':''} ${x.id}</span>`).join("")}
+                    </div>
+                </div>`;
+            } else {
+                pchkHtml = `
+                <div style="margin-top:12px;">
+                    <button onclick="${usuarioActual?.rol==='Admin' ? `pchkAbrirConfigurar('${mesKey}',${tid})` : `pchkAbrirChecklist('${mesKey}',${tid})`}"
+                        style="width:100%;padding:10px;background:rgba(79,142,255,.08);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;"
+                        onmouseover="this.style.background='rgba(79,142,255,.16)'"
+                        onmouseout="this.style.background='rgba(79,142,255,.08)'"
+                    >${meta.emoji} ${usuarioActual?.rol==='Admin' ? `Configurar e Iniciar — ${meta.label}` : `Iniciar — ${meta.label}`}</button>
                 </div>`;
             }
         }
@@ -6900,6 +7079,17 @@ function ppRegistrarEnHistorial(t){
             islasArr = ccbData.islas.filter(x => x.hecho).map(x => String(x.id));
             // Si no tildó ninguna, registrar todas las configuradas igual
             if(islasArr.length === 0) islasArr = ccbData.islas.map(x => String(x.id));
+        }
+    } else if(PCHK_META && PCHK_META[t._ppTareaId]){
+        // Preventivos con checklist genérico PCHK
+        let meta = PCHK_META[t._ppTareaId];
+        subTipo = meta.subTipo;
+        let pchkData = pchkGetData ? pchkGetData(t._ppTareaId, t._ppMesKey) : null;
+        if(pchkData && pchkData.islas){
+            islasArr = pchkData.islas.filter(x => x.hecho).map(x => String(x.id));
+            if(islasArr.length === 0) islasArr = pchkData.islas.map(x => String(x.id));
+        } else {
+            islasArr = t._ppIslas ? t._ppIslas.map(String) : [];
         }
     } else {
         // Otros preventivos de plan: usar _ppIslas si existe
@@ -7210,6 +7400,7 @@ ppRenderMes = function(mesIdx){
 
         // ── Botón / checklist CCB (tareaId 31) ──
         let esCCB = p.tareaId === 31;
+        let esPCHK = PCHK_META && !!PCHK_META[p.tareaId];
         let ccbHtml = "";
         if(esCCB){
             let ccbData = ccbCronogramas[mesKey] || null;
@@ -7252,6 +7443,54 @@ ppRenderMes = function(mesIdx){
                         onmouseover="this.style.background='rgba(79,142,255,.16)'"
                         onmouseout="this.style.background='rgba(79,142,255,.08)'"
                     >🔧 ${esAdmin ? 'Configurar y Iniciar Control Cooler Botonera' : 'Iniciar Control Cooler Botonera'}</button>
+                </div>`;
+            }
+        }
+
+        // ── Bloque PCHK (checklist genérico de islas) ──
+        let pchkHtml = "";
+        if(esPCHK){
+            let tid = p.tareaId;
+            let meta = PCHK_META[tid];
+            let pchkData = pchkGetData(tid, mesKey);
+            if(pchkData){
+                let total = pchkData.islas.length;
+                let hecho = pchkData.islas.filter(x=>x.hecho).length;
+                let pct   = total > 0 ? Math.round(hecho/total*100) : 0;
+                let color = pchkData.cerrado ? 'rgba(0,212,168,.3)' : 'var(--border)';
+                pchkHtml = `
+                <div style="margin-top:12px;background:var(--bg3);border:1px solid ${color};border-radius:8px;padding:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+                        <div style="font-size:12px;font-weight:700;color:var(--white);">${meta.emoji} ${meta.label} · <span style="color:var(--muted);font-weight:400;">${hecho}/${total} islas ${pchkData.cerrado?'· ✅ Cerrado':''}</span></div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="width:60px;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;">
+                                <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
+                            </div>
+                            <span style="font-size:11px;color:var(--muted);">${pct}%</span>
+                            ${!pchkData.cerrado ? `<button onclick="pchkAbrirChecklist('${mesKey}',${tid})"
+                                style="background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;font-size:11px;padding:2px 8px;"
+                                onmouseover="this.style.background='rgba(0,212,168,.25)'"
+                                onmouseout="this.style.background='rgba(0,212,168,.1)'"
+                               >📋 Ver Checklist</button>` : ''}
+                            ${esAdmin ? `<button onclick="pchkAbrirConfigurar('${mesKey}',${tid})"
+                                style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);border-radius:5px;color:var(--yellow);cursor:pointer;font-size:11px;padding:2px 8px;"
+                                onmouseover="this.style.background='rgba(255,201,71,.2)'"
+                                onmouseout="this.style.background='rgba(255,201,71,.1)'"
+                               >⚙️ Config</button>` : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                        ${pchkData.islas.map(x=>`<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:${x.hecho?'rgba(0,212,168,.15)':'rgba(79,142,255,.08)'};border:1px solid ${x.hecho?'var(--accent)':'var(--border)'};color:${x.hecho?'var(--accent)':'var(--muted)'};margin:1px;">${x.hecho?'✓ ':''} ${x.id}</span>`).join("")}
+                    </div>
+                </div>`;
+            } else {
+                pchkHtml = `
+                <div style="margin-top:12px;">
+                    <button onclick="${esAdmin ? `pchkAbrirConfigurar('${mesKey}',${tid})` : `pchkAbrirChecklist('${mesKey}',${tid})`}"
+                        style="width:100%;padding:10px;background:rgba(79,142,255,.08);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;"
+                        onmouseover="this.style.background='rgba(79,142,255,.16)'"
+                        onmouseout="this.style.background='rgba(79,142,255,.08)'"
+                    >${meta.emoji} ${esAdmin ? `Configurar e Iniciar — ${meta.label}` : `Iniciar — ${meta.label}`}</button>
                 </div>`;
             }
         }
@@ -7346,6 +7585,7 @@ ppRenderMes = function(mesIdx){
             ${p.nota ? `<div class="pp-gen-nota"><b>📝 Nota:</b> ${p.nota}</div>` : ""}
             ${cronogramaHtml}
             ${ccbHtml}
+            ${pchkHtml}
         </div>`;
     }).join("");
 };
@@ -8211,6 +8451,258 @@ function ccbCerrarControl(){
     ppRenderMes(ppTabActivo);
 }
 
+// ══════════════════════════════════════════════════════════════
+//  PCHK — Sistema genérico de checklist de islas para preventivos
+//  Cubre tareaIds: 30, 32, 33, 34, 35, 36, 37, 38
+//  (tareaId 31 sigue usando el sistema CCB propio)
+// ══════════════════════════════════════════════════════════════
+
+// Metadatos por tareaId: nombre para mostrar en modales y subTipo para historial
+const PCHK_META = {
+    30: { label: "Control Remaches Puertas Stacker Viridian", subTipo: "pchk-30", emoji: "🔩" },
+    32: { label: "Control Cooler Fuentes Aristocrat",         subTipo: "pchk-32", emoji: "🌀" },
+    33: { label: "Control Botones/Calcos Aristocrat",         subTipo: "pchk-33", emoji: "🔘" },
+    34: { label: "Control Cooler Placas Video y CPU Aristocrat", subTipo: "pchk-34", emoji: "🖥️" },
+    35: { label: "Control Botones PLAY Ainsworth",            subTipo: "pchk-35", emoji: "▶️" },
+    36: { label: "Mantenimiento Preventivo INTERBLOCK",       subTipo: "pchk-36", emoji: "🎮" },
+    37: { label: "Control Cooler Monitor BCM",                subTipo: "pchk-37", emoji: "🖥️" },
+    38: { label: "Mantenimiento Preventivo BCM",              subTipo: "pchk-38", emoji: "🔧" },
+};
+
+// Storage: pchkCronogramas[tareaId][mesKey] = { islas:[{id,hecho}], nota, cerrado, fechaCierre }
+//          pchkIslasConfig[tareaId] = [110, 116, ...]
+let pchkCronogramas = {};
+let pchkIslasConfig = {};
+let _pchkIslasTemp  = [];
+
+function pchkGuardarStorage(){ localStorage.setItem("pchkCronogramas", JSON.stringify(pchkCronogramas)); }
+function pchkGuardarConfig(){   localStorage.setItem("pchkIslasConfig",  JSON.stringify(pchkIslasConfig));  }
+
+function pchkGetConfig(tid){ return pchkIslasConfig[tid] || []; }
+function pchkGetData(tid, mesKey){ return (pchkCronogramas[tid] || {})[mesKey] || null; }
+
+function pchkSetData(tid, mesKey, val){
+    if(!pchkCronogramas[tid]) pchkCronogramas[tid] = {};
+    pchkCronogramas[tid][mesKey] = val;
+    pchkGuardarStorage();
+}
+
+// ── Abrir configuración Admin ──────────────────────────────
+function pchkAbrirConfigurar(mesKey, tid){
+    let esAdmin = usuarioActual?.rol === "Admin";
+    if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
+    let meta = PCHK_META[tid];
+    if(!meta) return;
+
+    document.getElementById("pchkConfMesKey").value   = mesKey;
+    document.getElementById("pchkConfTareaId").value  = tid;
+    document.getElementById("pchkConfTitulo").textContent = `⚙️ Configurar Islas — ${meta.label}`;
+    _pchkIslasTemp = [...pchkGetConfig(tid)];
+    pchkRenderIslasList();
+    document.getElementById("modalPchkConfigurar").classList.add("open");
+}
+
+function pchkRenderIslasList(){
+    let cont = document.getElementById("pchkIslasList");
+    if(!cont) return;
+    if(_pchkIslasTemp.length === 0){
+        cont.innerHTML = `<span style="color:var(--muted);font-size:13px;font-style:italic;">Sin islas configuradas. Agregá una arriba.</span>`;
+        return;
+    }
+    cont.innerHTML = _pchkIslasTemp.sort((a,b)=>a-b).map(id => `
+        <span onclick="pchkQuitarIsla(${id})"
+            style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;padding:5px 12px;border-radius:8px;background:rgba(79,142,255,.15);border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;transition:all .15s;user-select:none;"
+            onmouseover="this.style.background='rgba(255,77,109,.2)';this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+            onmouseout="this.style.background='rgba(79,142,255,.15)';this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'"
+            title="Clic para eliminar"
+        >${id} ✕</span>
+    `).join("");
+}
+
+function pchkAgregarIsla(){
+    let inp = document.getElementById("pchkNuevaIsla");
+    let val = parseInt(inp.value);
+    if(!val || val < 1){ toast.warning("Valor inválido","Ingresá un número de isla válido."); return; }
+    if(_pchkIslasTemp.includes(val)){ toast.warning("Isla duplicada",`La isla ${val} ya está en la lista.`); return; }
+    _pchkIslasTemp.push(val);
+    inp.value = "";
+    pchkRenderIslasList();
+}
+
+function pchkQuitarIsla(id){
+    _pchkIslasTemp = _pchkIslasTemp.filter(x => x !== id);
+    pchkRenderIslasList();
+}
+
+function pchkGuardarConfiguracion(){
+    if(_pchkIslasTemp.length === 0){ toast.warning("Sin islas","Agregá al menos una isla antes de guardar."); return; }
+    let mesKey = document.getElementById("pchkConfMesKey").value;
+    let tid    = parseInt(document.getElementById("pchkConfTareaId").value);
+
+    pchkIslasConfig[tid] = [..._pchkIslasTemp].sort((a,b)=>a-b);
+    pchkGuardarConfig();
+
+    let dataExist = pchkGetData(tid, mesKey);
+    let islasNuevas = pchkIslasConfig[tid].map(id => {
+        let exist = dataExist?.islas?.find(x => x.id === id);
+        return { id, hecho: exist?.hecho || false };
+    });
+    pchkSetData(tid, mesKey, {
+        islas: islasNuevas,
+        nota: dataExist?.nota || "",
+        cerrado: dataExist?.cerrado || false,
+        fechaCierre: dataExist?.fechaCierre || null
+    });
+
+    document.getElementById("modalPchkConfigurar").classList.remove("open");
+    toast.success("Configuración guardada", `${pchkIslasConfig[tid].length} islas configuradas`);
+    let meta = PCHK_META[tid] || {};
+    auditRegistrar("preventivo","⚙️",`${meta.label||'PCHK'} — Islas configuradas`,`${pchkIslasConfig[tid].length} islas · Mes: ${mesKey}`);
+
+    setTimeout(() => pchkAbrirChecklist(mesKey, tid), 200);
+    ppRenderMes(ppTabActivo);
+}
+
+// ── Abrir checklist técnico ────────────────────────────────
+function pchkAbrirChecklist(mesKey, tid){
+    let esAdmin = usuarioActual?.rol === "Admin";
+    let cfg     = pchkGetConfig(tid);
+    let meta    = PCHK_META[tid];
+    if(!meta) return;
+
+    if(!pchkGetData(tid, mesKey)){
+        if(cfg.length === 0){
+            if(esAdmin){ pchkAbrirConfigurar(mesKey, tid); }
+            else { toast.warning("Sin configuración","El Admin aún no configuró las islas para este control."); }
+            return;
+        }
+        pchkSetData(tid, mesKey, {
+            islas: cfg.map(id => ({ id, hecho: false })),
+            nota: "", cerrado: false, fechaCierre: null
+        });
+    }
+
+    let data = pchkGetData(tid, mesKey);
+    let [anio, mes] = mesKey.split("-");
+    let nombreMes = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][parseInt(mes)] || mes;
+
+    document.getElementById("pchkChecklistMesKey").value   = mesKey;
+    document.getElementById("pchkChecklistTareaId").value  = tid;
+    document.getElementById("pchkChecklistTitulo").textContent = `${meta.emoji} ${meta.label} — ${nombreMes} ${anio}`;
+    document.getElementById("pchkChecklistInfo").innerHTML =
+        `<b>${data.islas.length} islas</b> a controlar${data.cerrado ? ` · <b style="color:var(--accent)">✅ Cerrado el ${data.fechaCierre}</b>` : ""}`;
+
+    document.getElementById("pchkBtnAdmin").style.display = esAdmin ? "block" : "none";
+    let btnCerrar = document.getElementById("pchkBtnCerrar");
+    btnCerrar.style.display = data.cerrado ? "none" : "";
+    document.getElementById("pchkChecklistNota").value = data.nota || "";
+
+    pchkRenderChecklistIslas(mesKey, tid);
+    document.getElementById("modalPchkChecklist").classList.add("open");
+}
+
+function pchkRenderChecklistIslas(mesKey, tid){
+    let data = pchkGetData(tid, mesKey);
+    if(!data) return;
+    let cont = document.getElementById("pchkChecklistIslas");
+    if(!cont) return;
+    let meta    = PCHK_META[tid] || {};
+    let total   = data.islas.length;
+    let hecho   = data.islas.filter(x=>x.hecho).length;
+    let pct     = total > 0 ? Math.round(hecho/total*100) : 0;
+    let esCerrado = data.cerrado;
+
+    document.getElementById("pchkProgText").textContent = `${hecho} / ${total}`;
+    document.getElementById("pchkProgBar").style.width  = pct + "%";
+
+    cont.innerHTML = data.islas.map((isla, idx) => `
+        <div onclick="${esCerrado ? '' : `pchkToggleIsla('${mesKey}',${tid},${idx})`}"
+            style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg3)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:9px;cursor:${esCerrado?'default':'pointer'};transition:all .2s;"
+            ${esCerrado?'':` onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'"`}
+        >
+            <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
+                ${isla.hecho ? '<span style="color:#0f1117;font-size:13px;font-weight:900;">✓</span>' : ''}
+            </div>
+            <div style="flex:1;">
+                <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</div>
+                <div style="font-size:11px;color:var(--muted);">${meta.label||''}</div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">
+                ${isla.hecho ? '✅ Listo' : (esCerrado?'—':'Pendiente')}
+            </div>
+        </div>
+    `).join("");
+}
+
+function pchkToggleIsla(mesKey, tid, idx){
+    let data = pchkGetData(tid, mesKey);
+    if(!data || data.cerrado) return;
+    data.islas[idx].hecho = !data.islas[idx].hecho;
+    pchkGuardarStorage();
+    pchkRenderChecklistIslas(mesKey, tid);
+    if(typeof ppRenderMes === "function") ppRenderMes(ppTabActivo);
+}
+
+function pchkToggleIslaInline(mesKey, tid, idx){
+    let data = pchkGetData(tid, mesKey);
+    if(!data || data.cerrado) return;
+    data.islas[idx].hecho = !data.islas[idx].hecho;
+    pchkGuardarStorage();
+    renderTareas();
+    if(typeof ppRenderMes === "function") ppRenderMes(ppTabActivo);
+}
+
+function pchkGuardarParcial(){
+    let mesKey = document.getElementById("pchkChecklistMesKey").value;
+    let tid    = parseInt(document.getElementById("pchkChecklistTareaId").value);
+    let data   = pchkGetData(tid, mesKey);
+    if(!data) return;
+    data.nota = document.getElementById("pchkChecklistNota").value.trim();
+    pchkGuardarStorage();
+    document.getElementById("modalPchkChecklist").classList.remove("open");
+    let hecho = data.islas.filter(x=>x.hecho).length;
+    toast.success("Progreso guardado", `${hecho}/${data.islas.length} islas completadas`);
+    ppRenderMes(ppTabActivo);
+}
+
+function pchkCerrarControl(){
+    let mesKey = document.getElementById("pchkChecklistMesKey").value;
+    let tid    = parseInt(document.getElementById("pchkChecklistTareaId").value);
+    let data   = pchkGetData(tid, mesKey);
+    if(!data) return;
+
+    let hecho = data.islas.filter(x=>x.hecho).length;
+    let total = data.islas.length;
+    if(hecho < total){
+        if(!confirm(`Solo completaste ${hecho} de ${total} islas. ¿Querés cerrar el control de todas formas?`)) return;
+    }
+
+    data.nota = document.getElementById("pchkChecklistNota").value.trim();
+    data.cerrado    = true;
+    data.fechaCierre = new Date().toLocaleDateString("es-AR");
+    pchkGuardarStorage();
+
+    let islasHechas = data.islas.filter(x=>x.hecho).map(x=>String(x.id));
+    let meta = PCHK_META[tid] || { label: "Preventivo", subTipo: `pchk-${tid}` };
+    incidencias.push({
+        tipo:    "Preventivo",
+        subTipo: meta.subTipo,
+        fecha:   new Date().toISOString().split("T")[0],
+        islas:   islasHechas,
+        tecnico: usuarioActual?.nombre || "Técnico",
+        nota:    `[${meta.label} ${mesKey}] ${hecho}/${total} islas — ${data.nota || "Sin notas"}`,
+        estado:  hecho === total ? "Realizado" : "Realizado Parcial",
+        validado: false
+    });
+    localStorage.setItem("incidencias", JSON.stringify(incidencias));
+
+    document.getElementById("modalPchkChecklist").classList.remove("open");
+    toast.success("Control cerrado ✅", `${hecho}/${total} islas completadas · Guardado en Historial`);
+    auditRegistrar("preventivo", meta.emoji || "🔧", `${meta.label} cerrado — ${mesKey}`, `${hecho}/${total} islas · Técnico: ${usuarioActual?.nombre}`);
+    renderDashboard();
+    ppRenderMes(ppTabActivo);
+}
+
 // ══════════════════════════════════════════════
 //  GESTIÓN DE USUARIOS — ADMIN
 // ══════════════════════════════════════════════
@@ -8626,6 +9118,50 @@ function _renderTareasConTurno(){
             }
         }
 
+        // ── Bloque inline PCHK genérico (tareaIds 30,32-38) ──
+        let pchkInlineHtml = "";
+        if(PCHK_META && PCHK_META[t._ppTareaId] && t._ppMesKey && t.estado !== "realizado"){
+            let tid = t._ppTareaId;
+            let mesKey = t._ppMesKey;
+            let meta = PCHK_META[tid];
+            let pchkData = pchkGetData(tid, mesKey);
+            if(!pchkData && pchkGetConfig(tid).length > 0){
+                pchkSetData(tid, mesKey, {
+                    islas: pchkGetConfig(tid).map(id => ({ id, hecho: false })),
+                    nota: "", cerrado: false, fechaCierre: null
+                });
+                pchkData = pchkGetData(tid, mesKey);
+            }
+            if(pchkData && !pchkData.cerrado){
+                let total = pchkData.islas.length, hecho = pchkData.islas.filter(x=>x.hecho).length;
+                let pct = total > 0 ? Math.round(hecho/total*100) : 0;
+                let islasHtml = pchkData.islas.map((isla, idx) => `
+                    <div onclick="pchkToggleIslaInline('${mesKey}',${tid},${idx})"
+                        style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;transition:all .2s;"
+                        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'">
+                        <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
+                            ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
+                        </div>
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
+                        <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
+                    </div>`).join("");
+                pchkInlineHtml = `<div style="margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--white);">${meta.emoji} Islas a controlar</span>
+                        <span style="font-size:12px;font-weight:700;color:var(--accent);">${hecho}/${total} · ${pct}%</span>
+                    </div>
+                    <div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border);">
+                        <div style="width:${pct}%;height:100%;background:${pct===100?'var(--accent)':'var(--accent2)'};border-radius:3px;transition:width .4s;"></div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;">${islasHtml}</div>
+                </div>`;
+            } else if(pchkData && pchkData.cerrado){
+                pchkInlineHtml = `<div style="margin-top:10px;padding:10px 14px;background:rgba(0,212,168,.08);border:1px solid var(--accent);border-radius:10px;font-size:13px;color:var(--accent);font-weight:600;">✅ Control completado · ${pchkData.islas.filter(x=>x.hecho).length}/${pchkData.islas.length} islas · ${pchkData.fechaCierre}</div>`;
+            } else {
+                pchkInlineHtml = `<div style="margin-top:10px;padding:10px 14px;background:rgba(255,201,71,.06);border:1px dashed var(--yellow);border-radius:10px;font-size:12px;color:var(--yellow);">⚠️ El Admin aún no configuró las islas para este control.</div>`;
+            }
+        }
+
         let esMiTarea = esTecnico && t.asignado === miNombre;
         return `<div class="tarea-row" style="${esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
             <div class="item-main" style="width:100%">
@@ -8639,6 +9175,7 @@ function _renderTareasConTurno(){
                     ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
                 </div>
                 ${ccbInlineHtml}
+                ${pchkInlineHtml}
                 ${acciones}
             </div>
             ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
