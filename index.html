@@ -173,23 +173,24 @@ function _activarListenersTiempoReal() {
     const reRender = () => {
         try {
             // Re-sincronizar variables globales con el cache
-            if (_cache["incidencias"])    incidencias    = _cache["incidencias"];
-            if (_cache["tareas"])         tareas         = _cache["tareas"];
-            if (_cache["islasActivas"])   islasActivas   = _cache["islasActivas"];
-            if (_cache["ccbCronogramas"]) ccbCronogramas = _cache["ccbCronogramas"];
-            if (_cache["ccbIslasConfig"]) ccbIslasConfig = _cache["ccbIslasConfig"];
-            if (_cache["pchkCronogramas"]) pchkCronogramas = _cache["pchkCronogramas"];
-            if (_cache["pchkIslasConfig"]) pchkIslasConfig = _cache["pchkIslasConfig"];
-            if (_cache["mgiCronogramas"]) mgiCronogramas = _cache["mgiCronogramas"];
-            if (_cache["mgiPlanes"])      mgiPlanes      = _cache["mgiPlanes"];
-            if (_cache["ppPreventivos"])  ppPreventivos  = _cache["ppPreventivos"];
-            if (_cache["ppTareas"])       ppTareas       = _cache["ppTareas"];
-            if (_cache["evaIncidencias"]) evaIncidencias = _cache["evaIncidencias"];
-            if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
-            if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
-            if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
-            if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
-            if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
+            // IMPORTANTE: usar !== undefined para que arrays vacíos [] también se apliquen
+            if (_cache["incidencias"]    !== undefined) incidencias    = _cache["incidencias"]    ?? [];
+            if (_cache["tareas"]         !== undefined) tareas         = _cache["tareas"]         ?? [];
+            if (_cache["islasActivas"]   !== undefined) islasActivas   = _cache["islasActivas"]   ?? [];
+            if (_cache["ccbCronogramas"] !== undefined) ccbCronogramas = _cache["ccbCronogramas"] ?? [];
+            if (_cache["ccbIslasConfig"] !== undefined) ccbIslasConfig = _cache["ccbIslasConfig"] ?? [];
+            if (_cache["pchkCronogramas"] !== undefined) pchkCronogramas = _cache["pchkCronogramas"] ?? [];
+            if (_cache["pchkIslasConfig"] !== undefined) pchkIslasConfig = _cache["pchkIslasConfig"] ?? [];
+            if (_cache["mgiCronogramas"] !== undefined) mgiCronogramas = _cache["mgiCronogramas"] ?? [];
+            if (_cache["mgiPlanes"]      !== undefined) mgiPlanes      = _cache["mgiPlanes"]      ?? [];
+            if (_cache["ppPreventivos"]  !== undefined) ppPreventivos  = _cache["ppPreventivos"]  ?? [];
+            if (_cache["ppTareas"]       !== undefined) ppTareas       = _cache["ppTareas"]       ?? [];
+            if (_cache["evaIncidencias"] !== undefined) evaIncidencias = _cache["evaIncidencias"] ?? [];
+            if (_cache["evaDiarios"]     !== undefined) evaDiarios     = _cache["evaDiarios"]     ?? [];
+            if (_cache["fdsData"]        !== undefined) fdsData        = _cache["fdsData"]        ?? [];
+            if (_cache["contadorasData"] !== undefined) contadorasData = _cache["contadorasData"] ?? [];
+            if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
+            if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
             // Re-render si la app ya está iniciada
             if (document.getElementById("app")?.style.display !== "none") {
                 renderDashboard?.();
@@ -207,8 +208,13 @@ function _activarListenersTiempoReal() {
             if (snap.exists) {
                 _cache[clave] = snap.data().data;
                 _localStorageOrig.setItem(clave, JSON.stringify(snap.data().data));
-                reRender();
+            } else {
+                // El documento fue eliminado o quedó vacío → limpiar cache y localStorage
+                delete _cache[clave];
+                _localStorageOrig.removeItem(clave);
             }
+            // Siempre re-renderizar, tanto si el doc existe como si fue borrado
+            reRender();
         });
     });
 }
