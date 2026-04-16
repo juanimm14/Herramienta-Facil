@@ -5051,23 +5051,25 @@ function renderIncidenciasPreventivos(){
         let maqCount = 0;
         let resumenEquipos = "";
 
+        // Auxiliar: slots de una isla usando islasMaquinas guardado (preciso) o islasActivas como fallback
+        const getSlots = (islaId) => {
+            if(p.islasMaquinas && p.islasMaquinas[String(islaId)] != null)
+                return p.islasMaquinas[String(islaId)];
+            let isla = islasActivas.find(il => il.id === parseInt(islaId));
+            return isla ? isla.slots : 1;
+        };
+
         if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas"){
             // Islas con slots: contar máquinas reales por isla
-            maqCount = islasEfectivas.reduce((s, islaId) => {
-                let isla = islasActivas.find(il => il.id === parseInt(islaId));
-                return s + (isla ? isla.slots : 1);
-            }, 0);
+            maqCount = islasEfectivas.reduce((s, islaId) => s + getSlots(islaId), 0);
             if(islasEfectivas.length > 0){
                 resumenEquipos = `${islasEfectivas.length} isla(s)${maqCount ? ` · <b style="color:var(--accent)">${maqCount} máquinas</b>` : ""}`;
             } else {
                 resumenEquipos = `<span style="color:var(--yellow);font-size:11px;">⚠️ Sin islas registradas — expandí para cargarlas</span>`;
             }
         } else if(p.subTipo === "control-cooler-botonera"){
-            // CCB: contar máquinas reales por isla (igual que MGI)
-            maqCount = islasEfectivas.reduce((s, islaId) => {
-                let isla = islasActivas.find(il => il.id === parseInt(islaId));
-                return s + (isla ? isla.slots : 1);
-            }, 0);
+            // CCB: contar máquinas reales por isla
+            maqCount = islasEfectivas.reduce((s, islaId) => s + getSlots(islaId), 0);
             if(islasEfectivas.length > 0){
                 resumenEquipos = `${islasEfectivas.length} isla(s) controladas${maqCount ? ` · <b style="color:var(--accent)">${maqCount} máquinas</b>` : ""}`;
             } else {
@@ -5106,10 +5108,14 @@ function renderIncidenciasPreventivos(){
                 <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Equipos intervenidos</div>
                 <div id="${cardId}-islas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
                     ${islasEfectivas.map(e => {
-                        let lbl = (!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas") ? `Isla ${e}` : (String(e).includes("|")?String(e).replace("|"," "):e);
-                        return `<span style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--white);">${lbl}</span>`;
+                        let isIsla = (!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera");
+                        let lbl = isIsla ? `Isla ${e}` : (String(e).includes("|")?String(e).replace("|"," "):e);
+                        let slots = isIsla ? (p.islasMaquinas ? p.islasMaquinas[String(e)] : null) ?? (islasActivas.find(il=>il.id===parseInt(e))?.slots) : null;
+                        let slotsBadge = (slots != null) ? `<span style="margin-left:5px;font-size:10px;background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 5px;font-weight:700;">${slots}maq</span>` : "";
+                        return `<span style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--white);display:inline-flex;align-items:center;">${lbl}${slotsBadge}</span>`;
                     }).join("")}
                 </div>
+                ${(maqCount > 0) ? `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(0,212,168,.07);border:1px solid rgba(0,212,168,.25);border-radius:8px;font-size:13px;color:var(--accent);font-weight:700;">🔧 Total: ${maqCount} máquinas en ${islasEfectivas.length} isla(s)${p.islasMaquinas ? "" : " <span style='font-weight:400;font-size:11px;color:var(--muted);'>(estimado)</span>"}</div>` : ""}
                 ${p.nota?`<div style="font-size:13px;color:var(--muted);margin-bottom:12px;"><b style="color:var(--white);">Nota:</b> ${p.nota}</div>`:""}
                 <!-- Panel editar islas cargadas — solo Admin, solo tipo Islas Slots -->
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo) ? `
@@ -7158,11 +7164,21 @@ function ppRegistrarEnHistorial(t){
         islasArr = t._ppIslas ? t._ppIslas.map(String) : [];
     }
 
+    // Capturar cantidad de máquinas por isla al momento de registrar
+    let islasMaquinas = {};
+    islasArr.forEach(idIsla => {
+        let isla = islasActivas.find(il => il.id === parseInt(idIsla));
+        islasMaquinas[idIsla] = isla ? isla.slots : 8;
+    });
+    let totalMaquinas = Object.values(islasMaquinas).reduce((a, b) => a + b, 0);
+
     incidencias.push({
         tipo: "Preventivo",
         subTipo,
         fecha: new Date().toISOString().split("T")[0],
         islas: islasArr,
+        islasMaquinas,
+        totalMaquinas,
         tecnico: t.asignado,
         nota: t.desc,
         estado: "Realizado",
