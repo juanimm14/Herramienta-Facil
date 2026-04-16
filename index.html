@@ -5076,9 +5076,19 @@ function renderIncidenciasPreventivos(){
                 resumenEquipos = `<span style="color:var(--muted);">Sin islas registradas</span>`;
             }
         } else {
-            // Otros preventivos genéricos (stackers, chippers, etc.)
+            // Otros preventivos genéricos (stackers, chippers, cilindros, etc.)
+            const ETIQUETA_EQUIPO = {
+                stacker:   'stacker(s)',
+                chipper:   'chipper(s)',
+                cilindros: 'cilindro(s)',
+                ra:        'visualizador(es)',
+                eva:       'kiosco(s) EVA',
+                pc:        'PC/cartel(es)',
+                avp:       'equipo(s) AVP'
+            };
+            let etiq = ETIQUETA_EQUIPO[p.subTipo] || 'equipo(s)';
             if(islasEfectivas.length > 0){
-                resumenEquipos = `${islasEfectivas.length} equipo(s)`;
+                resumenEquipos = `<b style="color:var(--accent2)">${islasEfectivas.length}</b> ${etiq}`;
             } else {
                 resumenEquipos = `<span style="color:var(--muted);font-size:11px;">Sin equipos registrados</span>`;
             }
@@ -5115,7 +5125,18 @@ function renderIncidenciasPreventivos(){
                         return `<span style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--white);display:inline-flex;align-items:center;">${lbl}${slotsBadge}</span>`;
                     }).join("")}
                 </div>
-                ${(maqCount > 0) ? `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(0,212,168,.07);border:1px solid rgba(0,212,168,.25);border-radius:8px;font-size:13px;color:var(--accent);font-weight:700;">🔧 Total: ${maqCount} máquinas en ${islasEfectivas.length} isla(s)${p.islasMaquinas ? "" : " <span style='font-weight:400;font-size:11px;color:var(--muted);'>(estimado)</span>"}</div>` : ""}
+                ${(()=>{
+                    let isIslaSubtipo = !p.subTipo || p.subTipo === 'plan' || p.subTipo === 'mantenimiento-islas' || p.subTipo === 'control-cooler-botonera';
+                    if(isIslaSubtipo && maqCount > 0){
+                        let est = p.islasMaquinas ? '' : " <span style='font-weight:400;font-size:11px;color:var(--muted);'>(estimado)</span>";
+                        return `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(0,212,168,.07);border:1px solid rgba(0,212,168,.25);border-radius:8px;font-size:13px;color:var(--accent);font-weight:700;">🔧 Total: ${maqCount} máquinas en ${islasEfectivas.length} isla(s)${est}</div>`;
+                    } else if(!isIslaSubtipo && islasEfectivas.length > 0){
+                        const ETIQ2 = {stacker:'stacker(s)',chipper:'chipper(s)',cilindros:'cilindro(s)',ra:'visualizador(es)',eva:'kiosco(s) EVA',pc:'PC/cartel(es)',avp:'equipo(s) AVP'};
+                        let et2 = ETIQ2[p.subTipo] || 'equipo(s)';
+                        return `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(79,142,255,.07);border:1px solid rgba(79,142,255,.25);border-radius:8px;font-size:13px;color:var(--accent2);font-weight:700;">📋 Total: ${islasEfectivas.length} ${et2}</div>`;
+                    }
+                    return '';
+                })()}
                 ${p.nota?`<div style="font-size:13px;color:var(--muted);margin-bottom:12px;"><b style="color:var(--white);">Nota:</b> ${p.nota}</div>`:""}
                 <!-- Panel editar islas cargadas — solo Admin, solo tipo Islas Slots -->
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo) ? `
