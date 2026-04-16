@@ -96,6 +96,14 @@ const _FB_KEYS = new Set([
 
 localStorage.setItem = function(clave, valor) {
     if (_FB_KEYS.has(clave)) {
+        // ⚠️ GUARDA CRÍTICA: no escribir en Firestore antes de que la carga
+        // inicial termine. Evita que datos vacíos del localStorage local
+        // (cuando se abre desde un dispositivo nuevo) sobreescriban los datos
+        // reales almacenados en Firebase desde otra PC.
+        if (!window._fbCargaCompleta) {
+            _localStorageOrig.setItem(clave, valor);
+            return;
+        }
         let parsed;
         try { parsed = JSON.parse(valor); } catch { parsed = valor; }
         _fbSet(clave, parsed);
@@ -4338,10 +4346,8 @@ function avanzarTarea(id){
         t.estado = "realizado";
         t.finalizadoEn = ahora;
         t.done = true;
-        ppRegistrarEnHistorial(t); // registrar en historial si es de plan preventivo
-        // Guardar tareas e incidencias juntos en un batch para evitar race condition
-        // (si se guardan por separado, el onSnapshot de "tareas" puede llegar antes
-        //  que el de "incidencias" y sobreescribir la incidencia recién creada)
+        ppRegistrarEnHistorial(t);
+        // Batch write: guardar tareas e incidencias juntos para evitar race condition
         _cache["tareas"] = tareas;
         _cache["incidencias"] = incidencias;
         _db.batch()
@@ -4349,12 +4355,10 @@ function avanzarTarea(id){
             .set(_colRef().doc("incidencias"),{ data: incidencias })
             .commit()
             .catch(e => {
-                // Fallback: guardar por separado si el batch falla
-                console.error("[Firebase] Batch error, saving separately:", e);
+                console.error("[Firebase] Batch error:", e);
                 _fbSet("tareas", tareas);
                 _fbSet("incidencias", incidencias);
             });
-        // Actualizar localStorage local también
         _localStorageOrig.setItem("tareas",      JSON.stringify(tareas));
         _localStorageOrig.setItem("incidencias", JSON.stringify(incidencias));
     }
@@ -9578,7 +9582,7 @@ function confirmarQuienRealizoMulti(){
     t.done = true;
 
     ppRegistrarEnHistorial?.(t);
-    // Guardar tareas e incidencias juntos en un batch para evitar race condition
+    // Batch write: guardar tareas e incidencias juntos para evitar race condition
     _cache["tareas"] = tareas;
     _cache["incidencias"] = incidencias;
     _db.batch()
@@ -9586,7 +9590,7 @@ function confirmarQuienRealizoMulti(){
         .set(_colRef().doc("incidencias"),{ data: incidencias })
         .commit()
         .catch(e => {
-            console.error("[Firebase] Batch error, saving separately:", e);
+            console.error("[Firebase] Batch error:", e);
             _fbSet("tareas", tareas);
             _fbSet("incidencias", incidencias);
         });
