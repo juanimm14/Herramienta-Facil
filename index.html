@@ -4333,15 +4333,34 @@ function avanzarTarea(id){
     if(t.estado === "pendiente"){
         t.estado = "en-curso";
         t.iniciadoEn = ahora;
+        localStorage.setItem("tareas", JSON.stringify(tareas));
     } else if(t.estado === "en-curso"){
         t.estado = "realizado";
         t.finalizadoEn = ahora;
         t.done = true;
         ppRegistrarEnHistorial(t); // registrar en historial si es de plan preventivo
+        // Guardar tareas e incidencias juntos en un batch para evitar race condition
+        // (si se guardan por separado, el onSnapshot de "tareas" puede llegar antes
+        //  que el de "incidencias" y sobreescribir la incidencia recién creada)
+        _cache["tareas"] = tareas;
+        _cache["incidencias"] = incidencias;
+        _db.batch()
+            .set(_colRef().doc("tareas"),     { data: tareas })
+            .set(_colRef().doc("incidencias"),{ data: incidencias })
+            .commit()
+            .catch(e => {
+                // Fallback: guardar por separado si el batch falla
+                console.error("[Firebase] Batch error, saving separately:", e);
+                _fbSet("tareas", tareas);
+                _fbSet("incidencias", incidencias);
+            });
+        // Actualizar localStorage local también
+        _localStorageOrig.setItem("tareas",      JSON.stringify(tareas));
+        _localStorageOrig.setItem("incidencias", JSON.stringify(incidencias));
     }
-    localStorage.setItem("tareas", JSON.stringify(tareas));
     renderTareas();
     renderDashboard();
+    renderIncidenciasPreventivos?.();
 }
 
 function volverTarea(id){
@@ -9559,7 +9578,20 @@ function confirmarQuienRealizoMulti(){
     t.done = true;
 
     ppRegistrarEnHistorial?.(t);
-    localStorage.setItem("tareas", JSON.stringify(tareas));
+    // Guardar tareas e incidencias juntos en un batch para evitar race condition
+    _cache["tareas"] = tareas;
+    _cache["incidencias"] = incidencias;
+    _db.batch()
+        .set(_colRef().doc("tareas"),     { data: tareas })
+        .set(_colRef().doc("incidencias"),{ data: incidencias })
+        .commit()
+        .catch(e => {
+            console.error("[Firebase] Batch error, saving separately:", e);
+            _fbSet("tareas", tareas);
+            _fbSet("incidencias", incidencias);
+        });
+    _localStorageOrig.setItem("tareas",      JSON.stringify(tareas));
+    _localStorageOrig.setItem("incidencias", JSON.stringify(incidencias));
     auditRegistrar?.("tarea","✔", `Tarea "${t.desc}" cerrada`, `Realizada por: ${t.realizadoPor}`);
 
     document.getElementById("modalQuienRealizoMulti").classList.remove("open");
@@ -9568,6 +9600,7 @@ function confirmarQuienRealizoMulti(){
 
     renderTareas?.();
     renderDashboard?.();
+    renderIncidenciasPreventivos?.();
     toast.success("Tarea cerrada ✅", `Realizada por: ${t.realizadoPor}`);
 }
 </script>
