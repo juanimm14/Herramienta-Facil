@@ -8768,7 +8768,7 @@ function pchkGuardarConfiguracion(){
 
     document.getElementById("modalPchkConfigurar").classList.remove("open");
     toast.success("Configuración guardada", `${pchkIslasConfig[tid].length} islas configuradas`);
-    let meta = PCHK_META[tid] || {};
+    meta = PCHK_META[tid] || {};
     auditRegistrar("preventivo","⚙️",`${meta.label||'PCHK'} — Islas configuradas`,`${pchkIslasConfig[tid].length} islas · Mes: ${mesKey}`);
 
     setTimeout(() => pchkAbrirChecklist(mesKey, tid), 200);
