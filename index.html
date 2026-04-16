@@ -2319,11 +2319,12 @@ body {
 <!-- ═══ MODAL PROGRAMAR LIMPIEZA SALA (PP-MGI) ═══ -->
 <div id="modalPpMgi" class="modal">
     <div class="modal-box wide" style="max-width:720px;max-height:92vh;overflow-y:auto;">
-        <div class="modal-title">🗓️ Programar Limpieza Sala</div>
+        <div class="modal-title" id="ppMgiModalTitulo">🗓️ Programar Limpieza Sala</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">
             Armá el cronograma de días con las islas que se limpian. Máximo 10 días.
         </div>
         <input type="hidden" id="ppMgiMesKey">
+        <input type="hidden" id="ppMgiTareaId" value="6">
         <div class="form-group">
             <label class="form-label">Cantidad de Días (1 – 10)</label>
             <div style="display:flex;align-items:center;gap:12px;">
@@ -4926,6 +4927,7 @@ const TIPO_LABELS_PREV = {
     "": "Islas Slots",
     "plan": "Mant. General de Islas",
     "mantenimiento-islas": "Mant. Islas",
+    "mgi-7": "Limpieza Sala Semicubierta",
     "control-cooler-botonera": "Control Cooler Botonera",
     "pchk-1":  "Mantenimiento de Chippers",
     "pchk-2":  "Mantenimiento de Visualizadores de RA",
@@ -5272,7 +5274,7 @@ function guardarGenerico(){
         subTipo: tipoGenActual,
         fecha: document.getElementById("fechaGen").value,
         islas: seleccionados,
-        tecnico: document.getElementById("tecnicoGen").value,
+        tecnico: (function(){ let v = document.getElementById("tecnicoGen").value; return v === "__turno_MANANA__" ? "☀️ Turno mañana" : v; })(),
         nota: document.getElementById("notaGen").value,
         estado: "Realizado",
         validado: false,
@@ -6772,10 +6774,10 @@ function ppRenderMes(mesIdx){
     let tecnicosOpts = PP_TECNICOS.map(t => `<option value="${t}">${t}</option>`).join("");
 
     cont.innerHTML = prevs.map((p,i) => {
-        let esMGI = p.tareaId === 6;
+        let esMGI = MGI_IDS.has(p.tareaId);
         let esCCB = p.tareaId === 31;
         let esPCHK = PCHK_META && !!PCHK_META[p.tareaId];
-        let cronograma = esMGI ? (mgiCronogramas[mesKey] || null) : null;
+        let cronograma = esMGI ? (mgiCronogramas[mgiGetKey(p.tareaId, mesKey)] || null) : null;
 
         // ── Botón / checklist Control Cooler Botonera Aristocrat (tareaId 31) ──
         let ccbHtml = "";
@@ -6870,7 +6872,7 @@ function ppRenderMes(mesIdx){
                         : `<span style="color:var(--muted);font-size:11px;font-style:italic;">Sin islas</span>`;
                     let estadoDia = d.cerrado
                         ? `<span style="font-size:11px;font-weight:700;color:var(--accent);">✅ Cerrado</span>`
-                        : `<button onclick="ppMgiCerrarDia('${mesKey}',${d.dia})"
+                        : `<button onclick="ppMgiCerrarDia('${mesKey}',${d.dia},${p.tareaId})"
                             style="background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;font-size:11px;padding:2px 8px;transition:all .15s;"
                             onmouseover="this.style.background='rgba(0,212,168,.25)'"
                             onmouseout="this.style.background='rgba(0,212,168,.1)'"
@@ -6898,7 +6900,7 @@ function ppRenderMes(mesIdx){
                                 <div style="width:${progPct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
                             </div>
                             <span style="font-size:11px;color:var(--muted);">${progPct}%</span>
-                            <button onclick="ppMgiProgramar('${mesKey}')"
+                            <button onclick="ppMgiProgramar('${mesKey}',${p.tareaId})"
                                 style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);border-radius:5px;color:var(--yellow);cursor:pointer;font-size:11px;padding:2px 8px;transition:all .15s;"
                                 onmouseover="this.style.background='rgba(255,201,71,.2)'"
                                 onmouseout="this.style.background='rgba(255,201,71,.1)'"
@@ -6910,11 +6912,11 @@ function ppRenderMes(mesIdx){
             } else {
                 cronogramaHtml = `
                 <div style="margin-top:12px;">
-                    <button onclick="ppMgiProgramar('${mesKey}')"
+                    <button onclick="ppMgiProgramar('${mesKey}',${p.tareaId})"
                         style="width:100%;padding:10px;background:rgba(0,212,168,.08);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;"
                         onmouseover="this.style.background='rgba(0,212,168,.16)'"
                         onmouseout="this.style.background='rgba(0,212,168,.08)'"
-                    >🗓️ Programar Limpieza Sala</button>
+                    >🗓️ Programar ${MGI_LABELS[p.tareaId] || 'Limpieza Sala'}</button>
                 </div>`;
             }
         }
@@ -7000,21 +7002,23 @@ function ppEnviarATareas(){
     let nuevasCreadas = 0;
 
     pendientes.forEach((p, i) => {
-        // Para Mantenimiento General de Islas (tareaId 6), generar una tarea por día del cronograma
-        if(p.tareaId === 6){
-            let cron = mgiCronogramas[mesKey];
+        // Para preventivos con cronograma por días (tareaId 6 y 7)
+        if(MGI_IDS.has(p.tareaId)){
+            let key  = mgiGetKey(p.tareaId, mesKey);
+            let cron = mgiCronogramas[key];
+            let label = MGI_LABELS[p.tareaId] || p.nombre;
             if(cron && cron.dias.length > 0){
                 cron.dias.forEach((d, di) => {
                     let keyDia = `${p.tareaId}-dia${d.dia}`;
-                    if(yaEnviados.includes(keyDia)) return; // ya existe
+                    if(yaEnviados.includes(keyDia)) return;
                     let islasTexto = d.islas.length > 0 ? `Islas: ${d.islas.join(", ")}` : "Sin islas asignadas";
                     tareas.push({
                         id: ahora + i * 100 + di,
-                        desc: `[Limpieza Sala ${mesNombre}] Día ${d.dia} · ${islasTexto}`,
+                        desc: `[${label} ${mesNombre}] Día ${d.dia} · ${islasTexto}`,
                         asignado: d.tecnico || "Juan",
                         prioridad: "alta",
                         fecha: d.fecha || fechaHoy,
-                        notas: `Mantenimiento General de Islas — ${mesNombre} ${anio}. ${islasTexto}. Controlá: cerraduras, coolers, impresoras. Sopletear gabinete y full CPU.`,
+                        notas: `${label} — ${mesNombre} ${anio}. ${islasTexto}.`,
                         estado: "pendiente",
                         done: false,
                         creadoEn: ahora + i * 100 + di,
@@ -7524,10 +7528,10 @@ ppRenderMes = function(mesIdx){
             }
         }
 
-        // ── Botón / cronograma Limpieza Sala (tareaId 6) ──
+        // ── Botón / cronograma Limpieza Sala (tareaId 6 y 7) ──
         let cronogramaHtml = "";
-        if(p.tareaId === 6){
-            let cronograma = mgiCronogramas[mesKey] || null;
+        if(MGI_IDS.has(p.tareaId)){
+            let cronograma = mgiCronogramas[mgiGetKey(p.tareaId, mesKey)] || null;
             if(cronograma){
                 let diasHtml = cronograma.dias.map(d => {
                     let islasChips = d.islas.length > 0
@@ -7535,7 +7539,7 @@ ppRenderMes = function(mesIdx){
                         : `<span style="color:var(--muted);font-size:11px;font-style:italic;">Sin islas</span>`;
                     let estadoDia = d.cerrado
                         ? `<span style="font-size:11px;font-weight:700;color:var(--accent);">✅ Cerrado</span>`
-                        : `<button onclick="ppMgiCerrarDia('${mesKey}',${d.dia})"
+                        : `<button onclick="ppMgiCerrarDia('${mesKey}',${d.dia},${p.tareaId})"
                             style="background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;font-size:11px;padding:2px 8px;"
                             onmouseover="this.style.background='rgba(0,212,168,.25)'"
                             onmouseout="this.style.background='rgba(0,212,168,.1)'"
@@ -7555,7 +7559,7 @@ ppRenderMes = function(mesIdx){
                 let progPct = cronograma.dias.length > 0 ? Math.round(cerradosCount/cronograma.dias.length*100) : 0;
 
                 let btnEditarCron = esAdmin
-                    ? `<button onclick="ppMgiProgramar('${mesKey}')"
+                    ? `<button onclick="ppMgiProgramar('${mesKey}',${p.tareaId})"
                         style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);border-radius:5px;color:var(--yellow);cursor:pointer;font-size:11px;padding:2px 8px;"
                         onmouseover="this.style.background='rgba(255,201,71,.2)'"
                         onmouseout="this.style.background='rgba(255,201,71,.1)'"
@@ -7579,11 +7583,11 @@ ppRenderMes = function(mesIdx){
             } else {
                 cronogramaHtml = esAdmin ? `
                 <div style="margin-top:10px;">
-                    <button onclick="ppMgiProgramar('${mesKey}')"
+                    <button onclick="ppMgiProgramar('${mesKey}',${p.tareaId})"
                         style="width:100%;padding:10px;background:rgba(0,212,168,.08);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;"
                         onmouseover="this.style.background='rgba(0,212,168,.16)'"
                         onmouseout="this.style.background='rgba(0,212,168,.08)'"
-                    >🗓️ Programar Limpieza Sala</button>
+                    >🗓️ Programar ${MGI_LABELS[p.tareaId] || 'Limpieza Sala'}</button>
                 </div>` : "";
             }
         }
@@ -7716,15 +7720,30 @@ guardarTarea = function(){
 //  PROGRAMAR LIMPIEZA SALA — dentro de Plan Preventivo
 // ══════════════════════════════════════════════════════════
 let mgiCronogramas = JSON.parse(localStorage.getItem("mgiCronogramas")) || {};
-let _ppMgiCerrandoRef = null; // { mesKey, dia }
+let _ppMgiCerrandoRef = null; // { mesKey, dia, tid }
+
+// IDs que usan el sistema de cronograma por días (MGI)
+const MGI_IDS = new Set([6, 7]);
+const MGI_LABELS = {
+    6: "Limpieza Sala",
+    7: "Limpieza Sala Semicubierta"
+};
+
+// Clave de storage: para tareaId 6 usamos mesKey solo (retrocompat), para otros tid-mesKey
+function mgiGetKey(tid, mesKey){ return tid === 6 ? mesKey : `${tid}-${mesKey}`; }
 
 function ppMgiGuardarStorage(){
     localStorage.setItem("mgiCronogramas", JSON.stringify(mgiCronogramas));
 }
 
-function ppMgiProgramar(mesKey){
-    document.getElementById("ppMgiMesKey").value = mesKey;
-    let cron = mgiCronogramas[mesKey];
+function ppMgiProgramar(mesKey, tid){
+    tid = tid || 6;
+    let label = MGI_LABELS[tid] || "Limpieza Sala";
+    document.getElementById("ppMgiMesKey").value  = mesKey;
+    document.getElementById("ppMgiTareaId").value = tid;
+    document.getElementById("ppMgiModalTitulo").textContent = `🗓️ Programar ${label}`;
+    let key  = mgiGetKey(tid, mesKey);
+    let cron = mgiCronogramas[key];
     let cant = cron ? cron.dias.length : 1;
     document.getElementById("ppMgiCantDias").value = cant;
     ppMgiGenerarDias(cron);
@@ -7774,6 +7793,8 @@ function ppMgiGenerarDias(cronExistente){
 
 function ppMgiGuardarCronograma(){
     let mesKey = document.getElementById("ppMgiMesKey").value;
+    let tid    = parseInt(document.getElementById("ppMgiTareaId").value) || 6;
+    let key    = mgiGetKey(tid, mesKey);
     let cant   = Math.min(10, Math.max(1, parseInt(document.getElementById("ppMgiCantDias").value) || 1));
     let dias   = [];
 
@@ -7782,26 +7803,27 @@ function ppMgiGuardarCronograma(){
         let tecnico = document.getElementById(`ppMgiDia${i}Tecnico`)?.value || "Juan";
         let chips   = document.querySelectorAll(`#ppMgiDia${i}Islas .mgi-isla-chip.on`);
         let islas   = Array.from(chips).map(c => parseInt(c.dataset.id));
-        // Preservar estado cerrado si ya existía
-        let dExist  = mgiCronogramas[mesKey]?.dias?.find(d => d.dia === i);
+        let dExist  = mgiCronogramas[key]?.dias?.find(d => d.dia === i);
         dias.push({ dia: i, fecha, tecnico, islas, nota: dExist?.nota || "", cerrado: dExist?.cerrado || false });
     }
 
-    mgiCronogramas[mesKey] = { dias };
+    mgiCronogramas[key] = { dias };
     ppMgiGuardarStorage();
     document.getElementById("modalPpMgi").classList.remove("open");
     toast.success("Cronograma guardado", `${cant} días programados`);
-
-    // Guardar también en mgiPlanes para que aparezca en la sección MGI si existe
-    auditRegistrar("preventivo","🗓️", `Cronograma Limpieza Sala guardado`, `Mes: ${mesKey} · ${cant} días`);
+    let label = MGI_LABELS[tid] || "Sala";
+    auditRegistrar("preventivo","🗓️", `Cronograma ${label} guardado`, `Mes: ${mesKey} · ${cant} días`);
     ppRenderMes(ppTabActivo);
 }
 
-function ppMgiCerrarDia(mesKey, diaNum){
-    _ppMgiCerrandoRef = { mesKey, diaNum };
-    let d = mgiCronogramas[mesKey]?.dias?.find(x => x.dia === diaNum);
+function ppMgiCerrarDia(mesKey, diaNum, tid){
+    tid = tid || 6;
+    let key = mgiGetKey(tid, mesKey);
+    _ppMgiCerrandoRef = { mesKey, diaNum, tid };
+    let d = mgiCronogramas[key]?.dias?.find(x => x.dia === diaNum);
     if(!d) return;
-    document.getElementById("ppMgiCerrarTitulo").textContent = `✅ Cerrar Día ${diaNum}`;
+    let label = MGI_LABELS[tid] || "Sala";
+    document.getElementById("ppMgiCerrarTitulo").textContent = `✅ Cerrar Día ${diaNum} — ${label}`;
     document.getElementById("ppMgiCerrarInfo").innerHTML =
         `<b>Fecha:</b> ${d.fecha} · <b>Técnico:</b> ${d.tecnico}<br><b>Islas:</b> ${d.islas.length > 0 ? d.islas.join(", ") : "Sin islas asignadas"}`;
     document.getElementById("ppMgiCerrarNota").value = d.nota || "";
@@ -7810,21 +7832,23 @@ function ppMgiCerrarDia(mesKey, diaNum){
 
 function ppMgiConfirmarCierre(){
     if(!_ppMgiCerrandoRef) return;
-    let { mesKey, diaNum } = _ppMgiCerrandoRef;
-    let d = mgiCronogramas[mesKey]?.dias?.find(x => x.dia === diaNum);
+    let { mesKey, diaNum, tid } = _ppMgiCerrandoRef;
+    tid = tid || 6;
+    let key   = mgiGetKey(tid, mesKey);
+    let label = MGI_LABELS[tid] || "Sala";
+    let d = mgiCronogramas[key]?.dias?.find(x => x.dia === diaNum);
     if(!d) return;
 
     d.nota    = document.getElementById("ppMgiCerrarNota").value.trim();
     d.cerrado = true;
 
-    // Guardar en historial preventivos
     incidencias.push({
         tipo: "Preventivo",
-        subTipo: "mantenimiento-islas",
+        subTipo: tid === 6 ? "mantenimiento-islas" : `mgi-${tid}`,
         fecha: d.fecha,
         islas: d.islas.map(String),
         tecnico: d.tecnico,
-        nota: `[Limpieza Sala ${mesKey}] Día ${diaNum} — ${d.nota || "Sin notas"}`,
+        nota: `[${label} ${mesKey}] Día ${diaNum} — ${d.nota || "Sin notas"}`,
         estado: "Realizado",
         validado: false
     });
@@ -7833,7 +7857,7 @@ function ppMgiConfirmarCierre(){
     ppMgiGuardarStorage();
     document.getElementById("modalPpMgiCerrar").classList.remove("open");
     toast.success(`Día ${diaNum} cerrado`, "Guardado en Historial Preventivos");
-    auditRegistrar("preventivo","✅", `Limpieza Sala Día ${diaNum} cerrado`, `Técnico: ${d.tecnico} · ${d.islas.length} islas`);
+    auditRegistrar("preventivo","✅", `${label} Día ${diaNum} cerrado`, `Técnico: ${d.tecnico} · ${d.islas.length} islas`);
     renderDashboard();
     ppRenderMes(ppTabActivo);
 }
@@ -9005,6 +9029,9 @@ function poblarSelectsTecnicos(){
         if(id === "tareaAsignado"){
             opts += `<option value="__turno_MANANA__">☀️ Turno mañana</option>`;
             opts += `<option value="__todos__">👥 Todos</option>`;
+        }
+        if(id === "tecnicoGen"){
+            opts += `<option value="__turno_MANANA__">☀️ Turno mañana</option>`;
         }
 
         tecnicos.forEach(n => {
