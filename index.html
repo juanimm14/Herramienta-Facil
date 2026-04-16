@@ -2476,6 +2476,10 @@ body {
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;">Islas a controlar</div>
         <div id="pchkChecklistIslas" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;padding-right:4px;"></div>
         <div class="form-group" style="margin-top:16px;">
+            <label class="form-label">👤 Técnico responsable</label>
+            <select id="pchkChecklistTecnico" class="form-select"></select>
+        </div>
+        <div class="form-group" style="margin-top:10px;">
             <label class="form-label">📝 Notas / Observaciones</label>
             <textarea id="pchkChecklistNota" class="form-textarea" placeholder="Observaciones del control..." style="min-height:70px;"></textarea>
         </div>
@@ -8515,7 +8519,7 @@ const PCHK_META = {
      1: { label: "Mantenimiento de Chippers",              subTipo: "pchk-1",  emoji: "🔧" },
      2: { label: "Mantenimiento de Visualizadores de RA",  subTipo: "pchk-2",  emoji: "🖥️" },
      5: { label: "Limpieza de Fichas",                     subTipo: "pchk-5",  emoji: "🎰" },
-     8: { label: "Limpieza General de Stackers",              subTipo: "pchk-8",  emoji: "🧹" },
+     8: { label: "Limpieza General de Stackers",              subTipo: "pchk-8",  emoji: "🧹", stackerGrupos: true },
     11: { label: "Limpieza CPU IGT",                          subTipo: "pchk-11", emoji: "🖥️" },
     12: { label: "Limpieza Filtros AVP IGT",                  subTipo: "pchk-12", emoji: "🔍" },
     13: { label: "Control Botones/Calcos OLED IGT",           subTipo: "pchk-13", emoji: "🔘" },
@@ -8567,6 +8571,11 @@ function pchkSetData(tid, mesKey, val){
 const PCHK_TEXT_IDS = new Set([1, 2, 5]);
 
 // ── Abrir configuración Admin ──────────────────────────────
+const STACKER_GRUPOS = [
+    { nombre: "Blancos",   color: "#e8edf5", equipos: ["A1","A2","B1","B2","C1","C2","D1","D2"] },
+    { nombre: "Amarillos", color: "#ffc947", equipos: ["A1","A2","B1","B2","C1","C2","D1","D2"] }
+];
+
 function pchkAbrirConfigurar(mesKey, tid){
     let esAdmin = usuarioActual?.rol === "Admin";
     if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
@@ -8576,6 +8585,62 @@ function pchkAbrirConfigurar(mesKey, tid){
     document.getElementById("pchkConfMesKey").value   = mesKey;
     document.getElementById("pchkConfTareaId").value  = tid;
     document.getElementById("pchkConfTitulo").textContent = `⚙️ Configurar Islas — ${meta.label}`;
+
+    // ── Stackers: UI especial con checkboxes por grupo ──
+    if(meta.stackerGrupos){
+        let existentes = pchkGetConfig(tid); // ["Blancos|A1","Amarillos|B2",...]
+        let body = document.querySelector("#modalPchkConfigurar .modal-box");
+
+        // Ocultar el input de número genérico y la lista, mostrar los grupos
+        document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "none";
+        document.querySelector("#modalPchkConfigurar .form-group:nth-child(3)").style.display = "none";
+        document.querySelector("#modalPchkConfigurar div[style*='💡']")?.style && (document.querySelector("#modalPchkConfigurar div[style*='💡']").style.display = "none");
+
+        let panelId = "pchkStackerGruposPanel";
+        let existingPanel = document.getElementById(panelId);
+        if(existingPanel) existingPanel.remove();
+
+        let panel = document.createElement("div");
+        panel.id = panelId;
+        panel.style.cssText = "margin-bottom:14px;";
+
+        let html = `<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Seleccioná los stackers que forman parte del control.</div>`;
+        STACKER_GRUPOS.forEach(grupo => {
+            html += `<div style="margin-bottom:14px;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${grupo.color};margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+                    <span>${grupo.nombre}</span>
+                    <button onclick="pchkStackerSelAll('${grupo.nombre}',true)" style="font-size:10px;padding:2px 8px;background:rgba(0,212,168,.15);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;">Todo</button>
+                    <button onclick="pchkStackerSelAll('${grupo.nombre}',false)" style="font-size:10px;padding:2px 8px;background:rgba(255,77,109,.1);border:1px solid var(--red);border-radius:5px;color:var(--red);cursor:pointer;">Ninguno</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">`;
+            grupo.equipos.forEach(eq => {
+                let key = grupo.nombre + "|" + eq;
+                let checked = existentes.includes(key) ? "checked" : "";
+                html += `<label style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--white);transition:all .2s;"
+                    onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <input type="checkbox" data-grupo="${grupo.nombre}" data-eq="${eq}" ${checked}
+                        style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    ${eq}
+                </label>`;
+            });
+            html += `</div></div>`;
+        });
+        panel.innerHTML = html;
+
+        // Insertar antes del footer
+        let footer = document.querySelector("#modalPchkConfigurar .modal-footer");
+        footer.parentNode.insertBefore(panel, footer);
+
+        document.getElementById("modalPchkConfigurar").classList.add("open");
+        return;
+    }
+
+    // ── Modo normal ──
+    // Restaurar visibilidad por si se abrió stacker antes
+    document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "";
+    document.querySelector("#modalPchkConfigurar .form-group:nth-child(3)").style.display = "";
+    let existingPanel2 = document.getElementById("pchkStackerGruposPanel");
+    if(existingPanel2) existingPanel2.remove();
 
     let isTexto = PCHK_TEXT_IDS.has(tid);
     let inp = document.getElementById("pchkNuevaIsla");
@@ -8591,6 +8656,11 @@ function pchkAbrirConfigurar(mesKey, tid){
     _pchkIslasTemp = [...pchkGetConfig(tid)];
     pchkRenderIslasList();
     document.getElementById("modalPchkConfigurar").classList.add("open");
+}
+
+function pchkStackerSelAll(grupo, sel){
+    document.querySelectorAll(`#pchkStackerGruposPanel input[data-grupo="${grupo}"]`)
+        .forEach(cb => cb.checked = sel);
 }
 
 function pchkRenderIslasList(){
@@ -8637,9 +8707,45 @@ function pchkQuitarIsla(id){
 }
 
 function pchkGuardarConfiguracion(){
-    if(_pchkIslasTemp.length === 0){ toast.warning("Sin islas","Agregá al menos una isla antes de guardar."); return; }
     let mesKey = document.getElementById("pchkConfMesKey").value;
     let tid    = parseInt(document.getElementById("pchkConfTareaId").value);
+    let meta   = PCHK_META[tid] || {};
+
+    // ── Stackers: recolectar checkboxes marcados ──
+    if(meta.stackerGrupos){
+        let cbs = document.querySelectorAll("#pchkStackerGruposPanel input[type=checkbox]:checked");
+        let seleccionados = [...cbs].map(cb => cb.dataset.grupo + "|" + cb.dataset.eq);
+        if(seleccionados.length === 0){ toast.warning("Sin stackers","Seleccioná al menos un stacker."); return; }
+        pchkIslasConfig[tid] = seleccionados;
+        pchkGuardarConfig();
+
+        let dataExist = pchkGetData(tid, mesKey);
+        let islasNuevas = seleccionados.map(id => {
+            let exist = dataExist?.islas?.find(x => x.id === id);
+            return { id, hecho: exist?.hecho || false };
+        });
+        pchkSetData(tid, mesKey, {
+            islas: islasNuevas,
+            nota: dataExist?.nota || "",
+            cerrado: dataExist?.cerrado || false,
+            fechaCierre: dataExist?.fechaCierre || null
+        });
+        // Cerrar modal y abrir checklist
+        document.getElementById("modalPchkConfigurar").classList.remove("open");
+        // Restaurar UI genérica para próximas aperturas
+        document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "";
+        let p3 = document.querySelector("#modalPchkConfigurar .form-group:nth-child(3)");
+        if(p3) p3.style.display = "";
+        let ep = document.getElementById("pchkStackerGruposPanel");
+        if(ep) ep.remove();
+        toast.success("Configuración guardada", `${seleccionados.length} stackers configurados`);
+        auditRegistrar?.("preventivo","⚙️",`${meta.label} — Stackers configurados`,`${seleccionados.length} stackers · Mes: ${mesKey}`);
+        setTimeout(() => pchkAbrirChecklist(mesKey, tid), 200);
+        ppRenderMes?.(ppTabActivo);
+        return;
+    }
+
+    if(_pchkIslasTemp.length === 0){ toast.warning("Sin islas","Agregá al menos una isla antes de guardar."); return; }
 
     pchkIslasConfig[tid] = [..._pchkIslasTemp].sort((a,b) => {
         let na = parseFloat(a), nb = parseFloat(b);
@@ -8703,6 +8809,19 @@ function pchkAbrirChecklist(mesKey, tid){
     btnCerrar.style.display = data.cerrado ? "none" : "";
     document.getElementById("pchkChecklistNota").value = data.nota || "";
 
+    // Poblar selector de técnico
+    let selTecPchk = document.getElementById("pchkChecklistTecnico");
+    if(selTecPchk){
+        let tecnicos = getTecnicos();
+        let opts = '<option value="__turno_MANANA__">☀️ Turno mañana</option>';
+        tecnicos.forEach(n => { opts += `<option value="${n}">${n}</option>`; });
+        selTecPchk.innerHTML = opts;
+        // Pre-seleccionar el usuario logueado
+        if(usuarioActual?.nombre && [...selTecPchk.options].some(o => o.value === usuarioActual.nombre)){
+            selTecPchk.value = usuarioActual.nombre;
+        }
+    }
+
     pchkRenderChecklistIslas(mesKey, tid);
     document.getElementById("modalPchkChecklist").classList.add("open");
 }
@@ -8721,10 +8840,38 @@ function pchkRenderChecklistIslas(mesKey, tid){
     document.getElementById("pchkProgText").textContent = `${hecho} / ${total}`;
     document.getElementById("pchkProgBar").style.width  = pct + "%";
 
+    // ── Stackers: mostrar agrupados por Blancos/Amarillos ──
+    if(meta.stackerGrupos){
+        let html = "";
+        STACKER_GRUPOS.forEach(grupo => {
+            let islasFiltradas = data.islas.filter(x => String(x.id).startsWith(grupo.nombre + "|"));
+            if(islasFiltradas.length === 0) return;
+            html += `<div style="margin-bottom:12px;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${grupo.color};margin-bottom:6px;">${grupo.nombre}</div>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">`;
+            islasFiltradas.forEach(isla => {
+                let idx = data.islas.indexOf(isla);
+                let eq  = String(isla.id).split("|")[1] || isla.id;
+                html += `<div onclick="${esCerrado ? '' : `pchkToggleIsla('${mesKey}',${tid},${idx})`}"
+                    style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg3)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:8px;cursor:${esCerrado?'default':'pointer'};transition:all .2s;"
+                    ${esCerrado ? '' : `onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'"` }>
+                    <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        ${isla.hecho ? '<span style="color:#0f1117;font-size:11px;font-weight:900;">✓</span>' : ''}
+                    </div>
+                    <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">${eq}</span>
+                    <span style="margin-left:auto;font-size:11px;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅':'Pendiente'}</span>
+                </div>`;
+            });
+            html += `</div></div>`;
+        });
+        cont.innerHTML = html;
+        return;
+    }
+
     cont.innerHTML = data.islas.map((isla, idx) => `
         <div onclick="${esCerrado ? '' : `pchkToggleIsla('${mesKey}',${tid},${idx})`}"
             style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg3)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:9px;cursor:${esCerrado?'default':'pointer'};transition:all .2s;"
-            ${esCerrado?'':` onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'"`}
+            ${esCerrado?'':` onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'"` }
         >
             <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
                 ${isla.hecho ? '<span style="color:#0f1117;font-size:13px;font-weight:900;">✓</span>' : ''}
@@ -8764,6 +8911,8 @@ function pchkGuardarParcial(){
     let data   = pchkGetData(tid, mesKey);
     if(!data) return;
     data.nota = document.getElementById("pchkChecklistNota").value.trim();
+    let tecPchkValP = document.getElementById("pchkChecklistTecnico")?.value || usuarioActual?.nombre || "Técnico";
+    data.tecnico = tecPchkValP === "__turno_MANANA__" ? "☀️ Turno mañana" : tecPchkValP;
     pchkGuardarStorage();
     document.getElementById("modalPchkChecklist").classList.remove("open");
     let hecho = data.islas.filter(x=>x.hecho).length;
@@ -8790,12 +8939,14 @@ function pchkCerrarControl(){
 
     let islasHechas = data.islas.filter(x=>x.hecho).map(x=>String(x.id));
     let meta = PCHK_META[tid] || { label: "Preventivo", subTipo: `pchk-${tid}` };
+    let tecPchkVal = document.getElementById("pchkChecklistTecnico")?.value || usuarioActual?.nombre || "Técnico";
+    let tecPchkLabel = tecPchkVal === "__turno_MANANA__" ? "☀️ Turno mañana" : tecPchkVal;
     incidencias.push({
         tipo:    "Preventivo",
         subTipo: meta.subTipo,
         fecha:   new Date().toISOString().split("T")[0],
         islas:   islasHechas,
-        tecnico: usuarioActual?.nombre || "Técnico",
+        tecnico: tecPchkLabel,
         nota:    `[${meta.label} ${mesKey}] ${hecho}/${total} islas — ${data.nota || "Sin notas"}`,
         estado:  hecho === total ? "Realizado" : "Realizado Parcial",
         validado: false
