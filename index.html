@@ -2447,11 +2447,11 @@ body {
                 >+ Agregar</button>
             </div>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="pchkConfGrupoIslas">
             <label class="form-label">Islas configuradas (clic para eliminar)</label>
             <div id="pchkIslasList" style="display:flex;flex-wrap:wrap;gap:8px;min-height:48px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;"></div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">💡 Hacé clic sobre una isla para eliminarla de la lista.</div>
+        <div id="pchkConfHint" style="font-size:12px;color:var(--muted);margin-bottom:14px;">💡 Hacé clic sobre una isla para eliminarla de la lista.</div>
         <div class="modal-footer">
             <button class="btn-modal-save" onclick="pchkGuardarConfiguracion()">✅ Guardar y Abrir Checklist</button>
             <button class="btn-modal-cancel" onclick="document.getElementById('modalPchkConfigurar').classList.remove('open')">Cancelar</button>
@@ -8577,10 +8577,12 @@ const STACKER_GRUPOS = [
 ];
 
 function pchkAbrirConfigurar(mesKey, tid){
+    tid = parseInt(tid);
     let esAdmin = usuarioActual?.rol === "Admin";
     if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
+    if(typeof PCHK_META === "undefined"){ console.error("[pchk] PCHK_META no definido"); return; }
     let meta = PCHK_META[tid];
-    if(!meta) return;
+    if(!meta){ console.error("[pchk] No se encontró meta para tid:", tid, "Keys:", Object.keys(PCHK_META)); return; }
 
     document.getElementById("pchkConfMesKey").value   = mesKey;
     document.getElementById("pchkConfTareaId").value  = tid;
@@ -8592,11 +8594,10 @@ function pchkAbrirConfigurar(mesKey, tid){
         let body = document.querySelector("#modalPchkConfigurar .modal-box");
 
         // Ocultar el input de número genérico y la lista, mostrar los grupos
-        let _fgs = document.querySelectorAll("#modalPchkConfigurar .form-group");
-        if(_fgs[0]) _fgs[0].style.display = "none";
-        if(_fgs[1]) _fgs[1].style.display = "none";
-        // Ocultar el hint de 💡
-        let _hint = [...document.querySelectorAll("#modalPchkConfigurar div")].find(d => d.textContent.includes("💡"));
+        document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "none";
+        let _fg2 = document.getElementById("pchkConfGrupoIslas");
+        if(_fg2) _fg2.style.display = "none";
+        let _hint = document.getElementById("pchkConfHint");
         if(_hint) _hint.style.display = "none";
 
         let panelId = "pchkStackerGruposPanel";
@@ -8640,10 +8641,10 @@ function pchkAbrirConfigurar(mesKey, tid){
 
     // ── Modo normal ──
     // Restaurar visibilidad por si se abrió stacker antes
-    let _fgs2 = document.querySelectorAll("#modalPchkConfigurar .form-group");
-    if(_fgs2[0]) _fgs2[0].style.display = "";
-    if(_fgs2[1]) _fgs2[1].style.display = "";
-    let _hint2 = [...document.querySelectorAll("#modalPchkConfigurar div")].find(d => d.textContent.includes("💡"));
+    document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "";
+    let _fg2b = document.getElementById("pchkConfGrupoIslas");
+    if(_fg2b) _fg2b.style.display = "";
+    let _hint2 = document.getElementById("pchkConfHint");
     if(_hint2) _hint2.style.display = "";
     let existingPanel2 = document.getElementById("pchkStackerGruposPanel");
     if(existingPanel2) existingPanel2.remove();
@@ -8739,9 +8740,11 @@ function pchkGuardarConfiguracion(){
         // Cerrar modal y abrir checklist
         document.getElementById("modalPchkConfigurar").classList.remove("open");
         // Restaurar UI genérica para próximas aperturas
-        let _fgs3 = document.querySelectorAll("#modalPchkConfigurar .form-group");
-        if(_fgs3[0]) _fgs3[0].style.display = "";
-        if(_fgs3[1]) _fgs3[1].style.display = "";
+        document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "";
+        let _fg2c = document.getElementById("pchkConfGrupoIslas");
+        if(_fg2c) _fg2c.style.display = "";
+        let _hint3 = document.getElementById("pchkConfHint");
+        if(_hint3) _hint3.style.display = "";
         let ep = document.getElementById("pchkStackerGruposPanel");
         if(ep) ep.remove();
         toast.success("Configuración guardada", `${seleccionados.length} stackers configurados`);
