@@ -8592,9 +8592,12 @@ function pchkAbrirConfigurar(mesKey, tid){
         let body = document.querySelector("#modalPchkConfigurar .modal-box");
 
         // Ocultar el input de número genérico y la lista, mostrar los grupos
-        document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "none";
-        document.querySelector("#modalPchkConfigurar .form-group:nth-child(3)").style.display = "none";
-        document.querySelector("#modalPchkConfigurar div[style*='💡']")?.style && (document.querySelector("#modalPchkConfigurar div[style*='💡']").style.display = "none");
+        let _fgs = document.querySelectorAll("#modalPchkConfigurar .form-group");
+        if(_fgs[0]) _fgs[0].style.display = "none";
+        if(_fgs[1]) _fgs[1].style.display = "none";
+        // Ocultar el hint de 💡
+        let _hint = [...document.querySelectorAll("#modalPchkConfigurar div")].find(d => d.textContent.includes("💡"));
+        if(_hint) _hint.style.display = "none";
 
         let panelId = "pchkStackerGruposPanel";
         let existingPanel = document.getElementById(panelId);
@@ -8637,8 +8640,11 @@ function pchkAbrirConfigurar(mesKey, tid){
 
     // ── Modo normal ──
     // Restaurar visibilidad por si se abrió stacker antes
-    document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "";
-    document.querySelector("#modalPchkConfigurar .form-group:nth-child(3)").style.display = "";
+    let _fgs2 = document.querySelectorAll("#modalPchkConfigurar .form-group");
+    if(_fgs2[0]) _fgs2[0].style.display = "";
+    if(_fgs2[1]) _fgs2[1].style.display = "";
+    let _hint2 = [...document.querySelectorAll("#modalPchkConfigurar div")].find(d => d.textContent.includes("💡"));
+    if(_hint2) _hint2.style.display = "";
     let existingPanel2 = document.getElementById("pchkStackerGruposPanel");
     if(existingPanel2) existingPanel2.remove();
 
@@ -8733,9 +8739,9 @@ function pchkGuardarConfiguracion(){
         // Cerrar modal y abrir checklist
         document.getElementById("modalPchkConfigurar").classList.remove("open");
         // Restaurar UI genérica para próximas aperturas
-        document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "";
-        let p3 = document.querySelector("#modalPchkConfigurar .form-group:nth-child(3)");
-        if(p3) p3.style.display = "";
+        let _fgs3 = document.querySelectorAll("#modalPchkConfigurar .form-group");
+        if(_fgs3[0]) _fgs3[0].style.display = "";
+        if(_fgs3[1]) _fgs3[1].style.display = "";
         let ep = document.getElementById("pchkStackerGruposPanel");
         if(ep) ep.remove();
         toast.success("Configuración guardada", `${seleccionados.length} stackers configurados`);
