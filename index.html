@@ -84,26 +84,15 @@ const _localStorageOrig = {
 const _FB_KEYS = new Set([
     "incidencias","tareas","islasActivas",
     "ccbCronogramas","ccbIslasConfig",
-    "pchkCronogramas","pchkIslasConfig",
     "mgiCronogramas","mgiPlanes",
     "ppPreventivos","ppTareas",
     "evaIncidencias","evaDiarios",
     "fdsData","contadorasData","cartelesData",
-    "auditLog","usersDB",
-    "equiposAVP","equiposChipper","equiposPC",
-    "equiposCilindros","equiposRA","equiposEVA"
+    "auditLog","usersDB"
 ]);
 
 localStorage.setItem = function(clave, valor) {
     if (_FB_KEYS.has(clave)) {
-        // ⚠️ GUARDA CRÍTICA: no escribir en Firestore antes de que la carga
-        // inicial termine. Evita que datos vacíos del localStorage local
-        // (cuando se abre desde un dispositivo nuevo) sobreescriban los datos
-        // reales almacenados en Firebase desde otra PC.
-        if (!window._fbCargaCompleta) {
-            _localStorageOrig.setItem(clave, valor);
-            return;
-        }
         let parsed;
         try { parsed = JSON.parse(valor); } catch { parsed = valor; }
         _fbSet(clave, parsed);
@@ -140,39 +129,6 @@ async function _cargarDatosFirebase() {
         }
     });
 
-    // Marcar que la carga inicial completó — a partir de aquí getUsersDB()
-    // y cargarIslas() pueden escribir defaults sin riesgo de pisar datos reales.
-    window._fbCargaCompleta = true;
-
-    // Recargar TODAS las variables globales desde el cache ya poblado
-    try {
-        if (_cache["incidencias"])    incidencias    = _cache["incidencias"];
-        if (_cache["tareas"])         tareas         = _cache["tareas"];
-        if (_cache["ccbCronogramas"]) ccbCronogramas = _cache["ccbCronogramas"];
-        if (_cache["ccbIslasConfig"]) ccbIslasConfig = _cache["ccbIslasConfig"];
-        if (_cache["pchkCronogramas"]) pchkCronogramas = _cache["pchkCronogramas"];
-        if (_cache["pchkIslasConfig"]) pchkIslasConfig = _cache["pchkIslasConfig"];
-        if (_cache["mgiCronogramas"]) mgiCronogramas = _cache["mgiCronogramas"];
-        if (_cache["mgiPlanes"])      mgiPlanes      = _cache["mgiPlanes"];
-        if (_cache["ppPreventivos"])  ppPreventivos  = _cache["ppPreventivos"];
-        if (_cache["ppTareas"])       ppTareas       = _cache["ppTareas"];
-        if (_cache["evaIncidencias"]) evaIncidencias = _cache["evaIncidencias"];
-        if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
-        if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
-        if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
-        if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
-        if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
-    } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
-
-    // Recargar islasActivas desde el cache ya poblado (puede haber quedado [] antes)
-    try {
-        if (_cache["islasActivas"]) {
-            islasActivas = _cache["islasActivas"];
-        } else {
-            islasActivas = generarListaDefault();
-        }
-    } catch(e) { /* islasActivas aún no declarada — se inicializará con cargarIslas() */ }
-
     // (campo usuario ahora es input de texto libre, no requiere poblar)
 }
 
@@ -181,32 +137,27 @@ function _activarListenersTiempoReal() {
     const reRender = () => {
         try {
             // Re-sincronizar variables globales con el cache
-            // IMPORTANTE: usar !== undefined para que arrays vacíos [] también se apliquen
-            if (_cache["incidencias"]    !== undefined) incidencias    = _cache["incidencias"]    ?? [];
-            if (_cache["tareas"]         !== undefined) tareas         = _cache["tareas"]         ?? [];
-            if (_cache["islasActivas"]   !== undefined) islasActivas   = _cache["islasActivas"]   ?? [];
-            if (_cache["ccbCronogramas"] !== undefined) ccbCronogramas = _cache["ccbCronogramas"] ?? [];
-            if (_cache["ccbIslasConfig"] !== undefined) ccbIslasConfig = _cache["ccbIslasConfig"] ?? [];
-            if (_cache["pchkCronogramas"] !== undefined) pchkCronogramas = _cache["pchkCronogramas"] ?? [];
-            if (_cache["pchkIslasConfig"] !== undefined) pchkIslasConfig = _cache["pchkIslasConfig"] ?? [];
-            if (_cache["mgiCronogramas"] !== undefined) mgiCronogramas = _cache["mgiCronogramas"] ?? [];
-            if (_cache["mgiPlanes"]      !== undefined) mgiPlanes      = _cache["mgiPlanes"]      ?? [];
-            if (_cache["ppPreventivos"]  !== undefined) ppPreventivos  = _cache["ppPreventivos"]  ?? [];
-            if (_cache["ppTareas"]       !== undefined) ppTareas       = _cache["ppTareas"]       ?? [];
-            if (_cache["evaIncidencias"] !== undefined) evaIncidencias = _cache["evaIncidencias"] ?? [];
-            if (_cache["evaDiarios"]     !== undefined) evaDiarios     = _cache["evaDiarios"]     ?? [];
-            if (_cache["fdsData"]        !== undefined) fdsData        = _cache["fdsData"]        ?? [];
-            if (_cache["contadorasData"] !== undefined) contadorasData = _cache["contadorasData"] ?? [];
-            if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
-            if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
+            if (_cache["incidencias"])    incidencias    = _cache["incidencias"];
+            if (_cache["tareas"])         tareas         = _cache["tareas"];
+            if (_cache["islasActivas"])   islasActivas   = _cache["islasActivas"];
+            if (_cache["ccbCronogramas"]) ccbCronogramas = _cache["ccbCronogramas"];
+            if (_cache["ccbIslasConfig"]) ccbIslasConfig = _cache["ccbIslasConfig"];
+            if (_cache["mgiCronogramas"]) mgiCronogramas = _cache["mgiCronogramas"];
+            if (_cache["mgiPlanes"])      mgiPlanes      = _cache["mgiPlanes"];
+            if (_cache["ppPreventivos"])  ppPreventivos  = _cache["ppPreventivos"];
+            if (_cache["ppTareas"])       ppTareas       = _cache["ppTareas"];
+            if (_cache["evaIncidencias"]) evaIncidencias = _cache["evaIncidencias"];
+            if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
+            if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
+            if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
+            if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
+            if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
             // Re-render si la app ya está iniciada
             if (document.getElementById("app")?.style.display !== "none") {
                 renderDashboard?.();
                 renderCorrectivos?.();
                 renderTareas?.();
                 poblarSelectsTecnicos?.();
-                cargarAniosPrev?.();
-                renderIncidenciasPreventivos?.();
             }
             // Actualizar select de login si está visible
             // (campo usuario es input de texto, no requiere actualización dinámica)
@@ -218,13 +169,8 @@ function _activarListenersTiempoReal() {
             if (snap.exists) {
                 _cache[clave] = snap.data().data;
                 _localStorageOrig.setItem(clave, JSON.stringify(snap.data().data));
-            } else {
-                // El documento fue eliminado o quedó vacío → limpiar cache y localStorage
-                delete _cache[clave];
-                _localStorageOrig.removeItem(clave);
+                reRender();
             }
-            // Siempre re-renderizar, tanto si el doc existe como si fue borrado
-            reRender();
         });
     });
 }
@@ -1468,15 +1414,17 @@ body {
     <div class="login-box">
         <div class="login-logo">HERRAMIENTA FÁCIL</div>
         <p class="login-sub">Sistema de Gestión de Incidencias</p>
-        <label>Email</label>
-        <input type="text" id="loginEmail" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')login()">
+        <label>Seleccioná tu usuario</label>
+        <select id="usuario">
+            <option value="">Cargando...</option>
+        </select>
         <label>Contraseña</label>
         <div class="input-pass-wrap">
-            <input type="password" id="loginPassword" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')login()">
+            <input type="password" id="loginPassword" placeholder="Tu contraseña (opcional)">
             <button class="eye-btn" type="button" onclick="togglePassVis('loginPassword',this)">👁</button>
         </div>
-        <div id="loginError" style="color:var(--red);font-size:12px;margin-top:-12px;margin-bottom:12px;display:none;">Error al ingresar</div>
-        <button class="btn-login" id="btnLogin" onclick="login()">INGRESAR →</button>
+        <div id="loginError" style="color:var(--red);font-size:12px;margin-top:-12px;margin-bottom:12px;display:none;">Contraseña incorrecta</div>
+        <button class="btn-login" onclick="login()">INGRESAR →</button>
         <p style="margin-top:14px;font-size:12px;color:var(--muted);">¿Olvidaste tu contraseña? Contactá al Admin</p>
     </div>
 </div>
@@ -2329,12 +2277,11 @@ body {
 <!-- ═══ MODAL PROGRAMAR LIMPIEZA SALA (PP-MGI) ═══ -->
 <div id="modalPpMgi" class="modal">
     <div class="modal-box wide" style="max-width:720px;max-height:92vh;overflow-y:auto;">
-        <div class="modal-title" id="ppMgiModalTitulo">🗓️ Programar Limpieza Sala</div>
+        <div class="modal-title">🗓️ Programar Limpieza Sala</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">
             Armá el cronograma de días con las islas que se limpian. Máximo 10 días.
         </div>
         <input type="hidden" id="ppMgiMesKey">
-        <input type="hidden" id="ppMgiTareaId" value="6">
         <div class="form-group">
             <label class="form-label">Cantidad de Días (1 – 10)</label>
             <div style="display:flex;align-items:center;gap:12px;">
@@ -2433,78 +2380,6 @@ body {
         <div class="modal-footer">
             <button class="btn-modal-save" id="ccbBtnCerrar" onclick="ccbCerrarControl()" style="background:var(--red);">⛔ Cerrar como Completo</button>
             <button class="btn-modal-cancel" onclick="ccbGuardarParcial()">💾 Guardar y Continuar Después</button>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ MODAL PCHK — CONFIGURAR ISLAS (sistema genérico, solo Admin) ═══ -->
-<div id="modalPchkConfigurar" class="modal">
-    <div class="modal-box wide" style="max-width:680px;max-height:92vh;overflow-y:auto;">
-        <div class="modal-title" id="pchkConfTitulo">⚙️ Configurar Islas</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">
-            Definí qué islas forman parte del control. Los técnicos no pueden modificar esta lista.
-        </div>
-        <input type="hidden" id="pchkConfMesKey">
-        <input type="hidden" id="pchkConfTareaId">
-        <div class="form-group">
-            <label class="form-label" id="pchkConfInputLabel">Agregar isla (número o texto)</label>
-            <div style="display:flex;gap:10px;">
-                <input type="text" id="pchkNuevaIsla" class="form-input" placeholder="Ej: 110" style="width:160px;" onkeydown="if(event.key==='Enter') pchkAgregarIsla()">
-                <button onclick="pchkAgregarIsla()"
-                    style="padding:10px 18px;background:rgba(0,212,168,.15);border:1px solid var(--accent);border-radius:9px;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;"
-                    onmouseover="this.style.background='rgba(0,212,168,.3)'"
-                    onmouseout="this.style.background='rgba(0,212,168,.15)'"
-                >+ Agregar</button>
-            </div>
-        </div>
-        <div class="form-group" id="pchkConfGrupoIslas">
-            <label class="form-label">Islas configuradas (clic para eliminar)</label>
-            <div id="pchkIslasList" style="display:flex;flex-wrap:wrap;gap:8px;min-height:48px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;"></div>
-        </div>
-        <div id="pchkConfHint" style="font-size:12px;color:var(--muted);margin-bottom:14px;">💡 Hacé clic sobre una isla para eliminarla de la lista.</div>
-        <div class="modal-footer">
-            <button class="btn-modal-save" onclick="pchkGuardarConfiguracion()">✅ Guardar y Abrir Checklist</button>
-            <button class="btn-modal-cancel" onclick="document.getElementById('modalPchkConfigurar').classList.remove('open')">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ MODAL PCHK — CHECKLIST TÉCNICO (sistema genérico) ═══ -->
-<div id="modalPchkChecklist" class="modal">
-    <div class="modal-box" style="max-width:560px;max-height:94vh;overflow-y:auto;">
-        <div class="modal-title" id="pchkChecklistTitulo">🔧 Control de Islas</div>
-        <div id="pchkChecklistInfo" style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--muted);"></div>
-        <div style="margin-bottom:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <span style="font-size:12px;font-weight:700;color:var(--white);">Progreso</span>
-                <span id="pchkProgText" style="font-size:12px;font-weight:700;color:var(--accent);">0 / 0</span>
-            </div>
-            <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;border:1px solid var(--border);">
-                <div id="pchkProgBar" style="height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width .3s;"></div>
-            </div>
-        </div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;">Islas a controlar</div>
-        <div id="pchkChecklistIslas" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;padding-right:4px;"></div>
-        <div class="form-group" style="margin-top:16px;">
-            <label class="form-label">👤 Técnico responsable</label>
-            <select id="pchkChecklistTecnico" class="form-select"></select>
-        </div>
-        <div class="form-group" style="margin-top:10px;">
-            <label class="form-label">📝 Notas / Observaciones</label>
-            <textarea id="pchkChecklistNota" class="form-textarea" placeholder="Observaciones del control..." style="min-height:70px;"></textarea>
-        </div>
-        <div id="pchkBtnAdmin" style="display:none;margin-bottom:10px;">
-            <button onclick="pchkAbrirConfigurar(document.getElementById('pchkChecklistMesKey').value, parseInt(document.getElementById('pchkChecklistTareaId').value))"
-                style="width:100%;padding:9px;background:rgba(255,201,71,.08);border:1px dashed var(--yellow);border-radius:8px;color:var(--yellow);cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;"
-                onmouseover="this.style.background='rgba(255,201,71,.16)'"
-                onmouseout="this.style.background='rgba(255,201,71,.08)'"
-            >⚙️ Editar lista de islas (Admin)</button>
-        </div>
-        <input type="hidden" id="pchkChecklistMesKey">
-        <input type="hidden" id="pchkChecklistTareaId">
-        <div class="modal-footer">
-            <button class="btn-modal-save" id="pchkBtnCerrar" onclick="pchkCerrarControl()" style="background:var(--red);">⛔ Cerrar como Completo</button>
-            <button class="btn-modal-cancel" onclick="pchkGuardarParcial()">💾 Guardar y Continuar Después</button>
         </div>
     </div>
 </div>
@@ -3337,22 +3212,15 @@ let tareaEditando = null;
 function generarListaDefault(){
     let arr = [];
     for(let i=100;i<=180;i++) arr.push({ id: i, slots: 8 });
-    // Solo guardar en Firestore si la carga inicial ya completó
-    // (evita pisar datos reales cuando Firebase aún no respondió)
-    if(window._fbCargaCompleta) {
-        _fbSet("islasActivas", arr);
-    }
+    // Guardar en Firestore la primera vez
+    _fbSet("islasActivas", arr);
     return arr;
 }
 
 // Migrar formato viejo (array de números) al nuevo (array de objetos)
 function cargarIslas(){
     let raw = localStorage.getItem("islasActivas");
-    if(!raw) {
-        // Si Firebase aún no cargó, devolver array vacío temporal sin escribir nada
-        if(!window._fbCargaCompleta) return [];
-        return generarListaDefault();
-    }
+    if(!raw) return generarListaDefault();
     let parsed = JSON.parse(raw);
     if(parsed.length > 0 && typeof parsed[0] === "number"){
         // Migrar
@@ -3369,14 +3237,6 @@ let islasActivas = cargarIslas();
 function getUsersDB(){
     let raw = localStorage.getItem("usersDB");
     if(raw) return JSON.parse(raw);
-    // Si el cache de Firebase ya cargó pero no tiene usersDB, recién ahí usar defaults
-    // _fbCargaCompleta evita pisar Firestore mientras la carga inicial no terminó
-    if(!window._fbCargaCompleta) {
-        // Aún cargando desde Firestore — devolver defaults temporalmente SIN guardar
-        return CONFIG_DEFAULTS.tecnicos.map(n => ({
-            nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: "", turno: ""
-        }));
-    }
     // defaults: Juan = Admin, resto = Tecnico. Sin contraseña por defecto.
     let defaults = CONFIG_DEFAULTS.tecnicos.map(n => ({
         nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: "", turno: ""
@@ -3403,40 +3263,40 @@ function mostrarAsignado(val){
 //  AUTH — Firebase Authentication
 // ──────────────────────────────────────────────
 async function login(){
-    let email = (document.getElementById("loginEmail").value || "").trim();
+    let user = (document.getElementById("usuario").value || "").trim();
     let pass  = document.getElementById("loginPassword").value;
     let errEl = document.getElementById("loginError");
-    let btn   = document.getElementById("btnLogin");
     errEl.style.display = "none";
 
-    if(!email){ errEl.textContent = "Ingresá tu email"; errEl.style.display = "block"; return; }
-    if(!pass){  errEl.textContent = "Ingresá tu contraseña"; errEl.style.display = "block"; return; }
+    if(!user){ errEl.textContent = "Seleccioná tu usuario"; errEl.style.display = "block"; return; }
 
-    btn.textContent = "Ingresando...";
-    btn.disabled = true;
+    // Siempre recargar desde Firestore para tener los datos más actualizados
+    try { await _cargarDatosFirebase(); } catch(e){ /* continuar con cache local */ }
 
-    try {
-        // 1. Autenticar con Firebase Auth
-        await _auth.signInWithEmailAndPassword(email, pass);
-        // El listener onAuthStateChanged toma el control desde acá
-    } catch(e) {
-        btn.textContent = "INGRESAR →";
-        btn.disabled = false;
-        let msg = "Error al ingresar";
-        if(e.code === "auth/user-not-found" || e.code === "auth/wrong-password" || e.code === "auth/invalid-credential"){
-            msg = "Email o contraseña incorrectos";
-        } else if(e.code === "auth/too-many-requests"){
-            msg = "Demasiados intentos. Intentá más tarde.";
-        } else if(e.code === "auth/invalid-email"){
-            msg = "Email inválido";
-        }
-        errEl.textContent = msg;
+    // Buscar usuario sin distinguir mayúsculas/minúsculas
+    let db = getUsersDB();
+    let rec = db.find(u => u.nombre.trim().toLowerCase() === user.toLowerCase());
+
+    if(!rec){
+        errEl.textContent = "Usuario no encontrado. Verificá el nombre.";
         errEl.style.display = "block";
+        return;
     }
+
+    // Verificar contraseña (si el usuario no tiene, cualquier valor pasa)
+    if(rec.password && rec.password !== "" && rec.password !== pass){
+        errEl.textContent = "Contraseña incorrecta";
+        errEl.style.display = "block";
+        return;
+    }
+
+    usuarioActual = { nombre: rec.nombre, rol: rec.rol };
+    localStorage.setItem("usuario", JSON.stringify(usuarioActual));
+    _activarListenersTiempoReal();
+    iniciarApp();
 }
 
 async function logout(){
-    await _auth.signOut();
     usuarioActual = null;
     localStorage.removeItem("usuario");
     location.reload();
@@ -4341,30 +4201,15 @@ function avanzarTarea(id){
     if(t.estado === "pendiente"){
         t.estado = "en-curso";
         t.iniciadoEn = ahora;
-        localStorage.setItem("tareas", JSON.stringify(tareas));
     } else if(t.estado === "en-curso"){
         t.estado = "realizado";
         t.finalizadoEn = ahora;
         t.done = true;
-        ppRegistrarEnHistorial(t);
-        // Batch write: guardar tareas e incidencias juntos para evitar race condition
-        _cache["tareas"] = tareas;
-        _cache["incidencias"] = incidencias;
-        _db.batch()
-            .set(_colRef().doc("tareas"),     { data: tareas })
-            .set(_colRef().doc("incidencias"),{ data: incidencias })
-            .commit()
-            .catch(e => {
-                console.error("[Firebase] Batch error:", e);
-                _fbSet("tareas", tareas);
-                _fbSet("incidencias", incidencias);
-            });
-        _localStorageOrig.setItem("tareas",      JSON.stringify(tareas));
-        _localStorageOrig.setItem("incidencias", JSON.stringify(incidencias));
+        ppRegistrarEnHistorial(t); // registrar en historial si es de plan preventivo
     }
+    localStorage.setItem("tareas", JSON.stringify(tareas));
     renderTareas();
     renderDashboard();
-    renderIncidenciasPreventivos?.();
 }
 
 function volverTarea(id){
@@ -4495,15 +4340,7 @@ function renderTareas(){
     let fBuscar  = (document.getElementById("filtroTareasBuscar")?.value || "").toLowerCase().trim();
 
     function cumpleFiltro(t){
-        if(fTecnico !== "todos"){
-            let tecsList = t.realizadoPor
-                ? t.realizadoPor.split(", ").map(s => s.trim())
-                : (t.asignado ? [mostrarAsignado(t.asignado)] : []);
-            // También verificar por valor bruto (asignado)
-            let matchAsignado = t.asignado === fTecnico;
-            let matchRealizado = tecsList.some(nombre => nombre === fTecnico || nombre === mostrarAsignado(fTecnico));
-            if(!matchAsignado && !matchRealizado) return false;
-        }
+        if(fTecnico !== "todos" && t.asignado !== fTecnico) return false;
         if(fAnio !== "todos"){
             let anioT = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha ? t.fecha.slice(0,4) : "");
             if(anioT !== fAnio) return false;
@@ -4513,7 +4350,7 @@ function renderTareas(){
             if(mesT !== fMes) return false;
         }
         if(fBuscar){
-            let haystack = (t.desc + " " + t.asignado + " " + (t.realizadoPor||"") + " " + (t.notas||"")).toLowerCase();
+            let haystack = (t.desc + " " + t.asignado + " " + (t.notas||"")).toLowerCase();
             if(!haystack.includes(fBuscar)) return false;
         }
         return true;
@@ -4553,7 +4390,7 @@ function renderTareas(){
                 <option value="__turno_MANANA__" ${t.asignado==="__turno_MANANA__"?"selected":""}>☀️ Turno mañana</option>
                 <option value="__todos__" ${t.asignado==="__todos__"?"selected":""}>👥 Todos</option>
                 ${TECNICOS_LIST.map(n=>`<option value="${n}" ${t.asignado===n?'selected':''}>${n}</option>`).join("")}
-            </select>` : `<span style="font-size:12px;color:var(--muted);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>`;
+            </select>` : `<span style="font-size:12px;color:var(--muted);">${mostrarAsignado(t.asignado)}</span>`;
 
         if(t.estado === "pendiente"){
             acciones = `<div class="tarea-actions">
@@ -4635,59 +4472,6 @@ function renderTareas(){
             }
         }
 
-        // ── Bloque inline PCHK genérico (tareaIds 30,32-38) ──
-        let pchkInlineHtml = "";
-        if(PCHK_META && PCHK_META[t._ppTareaId] && t._ppMesKey && t.estado !== "realizado"){
-            let tid = t._ppTareaId;
-            let mesKey = t._ppMesKey;
-            let meta = PCHK_META[tid];
-            let pchkData = pchkGetData(tid, mesKey);
-            if(!pchkData && pchkGetConfig(tid).length > 0){
-                pchkSetData(tid, mesKey, {
-                    islas: pchkGetConfig(tid).map(id => ({ id, hecho: false })),
-                    nota: "", cerrado: false, fechaCierre: null
-                });
-                pchkData = pchkGetData(tid, mesKey);
-            }
-            if(pchkData && !pchkData.cerrado){
-                let total = pchkData.islas.length;
-                let hecho = pchkData.islas.filter(x=>x.hecho).length;
-                let pct   = total > 0 ? Math.round(hecho/total*100) : 0;
-                let islasHtml = pchkData.islas.map((isla, idx) => `
-                    <div onclick="pchkToggleIslaInline('${mesKey}',${tid},${idx})"
-                        style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;transition:all .2s;"
-                        onmouseover="this.style.borderColor='var(--accent)'"
-                        onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'">
-                        <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
-                            ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
-                        </div>
-                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
-                        <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
-                    </div>`).join("");
-                pchkInlineHtml = `
-                <div style="margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                        <span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--white);">${meta.emoji} Islas a controlar</span>
-                        <span style="font-size:12px;font-weight:700;color:var(--accent);">${hecho}/${total} · ${pct}%</span>
-                    </div>
-                    <div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border);">
-                        <div style="width:${pct}%;height:100%;background:${pct===100?'var(--accent)':'var(--accent2)'};border-radius:3px;transition:width .4s;"></div>
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;">${islasHtml}</div>
-                </div>`;
-            } else if(pchkData && pchkData.cerrado){
-                pchkInlineHtml = `
-                <div style="margin-top:10px;padding:10px 14px;background:rgba(0,212,168,.08);border:1px solid var(--accent);border-radius:10px;font-size:13px;color:var(--accent);font-weight:600;">
-                    ✅ Control completado · ${pchkData.islas.filter(x=>x.hecho).length}/${pchkData.islas.length} islas · ${pchkData.fechaCierre}
-                </div>`;
-            } else {
-                pchkInlineHtml = `
-                <div style="margin-top:10px;padding:10px 14px;background:rgba(255,201,71,.06);border:1px dashed var(--yellow);border-radius:10px;font-size:12px;color:var(--yellow);">
-                    ⚠️ El Admin aún no configuró las islas para este control.
-                </div>`;
-            }
-        }
-
         let esMiTarea = esTecnico && t.asignado === miNombre;
         return `
         <div class="tarea-row" style="${esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
@@ -4706,7 +4490,6 @@ function renderTareas(){
                     ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
                 </div>
                 ${ccbInlineHtml}
-                ${pchkInlineHtml}
                 ${acciones}
             </div>
             ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
@@ -4954,41 +4737,9 @@ function guardarEdicionIslas(){
 // ──────────────────────────────────────────────
 const TIPO_LABELS_PREV = {
     "": "Islas Slots",
-    "plan": "Mant. General de Islas",
+    "plan": "plan",
     "mantenimiento-islas": "Mant. Islas",
-    "mgi-7": "Limpieza Sala Semicubierta",
     "control-cooler-botonera": "Control Cooler Botonera",
-    "pchk-1":  "Mantenimiento de Chippers",
-    "pchk-2":  "Mantenimiento de Visualizadores de RA",
-    "pchk-5":  "Limpieza de Fichas",
-    "pchk-8":  "Limpieza General de Stackers",
-    "pchk-11": "Limpieza CPU IGT",
-    "pchk-12": "Limpieza Filtros AVP IGT",
-    "pchk-13": "Control Botones/Calcos OLED IGT",
-    "pchk-14": "Control Botones PLAY IGT",
-    "pchk-15": "Limpieza Placa Video y Coolers SG",
-    "pchk-16": "Test Botones SG",
-    "pchk-17": "Test Botones L&W",
-    "pchk-18": "Mant. PCs Progresivos + Carteles ZITRO",
-    "pchk-19": "Control Botones ZITRO",
-    "pchk-20": "Control Audio ZITRO",
-    "pchk-21": "Revisión Conectores Fuente ZITRO",
-    "pchk-22": "Control Coolers ZITRO",
-    "pchk-23": "Revisión Cerraduras Mariposa Stacker",
-    "pchk-24": "Control Puertas Belly BALLY v22",
-    "pchk-25": "Control Coolers CPU BALLY v22",
-    "pchk-26": "Control Coolers CPU BALLY v32",
-    "pchk-27": "Control Coolers Placa Video BALLY",
-    "pchk-28": "Control Botones PLAY Bally",
-    "pchk-29": "Control Cooler Gabinete WMS KC",
-    "pchk-30": "Control Remaches Stacker Viridian",
-    "pchk-32": "Control Cooler Fuentes Aristocrat",
-    "pchk-33": "Control Botones/Calcos Aristocrat",
-    "pchk-34": "Control Cooler Placas y CPU Aristocrat",
-    "pchk-35": "Control Botones PLAY Ainsworth",
-    "pchk-36": "Mant. Preventivo INTERBLOCK",
-    "pchk-37": "Control Cooler Monitor BCM",
-    "pchk-38": "Mant. Preventivo BCM",
     avp: "Filtros AVP",
     stacker: "Stackers",
     chipper: "Chipper",
@@ -5051,44 +4802,32 @@ function renderIncidenciasPreventivos(){
         let maqCount = 0;
         let resumenEquipos = "";
 
-        // Auxiliar: slots de una isla usando islasMaquinas guardado (preciso) o islasActivas como fallback
-        const getSlots = (islaId) => {
-            if(p.islasMaquinas && p.islasMaquinas[String(islaId)] != null)
-                return p.islasMaquinas[String(islaId)];
-            let isla = islasActivas.find(il => il.id === parseInt(islaId));
-            return isla ? isla.slots : 1;
-        };
-
         if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas"){
             // Islas con slots: contar máquinas reales por isla
-            maqCount = islasEfectivas.reduce((s, islaId) => s + getSlots(islaId), 0);
+            maqCount = islasEfectivas.reduce((s, islaId) => {
+                let isla = islasActivas.find(il => il.id === parseInt(islaId));
+                return s + (isla ? isla.slots : 1);
+            }, 0);
             if(islasEfectivas.length > 0){
                 resumenEquipos = `${islasEfectivas.length} isla(s)${maqCount ? ` · <b style="color:var(--accent)">${maqCount} máquinas</b>` : ""}`;
             } else {
                 resumenEquipos = `<span style="color:var(--yellow);font-size:11px;">⚠️ Sin islas registradas — expandí para cargarlas</span>`;
             }
         } else if(p.subTipo === "control-cooler-botonera"){
-            // CCB: contar máquinas reales por isla
-            maqCount = islasEfectivas.reduce((s, islaId) => s + getSlots(islaId), 0);
+            // CCB: contar máquinas reales por isla (igual que MGI)
+            maqCount = islasEfectivas.reduce((s, islaId) => {
+                let isla = islasActivas.find(il => il.id === parseInt(islaId));
+                return s + (isla ? isla.slots : 1);
+            }, 0);
             if(islasEfectivas.length > 0){
                 resumenEquipos = `${islasEfectivas.length} isla(s) controladas${maqCount ? ` · <b style="color:var(--accent)">${maqCount} máquinas</b>` : ""}`;
             } else {
                 resumenEquipos = `<span style="color:var(--muted);">Sin islas registradas</span>`;
             }
         } else {
-            // Otros preventivos genéricos (stackers, chippers, cilindros, etc.)
-            const ETIQUETA_EQUIPO = {
-                stacker:   'stacker(s)',
-                chipper:   'chipper(s)',
-                cilindros: 'cilindro(s)',
-                ra:        'visualizador(es)',
-                eva:       'kiosco(s) EVA',
-                pc:        'PC/cartel(es)',
-                avp:       'equipo(s) AVP'
-            };
-            let etiq = ETIQUETA_EQUIPO[p.subTipo] || 'equipo(s)';
+            // Otros preventivos genéricos (stackers, chippers, etc.)
             if(islasEfectivas.length > 0){
-                resumenEquipos = `<b style="color:var(--accent2)">${islasEfectivas.length}</b> ${etiq}`;
+                resumenEquipos = `${islasEfectivas.length} equipo(s)`;
             } else {
                 resumenEquipos = `<span style="color:var(--muted);font-size:11px;">Sin equipos registrados</span>`;
             }
@@ -5118,25 +4857,10 @@ function renderIncidenciasPreventivos(){
                 <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Equipos intervenidos</div>
                 <div id="${cardId}-islas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
                     ${islasEfectivas.map(e => {
-                        let isIsla = (!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera");
-                        let lbl = isIsla ? `Isla ${e}` : (String(e).includes("|")?String(e).replace("|"," "):e);
-                        let slots = isIsla ? (p.islasMaquinas ? p.islasMaquinas[String(e)] : null) ?? (islasActivas.find(il=>il.id===parseInt(e))?.slots) : null;
-                        let slotsBadge = (slots != null) ? `<span style="margin-left:5px;font-size:10px;background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 5px;font-weight:700;">${slots}maq</span>` : "";
-                        return `<span style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--white);display:inline-flex;align-items:center;">${lbl}${slotsBadge}</span>`;
+                        let lbl = (!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas") ? `Isla ${e}` : (String(e).includes("|")?String(e).replace("|"," "):e);
+                        return `<span style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--white);">${lbl}</span>`;
                     }).join("")}
                 </div>
-                ${(()=>{
-                    let isIslaSubtipo = !p.subTipo || p.subTipo === 'plan' || p.subTipo === 'mantenimiento-islas' || p.subTipo === 'control-cooler-botonera';
-                    if(isIslaSubtipo && maqCount > 0){
-                        let est = p.islasMaquinas ? '' : " <span style='font-weight:400;font-size:11px;color:var(--muted);'>(estimado)</span>";
-                        return `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(0,212,168,.07);border:1px solid rgba(0,212,168,.25);border-radius:8px;font-size:13px;color:var(--accent);font-weight:700;">🔧 Total: ${maqCount} máquinas en ${islasEfectivas.length} isla(s)${est}</div>`;
-                    } else if(!isIslaSubtipo && islasEfectivas.length > 0){
-                        const ETIQ2 = {stacker:'stacker(s)',chipper:'chipper(s)',cilindros:'cilindro(s)',ra:'visualizador(es)',eva:'kiosco(s) EVA',pc:'PC/cartel(es)',avp:'equipo(s) AVP'};
-                        let et2 = ETIQ2[p.subTipo] || 'equipo(s)';
-                        return `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(79,142,255,.07);border:1px solid rgba(79,142,255,.25);border-radius:8px;font-size:13px;color:var(--accent2);font-weight:700;">📋 Total: ${islasEfectivas.length} ${et2}</div>`;
-                    }
-                    return '';
-                })()}
                 ${p.nota?`<div style="font-size:13px;color:var(--muted);margin-bottom:12px;"><b style="color:var(--white);">Nota:</b> ${p.nota}</div>`:""}
                 <!-- Panel editar islas cargadas — solo Admin, solo tipo Islas Slots -->
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo) ? `
@@ -5330,7 +5054,7 @@ function guardarGenerico(){
         subTipo: tipoGenActual,
         fecha: document.getElementById("fechaGen").value,
         islas: seleccionados,
-        tecnico: (function(){ let v = document.getElementById("tecnicoGen").value; return v === "__turno_MANANA__" ? "☀️ Turno mañana" : v; })(),
+        tecnico: document.getElementById("tecnicoGen").value,
         nota: document.getElementById("notaGen").value,
         estado: "Realizado",
         validado: false,
@@ -6520,35 +6244,34 @@ function crearCartelBarajadora(){
 // ──────────────────────────────────────────────
 // Mostrar spinner de carga mientras Firebase inicializa
 // ── Inicio: cargar datos y mostrar login ──────────────────────
-// ─── Firebase Auth listener — maneja sesión automáticamente ──
-_auth.onAuthStateChanged(async (firebaseUser) => {
-    if(firebaseUser){
-        // Usuario autenticado — cargar datos y arrancar app
-        try { await _cargarDatosFirebase(); } catch(e){}
-        _activarListenersTiempoReal();
-
-        // Buscar el perfil (nombre + rol) en usersDB usando el email
-        let db = getUsersDB();
-        let rec = db.find(u => (u.email || "").toLowerCase() === firebaseUser.email.toLowerCase());
-        if(rec){
-            usuarioActual = { nombre: rec.nombre, rol: rec.rol };
-        } else {
-            // Fallback: usar email como nombre si no está en usersDB
-            usuarioActual = { nombre: firebaseUser.email, rol: "Tecnico" };
+(async () => {
+    // Intentar retomar sesión guardada
+    let sesion = localStorage.getItem("usuario");
+    if(sesion){
+        try { usuarioActual = JSON.parse(sesion); } catch(e){ usuarioActual = null; }
+        if(usuarioActual && usuarioActual.nombre){
+            // Cargar datos de Firestore — si falla, igual entramos con cache local
+            try { await _cargarDatosFirebase(); } catch(e){}
+            _activarListenersTiempoReal();
+            iniciarApp();
+            return;
         }
-        localStorage.setItem("usuario", JSON.stringify(usuarioActual));
-
-        // Restaurar estado del botón si venía de login manual
-        let btn = document.getElementById("btnLogin");
-        if(btn){ btn.textContent = "INGRESAR →"; btn.disabled = false; }
-
-        iniciarApp();
-    } else {
-        // Sin sesión — mostrar login
-        document.getElementById("loginDiv").style.display = "flex";
-        document.getElementById("app").style.display = "none";
     }
-});
+    // Sin sesión — mostrar login y cargar usuarios en background
+    document.getElementById("loginDiv").style.display = "flex";
+    document.getElementById("app").style.display = "none";
+    _cargarDatosFirebase().then(() => {
+        _llenarSelectLogin();
+    }).catch(()=>{ _llenarSelectLogin(); });
+})();
+
+function _llenarSelectLogin(){
+    let sel = document.getElementById("usuario");
+    if(!sel) return;
+    let db = getUsersDB();
+    if(!db || db.length === 0) return;
+    sel.innerHTML = db.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join("");
+}
 
 // ══════════════════════════════════════════════════════════
 //  MÓDULO: PLAN DE MANTENIMIENTO PREVENTIVO
@@ -6830,10 +6553,9 @@ function ppRenderMes(mesIdx){
     let tecnicosOpts = PP_TECNICOS.map(t => `<option value="${t}">${t}</option>`).join("");
 
     cont.innerHTML = prevs.map((p,i) => {
-        let esMGI = MGI_IDS.has(p.tareaId);
+        let esMGI = p.tareaId === 6;
         let esCCB = p.tareaId === 31;
-        let esPCHK = PCHK_META && !!PCHK_META[p.tareaId];
-        let cronograma = esMGI ? (mgiCronogramas[mgiGetKey(p.tareaId, mesKey)] || null) : null;
+        let cronograma = esMGI ? (mgiCronogramas[mesKey] || null) : null;
 
         // ── Botón / checklist Control Cooler Botonera Aristocrat (tareaId 31) ──
         let ccbHtml = "";
@@ -6876,49 +6598,6 @@ function ppRenderMes(mesIdx){
             }
         }
 
-        // ── Bloque PCHK (checklist genérico de islas) ──
-        let pchkHtml = "";
-        if(esPCHK){
-            let tid = p.tareaId;
-            let meta = PCHK_META[tid];
-            let pchkData = pchkGetData(tid, mesKey);
-            if(pchkData){
-                let total = pchkData.islas.length;
-                let hecho = pchkData.islas.filter(x=>x.hecho).length;
-                let pct   = total > 0 ? Math.round(hecho/total*100) : 0;
-                let color = pchkData.cerrado ? 'rgba(0,212,168,.3)' : 'var(--border)';
-                pchkHtml = `
-                <div style="margin-top:12px;background:var(--bg3);border:1px solid ${color};border-radius:8px;padding:12px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-                        <div style="font-size:12px;font-weight:700;color:var(--white);">${meta.emoji} ${meta.label} · <span style="color:var(--muted);font-weight:400;">${hecho}/${total} islas ${pchkData.cerrado?'· ✅ Cerrado':''}</span></div>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <div style="width:60px;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;">
-                                <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
-                            </div>
-                            <span style="font-size:11px;color:var(--muted);">${pct}%</span>
-                            ${!pchkData.cerrado ? `<button onclick="pchkAbrirChecklist('${mesKey}',${tid})"
-                                style="background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;font-size:11px;padding:2px 8px;"
-                                onmouseover="this.style.background='rgba(0,212,168,.25)'"
-                                onmouseout="this.style.background='rgba(0,212,168,.1)'"
-                               >📋 Ver Checklist</button>` : ''}
-                        </div>
-                    </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
-                        ${pchkData.islas.map(x=>`<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:${x.hecho?'rgba(0,212,168,.15)':'rgba(79,142,255,.08)'};border:1px solid ${x.hecho?'var(--accent)':'var(--border)'};color:${x.hecho?'var(--accent)':'var(--muted)'};margin:1px;">${x.hecho?'✓ ':''} ${x.id}</span>`).join("")}
-                    </div>
-                </div>`;
-            } else {
-                pchkHtml = `
-                <div style="margin-top:12px;">
-                    <button onclick="${usuarioActual?.rol==='Admin' ? `pchkAbrirConfigurar('${mesKey}',${tid})` : `pchkAbrirChecklist('${mesKey}',${tid})`}"
-                        style="width:100%;padding:10px;background:rgba(79,142,255,.08);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;"
-                        onmouseover="this.style.background='rgba(79,142,255,.16)'"
-                        onmouseout="this.style.background='rgba(79,142,255,.08)'"
-                    >${meta.emoji} ${usuarioActual?.rol==='Admin' ? `Configurar e Iniciar — ${meta.label}` : `Iniciar — ${meta.label}`}</button>
-                </div>`;
-            }
-        }
-
         let cronogramaHtml = "";
         if(esMGI){
             if(cronograma){
@@ -6928,7 +6607,7 @@ function ppRenderMes(mesIdx){
                         : `<span style="color:var(--muted);font-size:11px;font-style:italic;">Sin islas</span>`;
                     let estadoDia = d.cerrado
                         ? `<span style="font-size:11px;font-weight:700;color:var(--accent);">✅ Cerrado</span>`
-                        : `<button onclick="ppMgiCerrarDia('${mesKey}',${d.dia},${p.tareaId})"
+                        : `<button onclick="ppMgiCerrarDia('${mesKey}',${d.dia})"
                             style="background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;font-size:11px;padding:2px 8px;transition:all .15s;"
                             onmouseover="this.style.background='rgba(0,212,168,.25)'"
                             onmouseout="this.style.background='rgba(0,212,168,.1)'"
@@ -6956,7 +6635,7 @@ function ppRenderMes(mesIdx){
                                 <div style="width:${progPct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
                             </div>
                             <span style="font-size:11px;color:var(--muted);">${progPct}%</span>
-                            <button onclick="ppMgiProgramar('${mesKey}',${p.tareaId})"
+                            <button onclick="ppMgiProgramar('${mesKey}')"
                                 style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);border-radius:5px;color:var(--yellow);cursor:pointer;font-size:11px;padding:2px 8px;transition:all .15s;"
                                 onmouseover="this.style.background='rgba(255,201,71,.2)'"
                                 onmouseout="this.style.background='rgba(255,201,71,.1)'"
@@ -6968,11 +6647,11 @@ function ppRenderMes(mesIdx){
             } else {
                 cronogramaHtml = `
                 <div style="margin-top:12px;">
-                    <button onclick="ppMgiProgramar('${mesKey}',${p.tareaId})"
+                    <button onclick="ppMgiProgramar('${mesKey}')"
                         style="width:100%;padding:10px;background:rgba(0,212,168,.08);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;"
                         onmouseover="this.style.background='rgba(0,212,168,.16)'"
                         onmouseout="this.style.background='rgba(0,212,168,.08)'"
-                    >🗓️ Programar ${MGI_LABELS[p.tareaId] || 'Limpieza Sala'}</button>
+                    >🗓️ Programar Limpieza Sala</button>
                 </div>`;
             }
         }
@@ -7058,23 +6737,21 @@ function ppEnviarATareas(){
     let nuevasCreadas = 0;
 
     pendientes.forEach((p, i) => {
-        // Para preventivos con cronograma por días (tareaId 6 y 7)
-        if(MGI_IDS.has(p.tareaId)){
-            let key  = mgiGetKey(p.tareaId, mesKey);
-            let cron = mgiCronogramas[key];
-            let label = MGI_LABELS[p.tareaId] || p.nombre;
+        // Para Mantenimiento General de Islas (tareaId 6), generar una tarea por día del cronograma
+        if(p.tareaId === 6){
+            let cron = mgiCronogramas[mesKey];
             if(cron && cron.dias.length > 0){
                 cron.dias.forEach((d, di) => {
                     let keyDia = `${p.tareaId}-dia${d.dia}`;
-                    if(yaEnviados.includes(keyDia)) return;
+                    if(yaEnviados.includes(keyDia)) return; // ya existe
                     let islasTexto = d.islas.length > 0 ? `Islas: ${d.islas.join(", ")}` : "Sin islas asignadas";
                     tareas.push({
                         id: ahora + i * 100 + di,
-                        desc: `[${label} ${mesNombre}] Día ${d.dia} · ${islasTexto}`,
+                        desc: `[Limpieza Sala ${mesNombre}] Día ${d.dia} · ${islasTexto}`,
                         asignado: d.tecnico || "Juan",
                         prioridad: "alta",
                         fecha: d.fecha || fechaHoy,
-                        notas: `${label} — ${mesNombre} ${anio}. ${islasTexto}.`,
+                        notas: `Mantenimiento General de Islas — ${mesNombre} ${anio}. ${islasTexto}. Controlá: cerraduras, coolers, impresoras. Sopletear gabinete y full CPU.`,
                         estado: "pendiente",
                         done: false,
                         creadoEn: ahora + i * 100 + di,
@@ -7169,37 +6846,16 @@ function ppRegistrarEnHistorial(t){
             // Si no tildó ninguna, registrar todas las configuradas igual
             if(islasArr.length === 0) islasArr = ccbData.islas.map(x => String(x.id));
         }
-    } else if(PCHK_META && PCHK_META[t._ppTareaId]){
-        // Preventivos con checklist genérico PCHK
-        let meta = PCHK_META[t._ppTareaId];
-        subTipo = meta.subTipo;
-        let pchkData = pchkGetData ? pchkGetData(t._ppTareaId, t._ppMesKey) : null;
-        if(pchkData && pchkData.islas){
-            islasArr = pchkData.islas.filter(x => x.hecho).map(x => String(x.id));
-            if(islasArr.length === 0) islasArr = pchkData.islas.map(x => String(x.id));
-        } else {
-            islasArr = t._ppIslas ? t._ppIslas.map(String) : [];
-        }
     } else {
         // Otros preventivos de plan: usar _ppIslas si existe
         islasArr = t._ppIslas ? t._ppIslas.map(String) : [];
     }
-
-    // Capturar cantidad de máquinas por isla al momento de registrar
-    let islasMaquinas = {};
-    islasArr.forEach(idIsla => {
-        let isla = islasActivas.find(il => il.id === parseInt(idIsla));
-        islasMaquinas[idIsla] = isla ? isla.slots : 8;
-    });
-    let totalMaquinas = Object.values(islasMaquinas).reduce((a, b) => a + b, 0);
 
     incidencias.push({
         tipo: "Preventivo",
         subTipo,
         fecha: new Date().toISOString().split("T")[0],
         islas: islasArr,
-        islasMaquinas,
-        totalMaquinas,
         tecnico: t.asignado,
         nota: t.desc,
         estado: "Realizado",
@@ -7293,13 +6949,7 @@ function renderTareasRealizadas(){
         if(fTec === "__turno_MANANA__"){
             let turnoLista = getTecnicosTurno();
             if(!turnoLista.includes(t.asignado)) return false;
-        } else if(fTec !== "todos"){
-            let matchAsignado = t.asignado === fTec;
-            let matchRealizado = t.realizadoPor
-                ? t.realizadoPor.split(", ").map(s=>s.trim()).some(n => n === fTec || n === mostrarAsignado(fTec))
-                : false;
-            if(!matchAsignado && !matchRealizado) return false;
-        }
+        } else if(fTec !== "todos" && t.asignado !== fTec) return false;
         if(fAnio !== "todos"){
             let ay = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha||"").slice(0,4);
             if(ay !== fAnio) return false;
@@ -7309,7 +6959,7 @@ function renderTareasRealizadas(){
             if(my !== fMes) return false;
         }
         if(fBus){
-            let h = (t.desc+" "+t.asignado+" "+(t.realizadoPor||"")+" "+(t.notas||"")).toLowerCase();
+            let h = (t.desc+" "+t.asignado+" "+(t.notas||"")).toLowerCase();
             if(!h.includes(fBus)) return false;
         }
         return true;
@@ -7341,7 +6991,7 @@ function renderTareasRealizadas(){
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;">
-                <span style="font-size:12px;color:var(--accent2);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>
+                <span style="font-size:12px;color:var(--accent2);">👤 ${mostrarAsignado(t.asignado)}</span>
                 ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
                 ${comentarios.length > 0 ? `<span style="font-size:11px;color:var(--muted);">💬 ${comentarios.length} comentario${comentarios.length>1?"s":""}</span>` : ""}
             </div>
@@ -7499,7 +7149,6 @@ ppRenderMes = function(mesIdx){
 
         // ── Botón / checklist CCB (tareaId 31) ──
         let esCCB = p.tareaId === 31;
-        let esPCHK = PCHK_META && !!PCHK_META[p.tareaId];
         let ccbHtml = "";
         if(esCCB){
             let ccbData = ccbCronogramas[mesKey] || null;
@@ -7546,58 +7195,10 @@ ppRenderMes = function(mesIdx){
             }
         }
 
-        // ── Bloque PCHK (checklist genérico de islas) ──
-        let pchkHtml = "";
-        if(esPCHK){
-            let tid = p.tareaId;
-            let meta = PCHK_META[tid];
-            let pchkData = pchkGetData(tid, mesKey);
-            if(pchkData){
-                let total = pchkData.islas.length;
-                let hecho = pchkData.islas.filter(x=>x.hecho).length;
-                let pct   = total > 0 ? Math.round(hecho/total*100) : 0;
-                let color = pchkData.cerrado ? 'rgba(0,212,168,.3)' : 'var(--border)';
-                pchkHtml = `
-                <div style="margin-top:12px;background:var(--bg3);border:1px solid ${color};border-radius:8px;padding:12px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-                        <div style="font-size:12px;font-weight:700;color:var(--white);">${meta.emoji} ${meta.label} · <span style="color:var(--muted);font-weight:400;">${hecho}/${total} islas ${pchkData.cerrado?'· ✅ Cerrado':''}</span></div>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <div style="width:60px;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;">
-                                <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;"></div>
-                            </div>
-                            <span style="font-size:11px;color:var(--muted);">${pct}%</span>
-                            ${!pchkData.cerrado ? `<button onclick="pchkAbrirChecklist('${mesKey}',${tid})"
-                                style="background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;font-size:11px;padding:2px 8px;"
-                                onmouseover="this.style.background='rgba(0,212,168,.25)'"
-                                onmouseout="this.style.background='rgba(0,212,168,.1)'"
-                               >📋 Ver Checklist</button>` : ''}
-                            ${esAdmin ? `<button onclick="pchkAbrirConfigurar('${mesKey}',${tid})"
-                                style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);border-radius:5px;color:var(--yellow);cursor:pointer;font-size:11px;padding:2px 8px;"
-                                onmouseover="this.style.background='rgba(255,201,71,.2)'"
-                                onmouseout="this.style.background='rgba(255,201,71,.1)'"
-                               >⚙️ Config</button>` : ''}
-                        </div>
-                    </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:4px;">
-                        ${pchkData.islas.map(x=>`<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:${x.hecho?'rgba(0,212,168,.15)':'rgba(79,142,255,.08)'};border:1px solid ${x.hecho?'var(--accent)':'var(--border)'};color:${x.hecho?'var(--accent)':'var(--muted)'};margin:1px;">${x.hecho?'✓ ':''} ${x.id}</span>`).join("")}
-                    </div>
-                </div>`;
-            } else {
-                pchkHtml = `
-                <div style="margin-top:12px;">
-                    <button onclick="${esAdmin ? `pchkAbrirConfigurar('${mesKey}',${tid})` : `pchkAbrirChecklist('${mesKey}',${tid})`}"
-                        style="width:100%;padding:10px;background:rgba(79,142,255,.08);border:1px dashed var(--accent2);border-radius:8px;color:var(--accent2);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;"
-                        onmouseover="this.style.background='rgba(79,142,255,.16)'"
-                        onmouseout="this.style.background='rgba(79,142,255,.08)'"
-                    >${meta.emoji} ${esAdmin ? `Configurar e Iniciar — ${meta.label}` : `Iniciar — ${meta.label}`}</button>
-                </div>`;
-            }
-        }
-
-        // ── Botón / cronograma Limpieza Sala (tareaId 6 y 7) ──
+        // ── Botón / cronograma Limpieza Sala (tareaId 6) ──
         let cronogramaHtml = "";
-        if(MGI_IDS.has(p.tareaId)){
-            let cronograma = mgiCronogramas[mgiGetKey(p.tareaId, mesKey)] || null;
+        if(p.tareaId === 6){
+            let cronograma = mgiCronogramas[mesKey] || null;
             if(cronograma){
                 let diasHtml = cronograma.dias.map(d => {
                     let islasChips = d.islas.length > 0
@@ -7605,7 +7206,7 @@ ppRenderMes = function(mesIdx){
                         : `<span style="color:var(--muted);font-size:11px;font-style:italic;">Sin islas</span>`;
                     let estadoDia = d.cerrado
                         ? `<span style="font-size:11px;font-weight:700;color:var(--accent);">✅ Cerrado</span>`
-                        : `<button onclick="ppMgiCerrarDia('${mesKey}',${d.dia},${p.tareaId})"
+                        : `<button onclick="ppMgiCerrarDia('${mesKey}',${d.dia})"
                             style="background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;font-size:11px;padding:2px 8px;"
                             onmouseover="this.style.background='rgba(0,212,168,.25)'"
                             onmouseout="this.style.background='rgba(0,212,168,.1)'"
@@ -7625,7 +7226,7 @@ ppRenderMes = function(mesIdx){
                 let progPct = cronograma.dias.length > 0 ? Math.round(cerradosCount/cronograma.dias.length*100) : 0;
 
                 let btnEditarCron = esAdmin
-                    ? `<button onclick="ppMgiProgramar('${mesKey}',${p.tareaId})"
+                    ? `<button onclick="ppMgiProgramar('${mesKey}')"
                         style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);border-radius:5px;color:var(--yellow);cursor:pointer;font-size:11px;padding:2px 8px;"
                         onmouseover="this.style.background='rgba(255,201,71,.2)'"
                         onmouseout="this.style.background='rgba(255,201,71,.1)'"
@@ -7649,11 +7250,11 @@ ppRenderMes = function(mesIdx){
             } else {
                 cronogramaHtml = esAdmin ? `
                 <div style="margin-top:10px;">
-                    <button onclick="ppMgiProgramar('${mesKey}',${p.tareaId})"
+                    <button onclick="ppMgiProgramar('${mesKey}')"
                         style="width:100%;padding:10px;background:rgba(0,212,168,.08);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;"
                         onmouseover="this.style.background='rgba(0,212,168,.16)'"
                         onmouseout="this.style.background='rgba(0,212,168,.08)'"
-                    >🗓️ Programar ${MGI_LABELS[p.tareaId] || 'Limpieza Sala'}</button>
+                    >🗓️ Programar Limpieza Sala</button>
                 </div>` : "";
             }
         }
@@ -7684,7 +7285,6 @@ ppRenderMes = function(mesIdx){
             ${p.nota ? `<div class="pp-gen-nota"><b>📝 Nota:</b> ${p.nota}</div>` : ""}
             ${cronogramaHtml}
             ${ccbHtml}
-            ${pchkHtml}
         </div>`;
     }).join("");
 };
@@ -7786,30 +7386,15 @@ guardarTarea = function(){
 //  PROGRAMAR LIMPIEZA SALA — dentro de Plan Preventivo
 // ══════════════════════════════════════════════════════════
 let mgiCronogramas = JSON.parse(localStorage.getItem("mgiCronogramas")) || {};
-let _ppMgiCerrandoRef = null; // { mesKey, dia, tid }
-
-// IDs que usan el sistema de cronograma por días (MGI)
-const MGI_IDS = new Set([6, 7]);
-const MGI_LABELS = {
-    6: "Limpieza Sala",
-    7: "Limpieza Sala Semicubierta"
-};
-
-// Clave de storage: para tareaId 6 usamos mesKey solo (retrocompat), para otros tid-mesKey
-function mgiGetKey(tid, mesKey){ return tid === 6 ? mesKey : `${tid}-${mesKey}`; }
+let _ppMgiCerrandoRef = null; // { mesKey, dia }
 
 function ppMgiGuardarStorage(){
     localStorage.setItem("mgiCronogramas", JSON.stringify(mgiCronogramas));
 }
 
-function ppMgiProgramar(mesKey, tid){
-    tid = tid || 6;
-    let label = MGI_LABELS[tid] || "Limpieza Sala";
-    document.getElementById("ppMgiMesKey").value  = mesKey;
-    document.getElementById("ppMgiTareaId").value = tid;
-    document.getElementById("ppMgiModalTitulo").textContent = `🗓️ Programar ${label}`;
-    let key  = mgiGetKey(tid, mesKey);
-    let cron = mgiCronogramas[key];
+function ppMgiProgramar(mesKey){
+    document.getElementById("ppMgiMesKey").value = mesKey;
+    let cron = mgiCronogramas[mesKey];
     let cant = cron ? cron.dias.length : 1;
     document.getElementById("ppMgiCantDias").value = cant;
     ppMgiGenerarDias(cron);
@@ -7859,8 +7444,6 @@ function ppMgiGenerarDias(cronExistente){
 
 function ppMgiGuardarCronograma(){
     let mesKey = document.getElementById("ppMgiMesKey").value;
-    let tid    = parseInt(document.getElementById("ppMgiTareaId").value) || 6;
-    let key    = mgiGetKey(tid, mesKey);
     let cant   = Math.min(10, Math.max(1, parseInt(document.getElementById("ppMgiCantDias").value) || 1));
     let dias   = [];
 
@@ -7869,27 +7452,26 @@ function ppMgiGuardarCronograma(){
         let tecnico = document.getElementById(`ppMgiDia${i}Tecnico`)?.value || "Juan";
         let chips   = document.querySelectorAll(`#ppMgiDia${i}Islas .mgi-isla-chip.on`);
         let islas   = Array.from(chips).map(c => parseInt(c.dataset.id));
-        let dExist  = mgiCronogramas[key]?.dias?.find(d => d.dia === i);
+        // Preservar estado cerrado si ya existía
+        let dExist  = mgiCronogramas[mesKey]?.dias?.find(d => d.dia === i);
         dias.push({ dia: i, fecha, tecnico, islas, nota: dExist?.nota || "", cerrado: dExist?.cerrado || false });
     }
 
-    mgiCronogramas[key] = { dias };
+    mgiCronogramas[mesKey] = { dias };
     ppMgiGuardarStorage();
     document.getElementById("modalPpMgi").classList.remove("open");
     toast.success("Cronograma guardado", `${cant} días programados`);
-    let label = MGI_LABELS[tid] || "Sala";
-    auditRegistrar("preventivo","🗓️", `Cronograma ${label} guardado`, `Mes: ${mesKey} · ${cant} días`);
+
+    // Guardar también en mgiPlanes para que aparezca en la sección MGI si existe
+    auditRegistrar("preventivo","🗓️", `Cronograma Limpieza Sala guardado`, `Mes: ${mesKey} · ${cant} días`);
     ppRenderMes(ppTabActivo);
 }
 
-function ppMgiCerrarDia(mesKey, diaNum, tid){
-    tid = tid || 6;
-    let key = mgiGetKey(tid, mesKey);
-    _ppMgiCerrandoRef = { mesKey, diaNum, tid };
-    let d = mgiCronogramas[key]?.dias?.find(x => x.dia === diaNum);
+function ppMgiCerrarDia(mesKey, diaNum){
+    _ppMgiCerrandoRef = { mesKey, diaNum };
+    let d = mgiCronogramas[mesKey]?.dias?.find(x => x.dia === diaNum);
     if(!d) return;
-    let label = MGI_LABELS[tid] || "Sala";
-    document.getElementById("ppMgiCerrarTitulo").textContent = `✅ Cerrar Día ${diaNum} — ${label}`;
+    document.getElementById("ppMgiCerrarTitulo").textContent = `✅ Cerrar Día ${diaNum}`;
     document.getElementById("ppMgiCerrarInfo").innerHTML =
         `<b>Fecha:</b> ${d.fecha} · <b>Técnico:</b> ${d.tecnico}<br><b>Islas:</b> ${d.islas.length > 0 ? d.islas.join(", ") : "Sin islas asignadas"}`;
     document.getElementById("ppMgiCerrarNota").value = d.nota || "";
@@ -7898,23 +7480,21 @@ function ppMgiCerrarDia(mesKey, diaNum, tid){
 
 function ppMgiConfirmarCierre(){
     if(!_ppMgiCerrandoRef) return;
-    let { mesKey, diaNum, tid } = _ppMgiCerrandoRef;
-    tid = tid || 6;
-    let key   = mgiGetKey(tid, mesKey);
-    let label = MGI_LABELS[tid] || "Sala";
-    let d = mgiCronogramas[key]?.dias?.find(x => x.dia === diaNum);
+    let { mesKey, diaNum } = _ppMgiCerrandoRef;
+    let d = mgiCronogramas[mesKey]?.dias?.find(x => x.dia === diaNum);
     if(!d) return;
 
     d.nota    = document.getElementById("ppMgiCerrarNota").value.trim();
     d.cerrado = true;
 
+    // Guardar en historial preventivos
     incidencias.push({
         tipo: "Preventivo",
-        subTipo: tid === 6 ? "mantenimiento-islas" : `mgi-${tid}`,
+        subTipo: "mantenimiento-islas",
         fecha: d.fecha,
         islas: d.islas.map(String),
         tecnico: d.tecnico,
-        nota: `[${label} ${mesKey}] Día ${diaNum} — ${d.nota || "Sin notas"}`,
+        nota: `[Limpieza Sala ${mesKey}] Día ${diaNum} — ${d.nota || "Sin notas"}`,
         estado: "Realizado",
         validado: false
     });
@@ -7923,7 +7503,7 @@ function ppMgiConfirmarCierre(){
     ppMgiGuardarStorage();
     document.getElementById("modalPpMgiCerrar").classList.remove("open");
     toast.success(`Día ${diaNum} cerrado`, "Guardado en Historial Preventivos");
-    auditRegistrar("preventivo","✅", `${label} Día ${diaNum} cerrado`, `Técnico: ${d.tecnico} · ${d.islas.length} islas`);
+    auditRegistrar("preventivo","✅", `Limpieza Sala Día ${diaNum} cerrado`, `Técnico: ${d.tecnico} · ${d.islas.length} islas`);
     renderDashboard();
     ppRenderMes(ppTabActivo);
 }
@@ -8570,467 +8150,6 @@ function ccbCerrarControl(){
     ppRenderMes(ppTabActivo);
 }
 
-// ══════════════════════════════════════════════════════════════
-//  PCHK — Sistema genérico de checklist de islas para preventivos
-//  Cubre tareaIds: 30, 32, 33, 34, 35, 36, 37, 38
-//  (tareaId 31 sigue usando el sistema CCB propio)
-// ══════════════════════════════════════════════════════════════
-
-// Metadatos por tareaId: nombre para mostrar en modales y subTipo para historial
-const PCHK_META = {
-     1: { label: "Mantenimiento de Chippers",              subTipo: "pchk-1",  emoji: "🔧" },
-     2: { label: "Mantenimiento de Visualizadores de RA",  subTipo: "pchk-2",  emoji: "🖥️" },
-     5: { label: "Limpieza de Fichas",                     subTipo: "pchk-5",  emoji: "🎰" },
-     8: { label: "Limpieza General de Stackers",              subTipo: "pchk-8",  emoji: "🧹", stackerGrupos: true },
-    11: { label: "Limpieza CPU IGT",                          subTipo: "pchk-11", emoji: "🖥️" },
-    12: { label: "Limpieza Filtros AVP IGT",                  subTipo: "pchk-12", emoji: "🔍" },
-    13: { label: "Control Botones/Calcos OLED IGT",           subTipo: "pchk-13", emoji: "🔘" },
-    14: { label: "Control Botones PLAY IGT",                  subTipo: "pchk-14", emoji: "▶️" },
-    15: { label: "Limpieza Placa Video y Coolers SG",         subTipo: "pchk-15", emoji: "🌀" },
-    16: { label: "Test Botones SG",                           subTipo: "pchk-16", emoji: "🎮" },
-    17: { label: "Test Botones L&W",                          subTipo: "pchk-17", emoji: "🎮" },
-    18: { label: "Mant. PCs Progresivos + Carteles ZITRO",        subTipo: "pchk-18", emoji: "🖥️" },
-    19: { label: "Control Botones ZITRO",                          subTipo: "pchk-19", emoji: "🔘" },
-    20: { label: "Control Audio ZITRO",                            subTipo: "pchk-20", emoji: "🔊" },
-    21: { label: "Revisión Conectores Fuente ZITRO",               subTipo: "pchk-21", emoji: "🔌" },
-    22: { label: "Control Coolers ZITRO (Gab/CPU/Placas/Bot)",     subTipo: "pchk-22", emoji: "🌀" },
-    23: { label: "Revisión Cerraduras Mariposa Stacker",           subTipo: "pchk-23", emoji: "🔒" },
-    24: { label: "Control Puertas Belly BALLY v22",                subTipo: "pchk-24", emoji: "🚪" },
-    25: { label: "Control Coolers CPU BALLY v22",                  subTipo: "pchk-25", emoji: "🌀" },
-    26: { label: "Control Coolers CPU BALLY v32",                  subTipo: "pchk-26", emoji: "🌀" },
-    27: { label: "Control Coolers Placa Video BALLY",              subTipo: "pchk-27", emoji: "🖥️" },
-    28: { label: "Control Botones PLAY Bally",                     subTipo: "pchk-28", emoji: "▶️" },
-    29: { label: "Control Cooler Gabinete WMS KC",                 subTipo: "pchk-29", emoji: "🌀" },
-    30: { label: "Control Remaches Puertas Stacker Viridian", subTipo: "pchk-30", emoji: "🔩" },
-    32: { label: "Control Cooler Fuentes Aristocrat",         subTipo: "pchk-32", emoji: "🌀" },
-    33: { label: "Control Botones/Calcos Aristocrat",         subTipo: "pchk-33", emoji: "🔘" },
-    34: { label: "Control Cooler Placas Video y CPU Aristocrat", subTipo: "pchk-34", emoji: "🖥️" },
-    35: { label: "Control Botones PLAY Ainsworth",            subTipo: "pchk-35", emoji: "▶️" },
-    36: { label: "Mantenimiento Preventivo INTERBLOCK",       subTipo: "pchk-36", emoji: "🎮" },
-    37: { label: "Control Cooler Monitor BCM",                subTipo: "pchk-37", emoji: "🖥️" },
-    38: { label: "Mantenimiento Preventivo BCM",              subTipo: "pchk-38", emoji: "🔧" },
-};
-
-// Storage: pchkCronogramas[tareaId][mesKey] = { islas:[{id,hecho}], nota, cerrado, fechaCierre }
-//          pchkIslasConfig[tareaId] = [110, 116, ...]
-let pchkCronogramas = {};
-let pchkIslasConfig = {};
-let _pchkIslasTemp  = [];
-
-function pchkGuardarStorage(){ localStorage.setItem("pchkCronogramas", JSON.stringify(pchkCronogramas)); }
-function pchkGuardarConfig(){   localStorage.setItem("pchkIslasConfig",  JSON.stringify(pchkIslasConfig));  }
-
-function pchkGetConfig(tid){ return pchkIslasConfig[tid] || []; }
-function pchkGetData(tid, mesKey){ return (pchkCronogramas[tid] || {})[mesKey] || null; }
-
-function pchkSetData(tid, mesKey, val){
-    if(!pchkCronogramas[tid]) pchkCronogramas[tid] = {};
-    pchkCronogramas[tid][mesKey] = val;
-    pchkGuardarStorage();
-}
-
-// IDs que usan etiquetas de texto en lugar de números de isla
-const PCHK_TEXT_IDS = new Set([1, 2, 5]);
-
-// ── Abrir configuración Admin ──────────────────────────────
-const STACKER_GRUPOS = [
-    { nombre: "Blancos",   color: "#e8edf5", equipos: ["A1","A2","B1","B2","C1","C2","D1","D2"] },
-    { nombre: "Amarillos", color: "#ffc947", equipos: ["A1","A2","B1","B2","C1","C2","D1","D2"] }
-];
-
-function pchkAbrirConfigurar(mesKey, tid){
-    tid = parseInt(tid);
-    let esAdmin = usuarioActual?.rol === "Admin";
-    if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
-    if(typeof PCHK_META === "undefined"){ console.error("[pchk] PCHK_META no definido"); return; }
-    let meta = PCHK_META[tid];
-    if(!meta){ console.error("[pchk] No se encontró meta para tid:", tid, "Keys:", Object.keys(PCHK_META)); return; }
-
-    document.getElementById("pchkConfMesKey").value   = mesKey;
-    document.getElementById("pchkConfTareaId").value  = tid;
-    document.getElementById("pchkConfTitulo").textContent = `⚙️ Configurar Islas — ${meta.label}`;
-
-    // ── Stackers: UI especial con checkboxes por grupo ──
-    if(meta.stackerGrupos){
-        let existentes = pchkGetConfig(tid); // ["Blancos|A1","Amarillos|B2",...]
-        let body = document.querySelector("#modalPchkConfigurar .modal-box");
-
-        // Ocultar el input de número genérico y la lista, mostrar los grupos
-        document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "none";
-        let _fg2 = document.getElementById("pchkConfGrupoIslas");
-        if(_fg2) _fg2.style.display = "none";
-        let _hint = document.getElementById("pchkConfHint");
-        if(_hint) _hint.style.display = "none";
-
-        let panelId = "pchkStackerGruposPanel";
-        let existingPanel = document.getElementById(panelId);
-        if(existingPanel) existingPanel.remove();
-
-        let panel = document.createElement("div");
-        panel.id = panelId;
-        panel.style.cssText = "margin-bottom:14px;";
-
-        let html = `<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Seleccioná los stackers que forman parte del control.</div>`;
-        STACKER_GRUPOS.forEach(grupo => {
-            html += `<div style="margin-bottom:14px;">
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${grupo.color};margin-bottom:8px;display:flex;align-items:center;gap:8px;">
-                    <span>${grupo.nombre}</span>
-                    <button onclick="pchkStackerSelAll('${grupo.nombre}',true)" style="font-size:10px;padding:2px 8px;background:rgba(0,212,168,.15);border:1px solid var(--accent);border-radius:5px;color:var(--accent);cursor:pointer;">Todo</button>
-                    <button onclick="pchkStackerSelAll('${grupo.nombre}',false)" style="font-size:10px;padding:2px 8px;background:rgba(255,77,109,.1);border:1px solid var(--red);border-radius:5px;color:var(--red);cursor:pointer;">Ninguno</button>
-                </div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">`;
-            grupo.equipos.forEach(eq => {
-                let key = grupo.nombre + "|" + eq;
-                let checked = existentes.includes(key) ? "checked" : "";
-                html += `<label style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--white);transition:all .2s;"
-                    onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-                    <input type="checkbox" data-grupo="${grupo.nombre}" data-eq="${eq}" ${checked}
-                        style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    ${eq}
-                </label>`;
-            });
-            html += `</div></div>`;
-        });
-        panel.innerHTML = html;
-
-        // Insertar antes del footer
-        let footer = document.querySelector("#modalPchkConfigurar .modal-footer");
-        footer.parentNode.insertBefore(panel, footer);
-
-        document.getElementById("modalPchkConfigurar").classList.add("open");
-        return;
-    }
-
-    // ── Modo normal ──
-    // Restaurar visibilidad por si se abrió stacker antes
-    document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "";
-    let _fg2b = document.getElementById("pchkConfGrupoIslas");
-    if(_fg2b) _fg2b.style.display = "";
-    let _hint2 = document.getElementById("pchkConfHint");
-    if(_hint2) _hint2.style.display = "";
-    let existingPanel2 = document.getElementById("pchkStackerGruposPanel");
-    if(existingPanel2) existingPanel2.remove();
-
-    let isTexto = PCHK_TEXT_IDS.has(tid);
-    let inp = document.getElementById("pchkNuevaIsla");
-    let lbl = document.getElementById("pchkConfInputLabel");
-    if(isTexto){
-        inp.placeholder = "Ej: RA 5, RA 6...";
-        lbl.textContent = "Agregar mesa (texto libre)";
-    } else {
-        inp.placeholder = "Ej: 110";
-        lbl.textContent = "Agregar isla (número)";
-    }
-
-    _pchkIslasTemp = [...pchkGetConfig(tid)];
-    pchkRenderIslasList();
-    document.getElementById("modalPchkConfigurar").classList.add("open");
-}
-
-function pchkStackerSelAll(grupo, sel){
-    document.querySelectorAll(`#pchkStackerGruposPanel input[data-grupo="${grupo}"]`)
-        .forEach(cb => cb.checked = sel);
-}
-
-function pchkRenderIslasList(){
-    let cont = document.getElementById("pchkIslasList");
-    if(!cont) return;
-    if(_pchkIslasTemp.length === 0){
-        cont.innerHTML = `<span style="color:var(--muted);font-size:13px;font-style:italic;">Sin islas configuradas. Agregá una arriba.</span>`;
-        return;
-    }
-    // Ordenar: números primero, luego texto
-    let sorted = [..._pchkIslasTemp].sort((a,b) => {
-        let na = parseFloat(a), nb = parseFloat(b);
-        if(!isNaN(na) && !isNaN(nb)) return na - nb;
-        return String(a).localeCompare(String(b));
-    });
-    cont.innerHTML = sorted.map(id => `
-        <span onclick="pchkQuitarIsla('${String(id).replace(/'/g,"\\'")}')"
-            style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;padding:5px 12px;border-radius:8px;background:rgba(79,142,255,.15);border:1px solid var(--accent2);color:var(--accent2);cursor:pointer;transition:all .15s;user-select:none;"
-            onmouseover="this.style.background='rgba(255,77,109,.2)';this.style.borderColor='var(--red)';this.style.color='var(--red)'"
-            onmouseout="this.style.background='rgba(79,142,255,.15)';this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'"
-            title="Clic para eliminar"
-        >${id} ✕</span>
-    `).join("");
-}
-
-function pchkAgregarIsla(){
-    let inp = document.getElementById("pchkNuevaIsla");
-    let tid = parseInt(document.getElementById("pchkConfTareaId").value);
-    let raw = inp.value.trim();
-    if(!raw){ toast.warning("Valor inválido","Ingresá un valor para agregar."); return; }
-    // Para IDs numéricos, convertir a número; para texto libre, mantener string
-    let val = PCHK_TEXT_IDS.has(tid) ? raw : (parseInt(raw) || null);
-    if(!val || (typeof val === "number" && val < 1)){ toast.warning("Valor inválido","Ingresá un número de isla válido."); return; }
-    if(_pchkIslasTemp.some(x => String(x) === String(val))){ toast.warning("Duplicado",`"${val}" ya está en la lista.`); return; }
-    _pchkIslasTemp.push(val);
-    inp.value = "";
-    inp.focus();
-    pchkRenderIslasList();
-}
-
-function pchkQuitarIsla(id){
-    _pchkIslasTemp = _pchkIslasTemp.filter(x => String(x) !== String(id));
-    pchkRenderIslasList();
-}
-
-function pchkGuardarConfiguracion(){
-    let mesKey = document.getElementById("pchkConfMesKey").value;
-    let tid    = parseInt(document.getElementById("pchkConfTareaId").value);
-    let meta   = PCHK_META[tid] || {};
-
-    // ── Stackers: recolectar checkboxes marcados ──
-    if(meta.stackerGrupos){
-        let cbs = document.querySelectorAll("#pchkStackerGruposPanel input[type=checkbox]:checked");
-        let seleccionados = [...cbs].map(cb => cb.dataset.grupo + "|" + cb.dataset.eq);
-        if(seleccionados.length === 0){ toast.warning("Sin stackers","Seleccioná al menos un stacker."); return; }
-        pchkIslasConfig[tid] = seleccionados;
-        pchkGuardarConfig();
-
-        let dataExist = pchkGetData(tid, mesKey);
-        let islasNuevas = seleccionados.map(id => {
-            let exist = dataExist?.islas?.find(x => x.id === id);
-            return { id, hecho: exist?.hecho || false };
-        });
-        pchkSetData(tid, mesKey, {
-            islas: islasNuevas,
-            nota: dataExist?.nota || "",
-            cerrado: dataExist?.cerrado || false,
-            fechaCierre: dataExist?.fechaCierre || null
-        });
-        // Cerrar modal y abrir checklist
-        document.getElementById("modalPchkConfigurar").classList.remove("open");
-        // Restaurar UI genérica para próximas aperturas
-        document.getElementById("pchkConfInputLabel").closest(".form-group").style.display = "";
-        let _fg2c = document.getElementById("pchkConfGrupoIslas");
-        if(_fg2c) _fg2c.style.display = "";
-        let _hint3 = document.getElementById("pchkConfHint");
-        if(_hint3) _hint3.style.display = "";
-        let ep = document.getElementById("pchkStackerGruposPanel");
-        if(ep) ep.remove();
-        toast.success("Configuración guardada", `${seleccionados.length} stackers configurados`);
-        auditRegistrar?.("preventivo","⚙️",`${meta.label} — Stackers configurados`,`${seleccionados.length} stackers · Mes: ${mesKey}`);
-        setTimeout(() => pchkAbrirChecklist(mesKey, tid), 200);
-        ppRenderMes?.(ppTabActivo);
-        return;
-    }
-
-    if(_pchkIslasTemp.length === 0){ toast.warning("Sin islas","Agregá al menos una isla antes de guardar."); return; }
-
-    pchkIslasConfig[tid] = [..._pchkIslasTemp].sort((a,b) => {
-        let na = parseFloat(a), nb = parseFloat(b);
-        if(!isNaN(na) && !isNaN(nb)) return na - nb;
-        return String(a).localeCompare(String(b));
-    });
-    pchkGuardarConfig();
-
-    let dataExist = pchkGetData(tid, mesKey);
-    let islasNuevas = pchkIslasConfig[tid].map(id => {
-        let exist = dataExist?.islas?.find(x => x.id === id);
-        return { id, hecho: exist?.hecho || false };
-    });
-    pchkSetData(tid, mesKey, {
-        islas: islasNuevas,
-        nota: dataExist?.nota || "",
-        cerrado: dataExist?.cerrado || false,
-        fechaCierre: dataExist?.fechaCierre || null
-    });
-
-    document.getElementById("modalPchkConfigurar").classList.remove("open");
-    toast.success("Configuración guardada", `${pchkIslasConfig[tid].length} islas configuradas`);
-    meta = PCHK_META[tid] || {};
-    auditRegistrar("preventivo","⚙️",`${meta.label||'PCHK'} — Islas configuradas`,`${pchkIslasConfig[tid].length} islas · Mes: ${mesKey}`);
-
-    setTimeout(() => pchkAbrirChecklist(mesKey, tid), 200);
-    ppRenderMes(ppTabActivo);
-}
-
-// ── Abrir checklist técnico ────────────────────────────────
-function pchkAbrirChecklist(mesKey, tid){
-    let esAdmin = usuarioActual?.rol === "Admin";
-    let cfg     = pchkGetConfig(tid);
-    let meta    = PCHK_META[tid];
-    if(!meta) return;
-
-    if(!pchkGetData(tid, mesKey)){
-        if(cfg.length === 0){
-            if(esAdmin){ pchkAbrirConfigurar(mesKey, tid); }
-            else { toast.warning("Sin configuración","El Admin aún no configuró las islas para este control."); }
-            return;
-        }
-        pchkSetData(tid, mesKey, {
-            islas: cfg.map(id => ({ id, hecho: false })),
-            nota: "", cerrado: false, fechaCierre: null
-        });
-    }
-
-    let data = pchkGetData(tid, mesKey);
-    let [anio, mes] = mesKey.split("-");
-    let nombreMes = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][parseInt(mes)] || mes;
-
-    document.getElementById("pchkChecklistMesKey").value   = mesKey;
-    document.getElementById("pchkChecklistTareaId").value  = tid;
-    document.getElementById("pchkChecklistTitulo").textContent = `${meta.emoji} ${meta.label} — ${nombreMes} ${anio}`;
-    document.getElementById("pchkChecklistInfo").innerHTML =
-        `<b>${data.islas.length} islas</b> a controlar${data.cerrado ? ` · <b style="color:var(--accent)">✅ Cerrado el ${data.fechaCierre}</b>` : ""}`;
-
-    document.getElementById("pchkBtnAdmin").style.display = esAdmin ? "block" : "none";
-    let btnCerrar = document.getElementById("pchkBtnCerrar");
-    btnCerrar.style.display = data.cerrado ? "none" : "";
-    document.getElementById("pchkChecklistNota").value = data.nota || "";
-
-    // Poblar selector de técnico
-    let selTecPchk = document.getElementById("pchkChecklistTecnico");
-    if(selTecPchk){
-        let tecnicos = getTecnicos();
-        let opts = '<option value="__turno_MANANA__">☀️ Turno mañana</option>';
-        tecnicos.forEach(n => { opts += `<option value="${n}">${n}</option>`; });
-        selTecPchk.innerHTML = opts;
-        // Pre-seleccionar el usuario logueado
-        if(usuarioActual?.nombre && [...selTecPchk.options].some(o => o.value === usuarioActual.nombre)){
-            selTecPchk.value = usuarioActual.nombre;
-        }
-    }
-
-    pchkRenderChecklistIslas(mesKey, tid);
-    document.getElementById("modalPchkChecklist").classList.add("open");
-}
-
-function pchkRenderChecklistIslas(mesKey, tid){
-    let data = pchkGetData(tid, mesKey);
-    if(!data) return;
-    let cont = document.getElementById("pchkChecklistIslas");
-    if(!cont) return;
-    let meta    = PCHK_META[tid] || {};
-    let total   = data.islas.length;
-    let hecho   = data.islas.filter(x=>x.hecho).length;
-    let pct     = total > 0 ? Math.round(hecho/total*100) : 0;
-    let esCerrado = data.cerrado;
-
-    document.getElementById("pchkProgText").textContent = `${hecho} / ${total}`;
-    document.getElementById("pchkProgBar").style.width  = pct + "%";
-
-    // ── Stackers: mostrar agrupados por Blancos/Amarillos ──
-    if(meta.stackerGrupos){
-        let html = "";
-        STACKER_GRUPOS.forEach(grupo => {
-            let islasFiltradas = data.islas.filter(x => String(x.id).startsWith(grupo.nombre + "|"));
-            if(islasFiltradas.length === 0) return;
-            html += `<div style="margin-bottom:12px;">
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${grupo.color};margin-bottom:6px;">${grupo.nombre}</div>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">`;
-            islasFiltradas.forEach(isla => {
-                let idx = data.islas.indexOf(isla);
-                let eq  = String(isla.id).split("|")[1] || isla.id;
-                html += `<div onclick="${esCerrado ? '' : `pchkToggleIsla('${mesKey}',${tid},${idx})`}"
-                    style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg3)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:8px;cursor:${esCerrado?'default':'pointer'};transition:all .2s;"
-                    ${esCerrado ? '' : `onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'"` }>
-                    <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        ${isla.hecho ? '<span style="color:#0f1117;font-size:11px;font-weight:900;">✓</span>' : ''}
-                    </div>
-                    <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">${eq}</span>
-                    <span style="margin-left:auto;font-size:11px;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅':'Pendiente'}</span>
-                </div>`;
-            });
-            html += `</div></div>`;
-        });
-        cont.innerHTML = html;
-        return;
-    }
-
-    cont.innerHTML = data.islas.map((isla, idx) => `
-        <div onclick="${esCerrado ? '' : `pchkToggleIsla('${mesKey}',${tid},${idx})`}"
-            style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg3)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:9px;cursor:${esCerrado?'default':'pointer'};transition:all .2s;"
-            ${esCerrado?'':` onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'"` }
-        >
-            <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
-                ${isla.hecho ? '<span style="color:#0f1117;font-size:13px;font-weight:900;">✓</span>' : ''}
-            </div>
-            <div style="flex:1;">
-                <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</div>
-                <div style="font-size:11px;color:var(--muted);">${meta.label||''}</div>
-            </div>
-            <div style="font-size:12px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">
-                ${isla.hecho ? '✅ Listo' : (esCerrado?'—':'Pendiente')}
-            </div>
-        </div>
-    `).join("");
-}
-
-function pchkToggleIsla(mesKey, tid, idx){
-    let data = pchkGetData(tid, mesKey);
-    if(!data || data.cerrado) return;
-    data.islas[idx].hecho = !data.islas[idx].hecho;
-    pchkGuardarStorage();
-    pchkRenderChecklistIslas(mesKey, tid);
-    if(typeof ppRenderMes === "function") ppRenderMes(ppTabActivo);
-}
-
-function pchkToggleIslaInline(mesKey, tid, idx){
-    let data = pchkGetData(tid, mesKey);
-    if(!data || data.cerrado) return;
-    data.islas[idx].hecho = !data.islas[idx].hecho;
-    pchkGuardarStorage();
-    renderTareas();
-    if(typeof ppRenderMes === "function") ppRenderMes(ppTabActivo);
-}
-
-function pchkGuardarParcial(){
-    let mesKey = document.getElementById("pchkChecklistMesKey").value;
-    let tid    = parseInt(document.getElementById("pchkChecklistTareaId").value);
-    let data   = pchkGetData(tid, mesKey);
-    if(!data) return;
-    data.nota = document.getElementById("pchkChecklistNota").value.trim();
-    let tecPchkValP = document.getElementById("pchkChecklistTecnico")?.value || usuarioActual?.nombre || "Técnico";
-    data.tecnico = tecPchkValP === "__turno_MANANA__" ? "☀️ Turno mañana" : tecPchkValP;
-    pchkGuardarStorage();
-    document.getElementById("modalPchkChecklist").classList.remove("open");
-    let hecho = data.islas.filter(x=>x.hecho).length;
-    toast.success("Progreso guardado", `${hecho}/${data.islas.length} islas completadas`);
-    ppRenderMes(ppTabActivo);
-}
-
-function pchkCerrarControl(){
-    let mesKey = document.getElementById("pchkChecklistMesKey").value;
-    let tid    = parseInt(document.getElementById("pchkChecklistTareaId").value);
-    let data   = pchkGetData(tid, mesKey);
-    if(!data) return;
-
-    let hecho = data.islas.filter(x=>x.hecho).length;
-    let total = data.islas.length;
-    if(hecho < total){
-        if(!confirm(`Solo completaste ${hecho} de ${total} islas. ¿Querés cerrar el control de todas formas?`)) return;
-    }
-
-    data.nota = document.getElementById("pchkChecklistNota").value.trim();
-    data.cerrado    = true;
-    data.fechaCierre = new Date().toLocaleDateString("es-AR");
-    pchkGuardarStorage();
-
-    let islasHechas = data.islas.filter(x=>x.hecho).map(x=>String(x.id));
-    let meta = PCHK_META[tid] || { label: "Preventivo", subTipo: `pchk-${tid}` };
-    let tecPchkVal = document.getElementById("pchkChecklistTecnico")?.value || usuarioActual?.nombre || "Técnico";
-    let tecPchkLabel = tecPchkVal === "__turno_MANANA__" ? "☀️ Turno mañana" : tecPchkVal;
-    incidencias.push({
-        tipo:    "Preventivo",
-        subTipo: meta.subTipo,
-        fecha:   new Date().toISOString().split("T")[0],
-        islas:   islasHechas,
-        tecnico: tecPchkLabel,
-        nota:    `[${meta.label} ${mesKey}] ${hecho}/${total} islas — ${data.nota || "Sin notas"}`,
-        estado:  hecho === total ? "Realizado" : "Realizado Parcial",
-        validado: false
-    });
-    localStorage.setItem("incidencias", JSON.stringify(incidencias));
-
-    document.getElementById("modalPchkChecklist").classList.remove("open");
-    toast.success("Control cerrado ✅", `${hecho}/${total} islas completadas · Guardado en Historial`);
-    auditRegistrar("preventivo", meta.emoji || "🔧", `${meta.label} cerrado — ${mesKey}`, `${hecho}/${total} islas · Técnico: ${usuarioActual?.nombre}`);
-    renderDashboard();
-    ppRenderMes(ppTabActivo);
-}
-
 // ══════════════════════════════════════════════
 //  GESTIÓN DE USUARIOS — ADMIN
 // ══════════════════════════════════════════════
@@ -9252,9 +8371,6 @@ function poblarSelectsTecnicos(){
             opts += `<option value="__turno_MANANA__">☀️ Turno mañana</option>`;
             opts += `<option value="__todos__">👥 Todos</option>`;
         }
-        if(id === "tecnicoGen"){
-            opts += `<option value="__turno_MANANA__">☀️ Turno mañana</option>`;
-        }
 
         tecnicos.forEach(n => {
             opts += `<option value="${n}">${n}</option>`;
@@ -9363,7 +8479,7 @@ function _renderTareasConTurno(){
             if(mesT !== fMes) return false;
         }
         if(fBuscar){
-            let haystack = (t.desc + " " + t.asignado + " " + (t.realizadoPor||"") + " " + (t.notas||"")).toLowerCase();
+            let haystack = (t.desc + " " + t.asignado + " " + (t.notas||"")).toLowerCase();
             if(!haystack.includes(fBuscar)) return false;
         }
         return true;
@@ -9449,50 +8565,6 @@ function _renderTareasConTurno(){
             }
         }
 
-        // ── Bloque inline PCHK genérico (tareaIds 30,32-38) ──
-        let pchkInlineHtml = "";
-        if(PCHK_META && PCHK_META[t._ppTareaId] && t._ppMesKey && t.estado !== "realizado"){
-            let tid = t._ppTareaId;
-            let mesKey = t._ppMesKey;
-            let meta = PCHK_META[tid];
-            let pchkData = pchkGetData(tid, mesKey);
-            if(!pchkData && pchkGetConfig(tid).length > 0){
-                pchkSetData(tid, mesKey, {
-                    islas: pchkGetConfig(tid).map(id => ({ id, hecho: false })),
-                    nota: "", cerrado: false, fechaCierre: null
-                });
-                pchkData = pchkGetData(tid, mesKey);
-            }
-            if(pchkData && !pchkData.cerrado){
-                let total = pchkData.islas.length, hecho = pchkData.islas.filter(x=>x.hecho).length;
-                let pct = total > 0 ? Math.round(hecho/total*100) : 0;
-                let islasHtml = pchkData.islas.map((isla, idx) => `
-                    <div onclick="pchkToggleIslaInline('${mesKey}',${tid},${idx})"
-                        style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${isla.hecho?'rgba(0,212,168,.08)':'var(--bg)'};border:1px solid ${isla.hecho?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;transition:all .2s;"
-                        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${isla.hecho?'var(--accent)':'var(--border)'}'">
-                        <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
-                            ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
-                        </div>
-                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
-                        <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
-                    </div>`).join("");
-                pchkInlineHtml = `<div style="margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                        <span style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--white);">${meta.emoji} Islas a controlar</span>
-                        <span style="font-size:12px;font-weight:700;color:var(--accent);">${hecho}/${total} · ${pct}%</span>
-                    </div>
-                    <div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border);">
-                        <div style="width:${pct}%;height:100%;background:${pct===100?'var(--accent)':'var(--accent2)'};border-radius:3px;transition:width .4s;"></div>
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;">${islasHtml}</div>
-                </div>`;
-            } else if(pchkData && pchkData.cerrado){
-                pchkInlineHtml = `<div style="margin-top:10px;padding:10px 14px;background:rgba(0,212,168,.08);border:1px solid var(--accent);border-radius:10px;font-size:13px;color:var(--accent);font-weight:600;">✅ Control completado · ${pchkData.islas.filter(x=>x.hecho).length}/${pchkData.islas.length} islas · ${pchkData.fechaCierre}</div>`;
-            } else {
-                pchkInlineHtml = `<div style="margin-top:10px;padding:10px 14px;background:rgba(255,201,71,.06);border:1px dashed var(--yellow);border-radius:10px;font-size:12px;color:var(--yellow);">⚠️ El Admin aún no configuró las islas para este control.</div>`;
-            }
-        }
-
         let esMiTarea = esTecnico && t.asignado === miNombre;
         return `<div class="tarea-row" style="${esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
             <div class="item-main" style="width:100%">
@@ -9506,7 +8578,6 @@ function _renderTareasConTurno(){
                     ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
                 </div>
                 ${ccbInlineHtml}
-                ${pchkInlineHtml}
                 ${acciones}
             </div>
             ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
@@ -9619,20 +8690,7 @@ function confirmarQuienRealizoMulti(){
     t.done = true;
 
     ppRegistrarEnHistorial?.(t);
-    // Batch write: guardar tareas e incidencias juntos para evitar race condition
-    _cache["tareas"] = tareas;
-    _cache["incidencias"] = incidencias;
-    _db.batch()
-        .set(_colRef().doc("tareas"),     { data: tareas })
-        .set(_colRef().doc("incidencias"),{ data: incidencias })
-        .commit()
-        .catch(e => {
-            console.error("[Firebase] Batch error:", e);
-            _fbSet("tareas", tareas);
-            _fbSet("incidencias", incidencias);
-        });
-    _localStorageOrig.setItem("tareas",      JSON.stringify(tareas));
-    _localStorageOrig.setItem("incidencias", JSON.stringify(incidencias));
+    localStorage.setItem("tareas", JSON.stringify(tareas));
     auditRegistrar?.("tarea","✔", `Tarea "${t.desc}" cerrada`, `Realizada por: ${t.realizadoPor}`);
 
     document.getElementById("modalQuienRealizoMulti").classList.remove("open");
@@ -9641,7 +8699,6 @@ function confirmarQuienRealizoMulti(){
 
     renderTareas?.();
     renderDashboard?.();
-    renderIncidenciasPreventivos?.();
     toast.success("Tarea cerrada ✅", `Realizada por: ${t.realizadoPor}`);
 }
 </script>
