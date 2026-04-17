@@ -4604,7 +4604,7 @@ function renderTareas(){
                         <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
                             ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
                         </div>
-                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">${/^\d+$/.test(String(isla.id)) ? 'Isla ' + isla.id : isla.id}</span>
                         <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
                     </div>`).join("");
 
@@ -4661,7 +4661,7 @@ function renderTareas(){
                         <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
                             ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
                         </div>
-                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">${/^\d+$/.test(String(isla.id)) ? 'Isla ' + isla.id : isla.id}</span>
                         <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
                     </div>`).join("");
                 pchkInlineHtml = `
@@ -9480,7 +9480,7 @@ function _renderTareasConTurno(){
                         <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isla.hecho?'var(--accent)':'var(--border)'};background:${isla.hecho?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;">
                             ${isla.hecho?'<span style="color:#0f1117;font-size:12px;font-weight:900;">✓</span>':''}
                         </div>
-                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">Isla ${isla.id}</span>
+                        <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--white)'};">${/^\d+$/.test(String(isla.id)) ? 'Isla ' + isla.id : isla.id}</span>
                         <span style="margin-left:auto;font-size:11px;font-weight:700;color:${isla.hecho?'var(--accent)':'var(--muted)'};">${isla.hecho?'✅ Listo':'Pendiente'}</span>
                     </div>`).join("");
                 pchkInlineHtml = `<div style="margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
