@@ -3175,7 +3175,7 @@ body {
             </select>
         </div>
         <div class="form-group">
-            <label class="form-label">Equipos intervenidos</label>
+            <label class="form-label">Máquinas intervenidas</label>
             <input type="text" id="cntPrevEquipos" class="form-input" placeholder="Ej: Contadora 1, Contadora 2...">
         </div>
         <div class="form-group">
@@ -3891,8 +3891,8 @@ function renderDashboard(){
                     : "Sin islas";
             } else {
                 resumenDash = islasEfectivas.length > 0
-                    ? `${islasEfectivas.length} equipos`
-                    : "Sin equipos";
+                    ? `${islasEfectivas.length} máquinas`
+                    : "Sin máquinas";
             }
             let tipoLabel = p.subTipo ? (tipoLabels[p.subTipo]||p.subTipo) : "Slots";
             return `
@@ -5084,13 +5084,13 @@ function renderIncidenciasPreventivos(){
                 ra:        'visualizador(es)',
                 eva:       'kiosco(s) EVA',
                 pc:        'PC/cartel(es)',
-                avp:       'equipo(s) AVP'
+                avp:       'máquina(s) AVP'
             };
-            let etiq = ETIQUETA_EQUIPO[p.subTipo] || 'equipo(s)';
+            let etiq = ETIQUETA_EQUIPO[p.subTipo] || 'máquina(s)';
             if(islasEfectivas.length > 0){
                 resumenEquipos = `<b style="color:var(--accent2)">${islasEfectivas.length}</b> ${etiq}`;
             } else {
-                resumenEquipos = `<span style="color:var(--muted);font-size:11px;">Sin equipos registrados</span>`;
+                resumenEquipos = `<span style="color:var(--muted);font-size:11px;">Sin máquinas registradas</span>`;
             }
         }
 
@@ -5115,14 +5115,14 @@ function renderIncidenciasPreventivos(){
                 <span style="color:var(--muted);font-size:16px;margin-left:4px;">▾</span>
             </div>
             <div id="${cardId}" style="display:none;padding:14px 18px;border-top:1px solid var(--border);background:var(--bg3);">
-                <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Equipos intervenidos</div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Máquinas intervenidas</div>
                 <div id="${cardId}-islas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
                     ${islasEfectivas.map(e => {
                         let isIsla = (!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera");
                         let lbl = isIsla ? `Isla ${e}` : (String(e).includes("|")?String(e).replace("|"," "):e);
                         let slots = isIsla ? (p.islasMaquinas ? p.islasMaquinas[String(e)] : null) ?? (islasActivas.find(il=>il.id===parseInt(e))?.slots) : null;
-                        let slotsBadge = (slots != null) ? `<span style="margin-left:5px;font-size:10px;background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 5px;font-weight:700;">${slots}maq</span>` : "";
-                        return `<span style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--white);display:inline-flex;align-items:center;">${lbl}${slotsBadge}</span>`;
+                        let maqLabel = (isIsla && slots != null) ? `<span style="margin-left:6px;font-size:11px;background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 6px;font-weight:700;">${slots} máq.</span>` : "";
+                        return `<span style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;color:var(--white);display:inline-flex;align-items:center;">${lbl}${maqLabel}</span>`;
                     }).join("")}
                 </div>
                 ${(()=>{
@@ -5131,8 +5131,8 @@ function renderIncidenciasPreventivos(){
                         let est = p.islasMaquinas ? '' : " <span style='font-weight:400;font-size:11px;color:var(--muted);'>(estimado)</span>";
                         return `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(0,212,168,.07);border:1px solid rgba(0,212,168,.25);border-radius:8px;font-size:13px;color:var(--accent);font-weight:700;">🔧 Total: ${maqCount} máquinas en ${islasEfectivas.length} isla(s)${est}</div>`;
                     } else if(!isIslaSubtipo && islasEfectivas.length > 0){
-                        const ETIQ2 = {stacker:'stacker(s)',chipper:'chipper(s)',cilindros:'cilindro(s)',ra:'visualizador(es)',eva:'kiosco(s) EVA',pc:'PC/cartel(es)',avp:'equipo(s) AVP'};
-                        let et2 = ETIQ2[p.subTipo] || 'equipo(s)';
+                        const ETIQ2 = {stacker:'stacker(s)',chipper:'chipper(s)',cilindros:'cilindro(s)',ra:'visualizador(es)',eva:'kiosco(s) EVA',pc:'PC/cartel(es)',avp:'máquina(s) AVP'};
+                        let et2 = ETIQ2[p.subTipo] || 'máquina(s)';
                         return `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(79,142,255,.07);border:1px solid rgba(79,142,255,.25);border-radius:8px;font-size:13px;color:var(--accent2);font-weight:700;">📋 Total: ${islasEfectivas.length} ${et2}</div>`;
                     }
                     return '';
