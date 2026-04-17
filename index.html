@@ -5038,7 +5038,11 @@ function renderIncidenciasPreventivos(){
 
     cont.innerHTML = lista.map(p => {
         let globalIdx = incidencias.indexOf(p);
-        let tipoLabel = TIPO_LABELS_PREV[p.subTipo != null ? (p.subTipo || "") : ""] || p.subTipo || "Slots";
+        let tipoLabel = (p.subTipo === "plan" && p.nombre)
+            ? p.nombre
+            : (p.subTipo === "plan" && p.nota)
+                ? p.nota.replace(/^\[.*?\]\s*/, "").split("·")[0].trim()
+                : TIPO_LABELS_PREV[p.subTipo != null ? (p.subTipo || "") : ""] || p.subTipo || "Slots";
 
         // Obtener array de islas efectivo — para registros "plan" viejos sin islas, extraer de la nota
         let islasEfectivas = (p.islas && p.islas.length > 0) ? p.islas : [];
