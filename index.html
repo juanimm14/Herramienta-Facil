@@ -3905,7 +3905,7 @@ function renderDashboard(){
                     ? `${islasEfectivas.length} máquinas`
                     : "Sin máquinas";
             }
-            let tipoLabel = p.subTipo ? (tipoLabels[p.subTipo]||p.subTipo) : "Slots";
+            let tipoLabel = (p.subTipo === "plan" && p.nombre) ? p.nombre : (TIPO_LABELS_PREV[p.subTipo] || p.subTipo || "Slots");
             return `
             <div class="item-row">
                 <div class="item-dot ${p.validado?"green":"blue"}"></div>
