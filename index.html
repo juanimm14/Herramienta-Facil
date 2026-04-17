@@ -4085,12 +4085,15 @@ function renderDashboard(){
             if(anios.length === 0){
                 elAnioChart.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><p>Sin datos por año</p></div>';
             } else {
-                let datosAnios = anios.map(a => ({
-                    anio: a,
-                    corr: incidencias.filter(i => i.tipo === "Correctivo" && i.fecha && i.fecha.startsWith(a)).length,
-                    prev: incidencias.filter(i => i.tipo === "Preventivo" && i.fecha && i.fecha.startsWith(a)).length
-                }));
-                let maxVal = Math.max(...datosAnios.map(d => Math.max(d.corr, d.prev)), 1);
+                let datosAnios = anios.map(a => {
+                    let corrAnio = incidencias.filter(i => i.tipo === "Correctivo" && i.fecha && i.fecha.startsWith(a));
+                    let prevAnio = incidencias.filter(i => i.tipo === "Preventivo" && i.fecha && i.fecha.startsWith(a));
+                    // Sumar máquinas intervenidas en preventivos del año
+                    let maqPrev = prevAnio.reduce((sum, p) => sum + calcMaq(getIslasEfectivas(p)), 0);
+                    return { anio: a, corr: corrAnio.length, prevReg: prevAnio.length, maqPrev };
+                });
+                let maxVal = Math.max(...datosAnios.map(d => Math.max(d.corr, d.maqPrev)), 1);
+                let totalMaqPrevAll = datosAnios.reduce((s, d) => s + d.maqPrev, 0);
 
                 let html = `
                 <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
@@ -4100,14 +4103,14 @@ function renderDashboard(){
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
                         <div style="width:12px;height:12px;border-radius:3px;background:var(--accent);flex-shrink:0;"></div>
-                        <span style="color:var(--muted);">Preventivos</span>
+                        <span style="color:var(--muted);">Preventivos (máq. intervenidas)</span>
                     </div>
                 </div>
                 <div style="display:flex;align-items:flex-end;gap:${anios.length > 5 ? 8 : 16}px;padding-bottom:8px;overflow-x:auto;">
                     ${datosAnios.map(d => {
                         let pctCorr = Math.round(d.corr / maxVal * 100);
-                        let pctPrev = Math.round(d.prev / maxVal * 100);
-                        let barH = 120; // altura max en px
+                        let pctPrev = Math.round(d.maqPrev / maxVal * 100);
+                        let barH = 120;
                         return `
                         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:${anios.length > 5 ? 52 : 64}px;flex:1;">
                             <div style="display:flex;align-items:flex-end;gap:3px;height:${barH}px;">
@@ -4116,20 +4119,21 @@ function renderDashboard(){
                                     <span style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:2px;">${d.corr}</span>
                                     <div style="width:${anios.length > 5 ? 18 : 22}px;height:${pctCorr > 0 ? Math.max(Math.round(pctCorr/100*barH),4) : 0}px;background:var(--red);border-radius:4px 4px 0 0;transition:height .4s;opacity:.85;"></div>
                                 </div>
-                                <!-- Barra Preventivos -->
+                                <!-- Barra Preventivos (máquinas) -->
                                 <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-                                    <span style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:2px;">${d.prev}</span>
+                                    <span style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:2px;">${d.maqPrev}</span>
                                     <div style="width:${anios.length > 5 ? 18 : 22}px;height:${pctPrev > 0 ? Math.max(Math.round(pctPrev/100*barH),4) : 0}px;background:var(--accent);border-radius:4px 4px 0 0;transition:height .4s;opacity:.85;"></div>
                                 </div>
                             </div>
-                            <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--muted);margin-top:4px;border-top:1px solid var(--border);padding-top:6px;width:100%;text-align:center;">${d.anio}</div>
+                            <div style="font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--muted);margin-top:2px;text-align:center;">${d.prevReg} reg.</div>
+                            <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;width:100%;text-align:center;">${d.anio}</div>
                         </div>`;
                     }).join("")}
                 </div>
                 <div style="display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap;">
                     <div style="font-size:12px;color:var(--muted);">Total correctivos: <span style="color:var(--red);font-weight:700;">${correctivos.length}</span></div>
-                    <div style="font-size:12px;color:var(--muted);">Total preventivos: <span style="color:var(--accent);font-weight:700;">${preventivos.length}</span></div>
-                    <div style="font-size:12px;color:var(--muted);">Total general: <span style="color:var(--white);font-weight:700;">${incidencias.length}</span></div>
+                    <div style="font-size:12px;color:var(--muted);">Máq. preventivadas: <span style="color:var(--accent);font-weight:700;">${totalMaqPrevAll}</span></div>
+                    <div style="font-size:12px;color:var(--muted);">Registros prev.: <span style="color:var(--white);font-weight:700;">${preventivos.length}</span></div>
                 </div>`;
                 elAnioChart.innerHTML = html;
             }
