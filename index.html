@@ -6002,17 +6002,51 @@ function abrirDetalleEvaIncidencia(id){
     evaDetalleId = id;
     let e = evaIncidencias.find(x => String(x.id) === String(id));
     if(!e) return;
-    document.getElementById("tareaComentarioNuevo").value = "";
-    document.getElementById("tareaQuedaPendiente").checked = false;
-    document.getElementById("tareaDetalleContenido").innerHTML = `
-        <div style="margin-bottom:12px;">
-            <div style="font-weight:700;font-size:15px;color:var(--accent2);">${e.kioscos.join(", ")} <span style="color:var(--muted);font-size:13px;">· ${e.tipo} · ${e.fecha}</span></div>
-            ${e.notaGeneral ? `<div style="color:var(--muted);font-size:13px;margin-top:4px;">${e.notaGeneral}</div>` : ""}
+    let estadoCls = (e.estado === "Resuelto" || e.estado === "Realizado") ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+    let tipoIcon  = e.tipo === "Preventivo" ? "🔧" : "🔴";
+    let tipoColor = e.tipo === "Preventivo" ? "var(--accent2)" : "#f87171";
+
+    // Desglose por kiosco
+    let detallesHtml = "";
+    if(e.detalles && Object.keys(e.detalles).some(k => e.detalles[k])){
+        detallesHtml = `<div style="margin-top:10px;"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">Detalle por kiosco:</div>`;
+        for(let [k,v] of Object.entries(e.detalles)){
+            if(v) detallesHtml += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:5px;">
+                <div style="font-size:11px;color:${tipoColor};font-weight:700;margin-bottom:2px;">${k}</div>
+                <div style="font-size:12px;color:var(--white);">${v}</div>
+            </div>`;
+        }
+        detallesHtml += `</div>`;
+    }
+
+    // Comentarios
+    let comentariosHtml = "";
+    if((e.comentarios||[]).length > 0){
+        comentariosHtml = `<div style="margin-top:10px;"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">Comentarios:</div>
+        <div style="max-height:150px;overflow-y:auto;">
+        ${e.comentarios.map(c => `<div style="font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">${c.fecha} · ${c.autor}:</span> ${c.texto}${c.pendiente?` <span style="color:var(--yellow);">⚠️ Pendiente</span>`:""}</div>`).join("")}
+        </div></div>`;
+    }
+
+    let adminBtns = usuarioActual?.rol === "Admin" ? `
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="if(confirm('¿Eliminar esta incidencia EVA?')){eliminarEvaIncidencia('${e.id}');document.getElementById('modalEvaDetalle').classList.remove('open');}" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;">🗑️ Eliminar</button>
+        </div>` : "";
+
+    document.getElementById("evaDetalleContenido").innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <span style="font-size:14px;color:${tipoColor};font-weight:700;">${tipoIcon} ${e.tipo}</span>
+            <span class="pill ${estadoCls}">${e.estado}</span>
+            <span style="font-size:12px;color:var(--muted);">📅 ${e.fecha||"—"}</span>
         </div>
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Estado actual: <span class="pill ${e.estado==="Resuelto"?"resuelto":"en-curso"}">${e.estado}</span></div>
-        ${(e.comentarios||[]).length > 0 ? `<div style="max-height:150px;overflow-y:auto;margin-bottom:8px;">${e.comentarios.map(c => `<div style="font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">${c.fecha} · ${c.autor}:</span> ${c.texto}${c.pendiente?` <span style="color:var(--yellow);">⚠️ Pendiente</span>`:""}</div>`).join("")}</div>` : ""}
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:6px;">${(e.kioscos||[]).join(", ")}</div>
+        ${e.tecnico ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">👤 Técnico Casino: <strong style="color:var(--white);">${e.tecnico}</strong></div>` : ""}
+        ${e.notaGeneral ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:8px 10px;">${e.notaGeneral}</div>` : ""}
+        ${detallesHtml}
+        ${comentariosHtml}
+        ${adminBtns}
     `;
-    document.getElementById("modalTareaDetalle").classList.add("open");
+    document.getElementById("modalEvaDetalle").classList.add("open");
 }
 
 function eliminarEvaIncidencia(id){
@@ -10208,6 +10242,16 @@ function confirmarQuienRealizoMulti(){
         <div id="cntDetalleContenido"></div>
         <div class="modal-footer" style="margin-top:14px;">
             <button class="btn-modal-cancel" onclick="cerrarDetalleContadora()">Cerrar</button>
+        </div>
+    </div>
+</div>
+<!-- ═══ MODAL DETALLE EVA INCIDENCIA ═══ -->
+<div id="modalEvaDetalle" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🧾 Detalle de Incidencia EVA</div>
+        <div id="evaDetalleContenido"></div>
+        <div class="modal-footer" style="margin-top:14px;">
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalEvaDetalle').classList.remove('open')">Cerrar</button>
         </div>
     </div>
 </div>
