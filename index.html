@@ -4344,7 +4344,7 @@ function guardarCorrectivo(){
         estado: estadoVal,
         rating: rating || undefined
     };
-    if(!obj.maquina){ alert("Ingresá el nombre de la máquina"); return; }
+    if(!obj.maquina){ toast.warning("Campo requerido","Ingresá el nombre de la máquina"); return; }
 
     if(indiceEditando !== null){
         incidencias[indiceEditando] = { ...incidencias[indiceEditando], ...obj };
@@ -4494,7 +4494,7 @@ function cerrarModalTarea(){
 function guardarTarea(){
     if(esVisita()) return;
     let desc = document.getElementById("tareaDesc").value.trim();
-    if(!desc){ alert("Ingresá la descripción de la tarea"); return; }
+    if(!desc){ toast.warning("Campo requerido","Ingresá la descripción de la tarea"); return; }
     let estado = document.getElementById("tareaEstado").value;
     let ahora = Date.now();
     let obj = {
@@ -4637,9 +4637,9 @@ function mostrarAlertas(){
     mensajes.push("🧹 Turno tarde: LIMPIAR BARAJADORAS SIN FALTA");
 
     if(mensajes.length){
-        setTimeout(()=>{
-            alert(mensajes.join("\n\n"));
-        }, 500);
+        mensajes.forEach((msg, i) => {
+            setTimeout(() => toast.warning("📌 Recordatorio", msg, 8000), 500 + i * 1200);
+        });
     }
 }
 function eliminarTarea(id){
@@ -4960,7 +4960,7 @@ function generarIslas(){
 function guardarLIMPIEZADEISLAS(){
     let checks = document.querySelectorAll("#checkIslas input:checked");
     let islasSeleccionadas = [...checks].map(c => c.value);
-    if(islasSeleccionadas.length === 0){ alert("Seleccioná al menos una isla"); return; }
+    if(islasSeleccionadas.length === 0){ toast.warning("Requerido","Seleccioná al menos una isla"); return; }
     let rating = getRating("starPrev");
     incidencias.push({
         tipo: "Preventivo",
@@ -5051,7 +5051,7 @@ function validarPreventivo(index){
 }
 function toggleEditarIslas(){
     if(usuarioActual?.rol !== "Admin"){
-        alert("Solo Admin puede modificar islas");
+        toast.warning("Sin permiso","Solo Admin puede modificar islas");
         return;
     }
 
@@ -5120,8 +5120,8 @@ function agregarIsla(){
     let id = parseInt(inputId.value);
     let slots = parseInt(inputSlots.value) || 8;
 
-    if(!id){ alert("Ingresá un número válido para la isla"); return; }
-    if(islasActivas.find(i => i.id === id)){ alert("Esa isla ya existe"); return; }
+    if(!id){ toast.warning("Campo requerido","Ingresá un número válido para la isla"); return; }
+    if(islasActivas.find(i => i.id === id)){ toast.warning("Duplicado","Esa isla ya existe"); return; }
 
     islasActivas.push({ id, slots });
     islasActivas.sort((a,b) => a.id - b.id);
@@ -5133,7 +5133,7 @@ function agregarIsla(){
 
 function guardarEdicionIslas(){
     localStorage.setItem("islasActivas", JSON.stringify(islasActivas));
-    alert("Islas actualizadas ✔");
+    toast.success("Guardado","Islas actualizadas ✔");
     renderIslas();
     generarIslas();
 }
@@ -5517,7 +5517,7 @@ function guardarGenerico(){
     let cfg = PREV_CONFIG[tipoGenActual];
     let checks = document.querySelectorAll("#checkEquiposGen input:checked");
     let seleccionados = [...checks].map(c => c.value);
-    if(seleccionados.length === 0){ alert("Seleccioná al menos un equipo"); return; }
+    if(seleccionados.length === 0){ toast.warning("Requerido","Seleccioná al menos un equipo"); return; }
     let rating = getRating("starGen");
 
     incidencias.push({
@@ -5560,10 +5560,10 @@ function renderListaEquiposEdit(){
 function agregarEquipoGen(){
     let input = document.getElementById("inputNuevoEquipo");
     let val = input.value.trim();
-    if(!val){ alert("Ingresá un nombre"); return; }
+    if(!val){ toast.warning("Campo requerido","Ingresá un nombre"); return; }
     let cfg = PREV_CONFIG[tipoGenActual];
     let equipos = getEquiposGen(tipoGenActual);
-    if(equipos.includes(val)){ alert("Ya existe"); return; }
+    if(equipos.includes(val)){ toast.warning("Duplicado","Ya existe"); return; }
     equipos.push(val);
     localStorage.setItem(cfg.storageKey, JSON.stringify(equipos));
     input.value = "";
@@ -5582,7 +5582,7 @@ function quitarEquipoGen(idx){
 
 function guardarEquiposGen(){
     // Ya se guarda en tiempo real al agregar/quitar
-    alert("Lista guardada ✔");
+    toast.success("Guardado","Lista guardada ✔");
     document.getElementById("panelEditarEquiposGen").style.display = "none";
 }
 
@@ -5717,10 +5717,10 @@ function agregarIslaAlRegistro(idx, cardId){
     if(!p) return;
     let input = document.getElementById(cardId + "-addisla");
     let idIsla = parseInt(input.value);
-    if(!idIsla){ alert("Ingresá un número de isla válido"); return; }
-    if(!islasActivas.find(il => il.id === idIsla)){ alert("Esa isla no existe en el sistema"); return; }
+    if(!idIsla){ toast.warning("Campo requerido","Ingresá un número de isla válido"); return; }
+    if(!islasActivas.find(il => il.id === idIsla)){ toast.warning("No encontrada","Esa isla no existe en el sistema"); return; }
     if(!p.islas) p.islas = [];
-    if(p.islas.includes(String(idIsla))){ alert("Esa isla ya está en el registro"); return; }
+    if(p.islas.includes(String(idIsla))){ toast.warning("Duplicado","Esa isla ya está en el registro"); return; }
     p.islas.push(String(idIsla));
     input.value = "";
     localStorage.setItem("incidencias", JSON.stringify(incidencias));
@@ -5794,7 +5794,7 @@ function guardarEvaIncidencia(){
     if(esVisita()) return;
     let checks = document.querySelectorAll(".evaKioscoCheck:checked");
     let seleccionados = [...checks].map(c => c.value);
-    if(seleccionados.length === 0){ alert("Seleccioná al menos un kiosco"); return; }
+    if(seleccionados.length === 0){ toast.warning("Requerido","Seleccioná al menos un kiosco"); return; }
     let detalles = {};
     seleccionados.forEach(v => {
         let el = document.getElementById("evaDetalle_"+v);
@@ -5879,7 +5879,7 @@ function guardarEvaDiaria(){
         let obs = document.getElementById("evaObs_"+k)?.value.trim();
         if(est) kioscos[k] = { estado: est, obs };
     });
-    if(Object.keys(kioscos).length === 0){ alert("Completá al menos un kiosco"); return; }
+    if(Object.keys(kioscos).length === 0){ toast.warning("Requerido","Completá al menos un kiosco"); return; }
     let obj = { id: Date.now(), fecha, tecnico, kioscos };
     evaDiarios.unshift(obj);
     localStorage.setItem("evaDiarios", JSON.stringify(evaDiarios));
@@ -6120,7 +6120,7 @@ function cerrarModalTareaDetalle(){
 
 function guardarComentarioTarea(){
     let texto = document.getElementById("tareaComentarioNuevo").value.trim();
-    if(!texto){ alert("Escribí un comentario o detalle"); return; }
+    if(!texto){ toast.warning("Campo requerido","Escribí un comentario o detalle"); return; }
     let pendiente = document.getElementById("tareaQuedaPendiente").checked;
     let comentario = {
         fecha: new Date().toISOString().split("T")[0],
@@ -6578,9 +6578,9 @@ function guardarFds(){
     let fecha = document.getElementById("fdsFecha").value;
     let estado = document.getElementById("fdsEstado").value;
 
-    if(!nAdmin){ alert("Ingresá el N° Admin"); return; }
-    if(!isla){ alert("Ingresá la isla"); return; }
-    if(!falla){ alert("Ingresá la falla"); return; }
+    if(!nAdmin){ toast.warning("Campo requerido","Ingresá el N° Admin"); return; }
+    if(!isla){ toast.warning("Campo requerido","Ingresá la isla"); return; }
+    if(!falla){ toast.warning("Campo requerido","Ingresá la falla"); return; }
 
     if(fdsEditando !== null){
         // Editar existente
@@ -6601,7 +6601,7 @@ function guardarFds(){
     cerrarModalFds();
     renderFds();
     renderDashboard();
-    alert("✔ FDS guardado");
+    toast.success("Guardado","FDS guardado ✔");
 }
 
 function renderFds(){
@@ -6729,7 +6729,7 @@ function habilitarFdsDesdeDash(idx){
 // ──────────────────────────────────────────────
 function abrirModalEditarIslasDirecto(){
     if(usuarioActual?.rol !== "Admin"){
-        alert("Solo el Admin puede modificar islas");
+        toast.warning("Sin permiso","Solo el Admin puede modificar islas");
         return;
     }
     islasActivas = cargarIslas();
@@ -6786,9 +6786,9 @@ function agregarIslaDirecto(){
     let id = parseInt(inputId.value);
     let slots = parseInt(inputSlots.value) || 8;
 
-    if(!id || id < 1){ alert("Ingresá un número válido para la isla"); return; }
-    if(islasActivas.find(i => i.id === id)){ alert(`La isla ${id} ya existe`); return; }
-    if(slots < 1 || slots > 100){ alert("La cantidad de máquinas debe ser entre 1 y 100"); return; }
+    if(!id || id < 1){ toast.warning("Campo requerido","Ingresá un número válido para la isla"); return; }
+    if(islasActivas.find(i => i.id === id)){ toast.warning("Duplicado",`La isla ${id} ya existe`); return; }
+    if(slots < 1 || slots > 100){ toast.warning("Valor inválido","La cantidad de máquinas debe ser entre 1 y 100"); return; }
 
     islasActivas.push({ id, slots });
     islasActivas.sort((a,b) => a.id - b.id);
@@ -6803,7 +6803,7 @@ function guardarIslasDirecto(){
     cerrarModalEditarIslasDirecto();
     renderDashboard();
     generarIslas();
-    alert(`✔ Islas guardadas — ${islasActivas.length} islas activas`);
+    toast.success("Guardado",`Islas guardadas — ${islasActivas.length} islas activas`);
 }
 
 // ──────────────────────────────────────────────
@@ -6847,7 +6847,7 @@ function guardarCartel(){
     let fechaCaducidad = document.getElementById("cartelFechaCaducidad").value;
     let color = document.getElementById("cartelColor").value;
 
-    if(!titulo){ alert("Ingresá el título del cartel"); return; }
+    if(!titulo){ toast.warning("Campo requerido","Ingresá el título del cartel"); return; }
 
     let hoy = new Date().toISOString().split("T")[0];
     if(!fechaInicio) fechaInicio = hoy;
@@ -7208,7 +7208,7 @@ function ppAgregarTarea(){
     if(esVisita()) return;
     let input = document.getElementById("ppNuevaTareaInput");
     let nombre = input.value.trim();
-    if(!nombre){ alert("Escribí el nombre de la tarea"); return; }
+    if(!nombre){ toast.warning("Campo requerido","Escribí el nombre de la tarea"); return; }
     let newId = ppTareas.length > 0 ? Math.max(...ppTareas.map(t => t.id)) + 1 : 1;
     ppTareas.push({ id: newId, nombre, meses: [] });
     ppGuardarTareas();
@@ -9595,7 +9595,7 @@ function abrirModalNuevoUsuario(){
         document.getElementById("modalNuevoUsuario").classList.add("open");
     } catch(e) {
         console.error("Error abriendo modal usuario:", e);
-        alert("Error al abrir el formulario: " + e.message);
+        toast.error("Error","Error al abrir el formulario: " + e.message);
     }
 }
 
