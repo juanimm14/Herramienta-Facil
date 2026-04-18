@@ -1566,6 +1566,9 @@ body {
             <button class="menu-btn" id="nav-kioscos-eva" onclick="mostrar('kioscos-eva')">
                 <span class="icon">🎫</span> Kioscos EVA
             </button>
+            <button class="menu-btn" id="nav-estados-eva" onclick="mostrar('estados-eva')">
+                <span class="icon">📊</span> Estados Kioscos EVA
+            </button>
             <button class="menu-btn" id="nav-contadoras" onclick="mostrar('contadoras')">
                 <span class="icon">🔢</span> Contadoras
             </button>
@@ -1950,32 +1953,44 @@ body {
                 <div class="page-header">
                     <div>
                         <div class="page-title">🧾 Kioscos EVA</div>
-                        <div class="page-subtitle">Correctivos, preventivos y estado diario de los kioscos EVA</div>
+                        <div class="page-subtitle">Correctivos y preventivos de los kioscos EVA</div>
                     </div>
                     <div class="action-bar">
                         <button class="btn-primary" onclick="abrirModalEvaNuevaIncidencia()">➕ Nueva Incidencia EVA</button>
+                        <button class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);" onclick="abrirModalEditarKioscosEva()">✏️ Editar Kioscos</button>
+                    </div>
+                </div>
+
+                <!-- Correctivos -->
+                <div class="card-box" style="margin-bottom:16px;border-left:3px solid var(--red);">
+                    <div class="card-box-title"><span>🔴 Correctivos EVA</span><span class="badge-count" id="badgeEvaCorr" style="background:var(--red);">0</span></div>
+                    <div id="listaEvaCorrectivos">
+                        <div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>
+                    </div>
+                </div>
+
+                <!-- Preventivos -->
+                <div class="card-box" style="border-left:3px solid var(--accent2);">
+                    <div class="card-box-title"><span>🔧 Preventivos EVA</span><span class="badge-count" id="badgeEvaPrev" style="background:var(--accent2);">0</span></div>
+                    <div id="listaEvaPreventivos">
+                        <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ ESTADOS KIOSCOS EVA ═══ -->
+            <div id="estados-eva" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Estados Kioscos EVA</div>
+                        <div class="page-subtitle">Historial de estado diario (Sensor POM)</div>
+                    </div>
+                    <div class="action-bar">
                         <button class="btn-primary blue" onclick="abrirModalEvaEstadoDiario()">📊 Cargar Estado Diario</button>
                     </div>
                 </div>
-
-                <div class="grid2" style="margin-bottom:16px;">
-                    <div class="card-box">
-                        <div class="card-box-title"><span>🔴 Correctivos EVA</span><span class="badge-count" id="badgeEvaCorr">0</span></div>
-                        <div id="listaEvaCorrectivos">
-                            <div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>
-                        </div>
-                    </div>
-                    <div class="card-box">
-                        <div class="card-box-title"><span>🔧 Preventivos EVA</span><span class="badge-count" id="badgeEvaPrev">0</span></div>
-                        <div id="listaEvaPreventivos">
-                            <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="card-box">
-                    <div class="card-box-title">📋 Historial de Estado Diario (Sensor POM)</div>
-                    <div id="historialEvaDiario" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;">
+                    <div id="historialEvaDiario" style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto;">
                         <div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros</p></div>
                     </div>
                 </div>
@@ -3707,6 +3722,7 @@ function mostrar(sec){
     if(sec === 'dashboard'){ renderDashboard(); renderDashboardEvaPom(); renderCartelesDashboard(); }
     if(sec === 'incidencias-prev'){ cargarAniosPrev(); renderIncidenciasPreventivos(); }
     if(sec === 'kioscos-eva') renderKioscosEva();
+    if(sec === 'estados-eva') renderEstadosEva();
     if(sec === 'contadoras') renderContadoras();
     if(sec === 'fuera-servicio') renderFds();
     if(sec === 'carteles') renderCartelesAdmin();
@@ -5815,6 +5831,7 @@ function guardarEvaDiaria(){
     localStorage.setItem("evaDiarios", JSON.stringify(evaDiarios));
     cerrarModalEvaEstadoDiario();
     renderKioscosEva();
+    renderEstadosEva();
     renderDashboardEvaPom();
     toast.success("Estado guardado", "El estado diario de los kioscos se registró correctamente");
 }
@@ -5833,14 +5850,17 @@ function renderKioscosEva(){
 
     function mkEvaCard(e){
         let estadoCls = e.estado === "Resuelto" ? "resuelto" : "en-curso";
+        let esCorr = e.tipo === "Correctivo";
+        let borderColor = esCorr ? "var(--red)" : "var(--accent2)";
+        let kioscoColor = esCorr ? "var(--red)" : "var(--accent2)";
         return `
-        <div class="card-box" style="padding:0;overflow:hidden;margin-bottom:8px;">
+        <div style="border:1px solid var(--border);border-left:3px solid ${borderColor};border-radius:10px;overflow:hidden;margin-bottom:8px;background:var(--bg2);">
             <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;"
                  onclick="togglePrevDetail('eva-detail-${e.id}')"
                  onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
                 <div style="flex:1;">
                     <div style="font-size:13px;font-weight:600;">
-                        <span style="color:var(--accent2);">${e.kioscos.join(", ")}</span>
+                        <span style="color:${kioscoColor};">${e.kioscos.join(", ")}</span>
                         &nbsp;·&nbsp;<span style="color:var(--muted);font-size:12px;">${e.fecha||"—"}</span>
                         &nbsp;·&nbsp;<span style="color:var(--muted);font-size:12px;">${e.tecnico||"—"}</span>
                     </div>
@@ -5850,7 +5870,7 @@ function renderKioscosEva(){
                 <span style="color:var(--muted);font-size:16px;">▾</span>
             </div>
             <div id="eva-detail-${e.id}" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg3);">
-                ${Object.entries(e.detalles||{}).map(([k,v]) => v ? `<div style="margin-bottom:6px;font-size:13px;"><b style="color:var(--accent2);">${k}:</b> ${v}</div>` : "").join("")}
+                ${Object.entries(e.detalles||{}).map(([k,v]) => v ? `<div style="margin-bottom:6px;font-size:13px;"><b style="color:${kioscoColor};">${k}:</b> ${v}</div>` : "").join("")}
                 ${(e.comentarios||[]).length > 0 ? `
                 <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
                     <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Comentarios</div>
@@ -5866,28 +5886,28 @@ function renderKioscosEva(){
 
     if(contC) contC.innerHTML = corr.length ? corr.map(mkEvaCard).join("") : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>';
     if(contP) contP.innerHTML = prev.length ? prev.map(mkEvaCard).join("") : '<div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>';
-
-    // Historial diario
-    let contH = document.getElementById("historialEvaDiario");
-    if(contH){
-        if(evaDiarios.length === 0){
-            contH.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros</p></div>';
-        } else {
-            contH.innerHTML = evaDiarios.map(d => {
-                let pomBadges = ["EVA1","EVA2","EVA3","EVA4"].map(k => {
-                    if(!d.kioscos[k]) return "";
-                    let color = d.kioscos[k].estado === "OK" ? "var(--accent)" : d.kioscos[k].estado === "Alerta" ? "var(--yellow)" : "var(--red)";
-                    return `<span style="background:var(--bg2);border:1px solid ${color};color:${color};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">${k}: ${d.kioscos[k].estado}${d.kioscos[k].obs ? " — "+d.kioscos[k].obs : ""}</span>`;
-                }).filter(Boolean).join(" ");
-                return `
-                <div style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;">
-                    <div style="font-size:12px;font-weight:600;color:var(--white);margin-bottom:6px;">${d.fecha} · <span style="color:var(--muted);">${d.tecnico}</span></div>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px;">${pomBadges}</div>
-                </div>`;
-            }).join("");
-        }
-    }
 }
+
+function renderEstadosEva(){
+    let contH = document.getElementById("historialEvaDiario");
+    if(!contH) return;
+    if(evaDiarios.length === 0){
+        contH.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros</p></div>';
+        return;
+    }
+    contH.innerHTML = evaDiarios.map(d => {
+        let kioscos = getEquiposGen ? getEquiposGen("eva") : ["EVA1","EVA2","EVA3","EVA4"];
+        let pomBadges = kioscos.map(k => {
+            if(!d.kioscos[k]) return "";
+            let color = d.kioscos[k].estado === "OK" ? "var(--accent)" : d.kioscos[k].estado === "Alerta" ? "var(--yellow)" : "var(--red)";
+            return `<span style="background:var(--bg2);border:1px solid ${color};color:${color};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">${k}: ${d.kioscos[k].estado}${d.kioscos[k].obs ? " — "+d.kioscos[k].obs : ""}</span>`;
+        }).filter(Boolean).join(" ");
+        return `
+        <div style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;">
+            <div style="font-size:12px;font-weight:600;color:var(--white);margin-bottom:6px;">${d.fecha} · <span style="color:var(--muted);">${d.tecnico}</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">${pomBadges}</div>
+        </div>`;
+    }).join("");
 
 function renderDashboardEvaPom(){
     let el = document.getElementById("dashEvaPom");
