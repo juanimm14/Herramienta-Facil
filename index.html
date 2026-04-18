@@ -477,6 +477,8 @@ body {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 .page-title {
     font-family: 'Rajdhani', sans-serif;
@@ -487,9 +489,9 @@ body {
 .page-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
 /* ACTION BUTTONS */
-.action-bar { display: flex; gap: 10px; }
+.action-bar { display: flex; gap: 10px; flex-wrap: wrap; }
 .btn-primary {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
     padding: 10px 20px;
     background: var(--accent);
     color: var(--bg);
@@ -502,6 +504,12 @@ body {
 .btn-primary:hover { opacity: .85; }
 .btn-primary.blue { background: var(--accent2); color: white; }
 .btn-primary.red  { background: var(--red); color: white; }
+
+@media (max-width: 600px) {
+    .page-header { flex-direction: column; align-items: stretch; }
+    .action-bar { flex-direction: column; }
+    .action-bar .btn-primary { width: 100%; }
+}
 
 /* STAT CARDS */
 .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
@@ -3223,19 +3231,19 @@ body {
                 <div style="height:1px;background:var(--border);"></div>
                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
                     <input type="checkbox" id="cntChk1" value="Contadora 1 Glory GFS-220 Serie:30099 (contaje)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 1</strong> · Glory GFS-220 · Serie: 30099 <span style="color:var(--muted);">(contaje)</span></span>
+                    <span><strong>Contadora 1</strong> · GFS-220 · 30099 <span style="color:var(--muted);">(contaje)</span></span>
                 </label>
                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
                     <input type="checkbox" id="cntChk2" value="Contadora 2 Glory GFS-220 Serie:5692 (contaje)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 2</strong> · Glory GFS-220 · Serie: 5692 <span style="color:var(--muted);">(contaje)</span></span>
+                    <span><strong>Contadora 2</strong> · GFS-220 · 5692 <span style="color:var(--muted);">(contaje)</span></span>
                 </label>
                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
                     <input type="checkbox" id="cntChk3" value="Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 3</strong> · Glory GFS-220 · Serie: 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
+                    <span><strong>Contadora 3</strong> · GFS-220 · 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
                 </label>
                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
                     <input type="checkbox" id="cntChk4" value="Contadora 4 Glory GFS-220 Serie:41837 (bunker)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 4</strong> · Glory GFS-220 · Serie: 41837 <span style="color:var(--muted);">(bunker)</span></span>
+                    <span><strong>Contadora 4</strong> · GFS-220 · 41837 <span style="color:var(--muted);">(bunker)</span></span>
                 </label>
                 <div style="height:1px;background:var(--border);"></div>
                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
@@ -3244,11 +3252,11 @@ body {
                 </label>
                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
                     <input type="checkbox" id="cntChk6" value="Contadora GFS-120 Serie:718190 (RA)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GFS-120</strong> · Serie: 718190 <span style="color:var(--muted);">(RA)</span></span>
+                    <span><strong>GFS-120</strong> · 718190 <span style="color:var(--muted);">(RA)</span></span>
                 </label>
                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
                     <input type="checkbox" id="cntChk7" value="Contadora GF-120 Serie:45100 (craps)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GF-120</strong> · Serie: 45100 <span style="color:var(--muted);">(craps)</span></span>
+                    <span><strong>GF-120</strong> · 45100 <span style="color:var(--muted);">(craps)</span></span>
                 </label>
             </div>
         </div>
@@ -6117,12 +6125,10 @@ function abrirModalContadoraPreventivo(){
     if(esVisita()) return;
     document.getElementById("cntPrevFecha").value = new Date().toISOString().split("T")[0];
     document.getElementById("cntPrevNota").value = "";
-    // Preseleccionar técnico PQ con usuario actual
     let selPQ = document.getElementById("cntPrevTecnicoPQ");
     let selCasino = document.getElementById("cntPrevTecnicoCasino");
     if(selPQ && usuarioActual?.nombre) selPQ.value = usuarioActual.nombre;
     if(selCasino) selCasino.value = "";
-    // Desmarcar todos los checkboxes
     for(let i=0; i<=7; i++){
         let chk = document.getElementById("cntChk"+i);
         if(chk) chk.checked = false;
@@ -6134,7 +6140,6 @@ function cerrarModalContadoraPreventivo(){
 }
 function guardarContadoraPreventivo(){
     if(esVisita()) return;
-    // Recopilar contadoras seleccionadas
     let seleccionadas = [];
     for(let i=0; i<=7; i++){
         let chk = document.getElementById("cntChk"+i);
@@ -6173,17 +6178,11 @@ function renderContadoras(){
 
     function mkCard(e){
         let estadoCls = e.estado === "Resuelto" || e.estado === "Realizado" ? "resuelto" : "en-curso";
-        let tecInfo = "";
-        if(e.tecnicoPQ || e.tecnicoCasino){
-            tecInfo = [e.tecnicoPQ ? `PQ: ${e.tecnicoPQ}` : null, e.tecnicoCasino ? `Casino: ${e.tecnicoCasino}` : null].filter(Boolean).join(" · ");
-        } else {
-            tecInfo = e.tecnico;
-        }
         return `
         <div style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;margin-bottom:8px;">
             <div style="display:flex;align-items:center;gap:10px;">
                 <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:600;color:var(--white);">${e.equipo} <span style="color:var(--muted);font-size:12px;">· ${e.fecha} · ${tecInfo}</span></div>
+                    <div style="font-size:13px;font-weight:600;color:var(--white);">${e.equipo} <span style="color:var(--muted);font-size:12px;">· ${e.fecha} · ${e.tecnico}</span></div>
                     ${e.nota ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${e.nota}</div>` : ""}
                 </div>
                 <span class="pill ${estadoCls}">${e.estado}</span>
