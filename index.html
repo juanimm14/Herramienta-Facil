@@ -161,6 +161,7 @@ async function _cargarDatosFirebase() {
         if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
         if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
         if (_cache["listaContadoras"]) listaContadoras = _cache["listaContadoras"];
+        if (_cache["equiposEVA"])     listaKioscosEva = _cache["equiposEVA"];
         if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
         if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
     } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
@@ -199,6 +200,7 @@ function _activarListenersTiempoReal() {
             if (_cache["fdsData"]        !== undefined) fdsData        = _cache["fdsData"]        ?? [];
             if (_cache["contadorasData"] !== undefined) contadorasData = _cache["contadorasData"] ?? [];
             if (_cache["listaContadoras"] !== undefined) listaContadoras = _cache["listaContadoras"] ?? [..._CNT_DEFAULT];
+            if (_cache["equiposEVA"]      !== undefined) listaKioscosEva = _cache["equiposEVA"]      ?? ["EVA1","EVA2","EVA3","EVA4"];
             if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
             if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
             // Re-render si la app ya está iniciada
