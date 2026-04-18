@@ -5851,9 +5851,9 @@ function guardarEvaDiaria(){
 }
 
 function renderKioscosEva(){
-    // Correctivos
-    let corr = evaIncidencias.filter(e => e.tipo === "Correctivo");
-    let prev = evaIncidencias.filter(e => e.tipo === "Preventivo");
+    let todos = [...evaIncidencias].sort((a,b) => b.id - a.id);
+    let corr = todos.filter(e => e.tipo === "Correctivo");
+    let prev = todos.filter(e => e.tipo === "Preventivo");
 
     let contC = document.getElementById("listaEvaCorrectivos");
     let contP = document.getElementById("listaEvaPreventivos");
@@ -5862,46 +5862,27 @@ function renderKioscosEva(){
     if(bC) bC.textContent = corr.length;
     if(bP) bP.textContent = prev.length;
 
-    function mkEvaCard(e){
-        let estadoCls = e.estado === "Resuelto" ? "resuelto" : "en-curso";
+    function mkEvaRow(e){
         let esCorr = e.tipo === "Correctivo";
-        let borderColor = esCorr ? "var(--red)" : "var(--accent2)";
-        let kioscoColor = esCorr ? "var(--red)" : "var(--accent2)";
-        return `
-        <div style="border:1px solid var(--border);border-left:3px solid ${borderColor};border-radius:10px;overflow:hidden;margin-bottom:8px;background:var(--bg2);">
-            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;"
-                 onclick="togglePrevDetail('eva-detail-${e.id}')"
-                 onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
-                <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:600;">
-                        <span style="color:${kioscoColor};">${e.kioscos.join(", ")}</span>
-                        &nbsp;·&nbsp;<span style="color:var(--muted);font-size:12px;">${e.fecha||"—"}</span>
-                        &nbsp;·&nbsp;<span style="color:var(--muted);font-size:12px;">${e.tecnico||"—"}</span>
-                    </div>
-                    ${e.notaGeneral ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${e.notaGeneral}</div>` : ""}
-                </div>
-                <span class="pill ${estadoCls}">${e.estado}</span>
-                <span style="color:var(--muted);font-size:16px;">▾</span>
-            </div>
-            <div id="eva-detail-${e.id}" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--bg3);">
-                ${Object.entries(e.detalles||{}).map(([k,v]) => v ? `<div style="margin-bottom:6px;font-size:13px;"><b style="color:${kioscoColor};">${k}:</b> ${v}</div>` : "").join("")}
-                ${(e.comentarios||[]).length > 0 ? `
-                <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
-                    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Comentarios</div>
-                    ${e.comentarios.map(c => `<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);color:var(--white);"><span style="color:var(--muted);">${c.fecha} · ${c.autor}:</span> ${c.texto}${c.pendiente?` <span style="color:var(--yellow);">⚠️ Pendiente</span>`:""}</div>`).join("")}
-                </div>` : ""}
-                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-                    <button onclick="abrirDetalleEvaIncidencia('${e.id}')" style="background:rgba(79,142,255,.15);border:1px solid var(--accent2);color:var(--accent2);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:12px;font-weight:600;">💬 Comentar</button>
-                    ${usuarioActual?.rol==="Admin" ? `<button onclick="eliminarEvaIncidencia('${e.id}')" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;">🗑️</button>` : ""}
-                </div>
-            </div>
-        </div>`;
+        let tipoColor = esCorr ? "#f87171" : "var(--accent2)";
+        let tipoIcon  = esCorr ? "🔴" : "🔧";
+        let estadoCls = (e.estado === "Resuelto" || e.estado === "Realizado") ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+        let nota = e.notaGeneral ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">'+e.notaGeneral+'</div>' : "";
+        let tec  = e.tecnico ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">\u{1F464} '+e.tecnico+'</div>' : "";
+        return '<div onclick="abrirDetalleEvaIncidencia(\''+e.id+'\')" style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid '+tipoColor+';border-radius:9px;margin-bottom:7px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'var(--bg2)\'">'
+            + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+            + '<span style="font-size:12px;font-weight:700;color:'+tipoColor+';">'+tipoIcon+' '+e.tipo+'</span>'
+            + '<span class="pill '+estadoCls+'" style="font-size:10px;">'+e.estado+'</span>'
+            + '<span style="font-size:11px;color:var(--muted);margin-left:auto;">📅 '+(e.fecha||"—")+'</span>'
+            + '</div>'
+            + '<div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">'+(e.kioscos||[]).join(", ")+'</div>'
+            + tec + nota
+            + '</div>';
     }
 
-    if(contC) contC.innerHTML = corr.length ? corr.map(mkEvaCard).join("") : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>';
-    if(contP) contP.innerHTML = prev.length ? prev.map(mkEvaCard).join("") : '<div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>';
+    if(contC) contC.innerHTML = corr.length ? corr.map(mkEvaRow).join("") : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>';
+    if(contP) contP.innerHTML = prev.length ? prev.map(mkEvaRow).join("") : '<div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>';
 }
-
 function renderEstadosEva(){
     let contH = document.getElementById("historialEvaDiario");
     if(!contH) return;
@@ -10196,5 +10177,109 @@ function confirmarQuienRealizoMulti(){
     </div>
 </div>
 
+<!-- ═══ MODAL EDITAR LISTA DE KIOSCOS EVA ═══ -->
+<div id="modalEditarKioscosEva" class="modal">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="modal-title">✏️ Editar Lista de Kioscos EVA</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Agregá, quitá o renombrá kioscos. Los cambios aplican a todos los formularios.</p>
+
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Kioscos actuales</div>
+            <div id="listaEditarKioscosEva" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+
+        <div style="background:var(--bg3);border:1px solid var(--accent);border-radius:10px;padding:12px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;">➕ Agregar kiosco</div>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="nuevoKioscoEvaInput" class="form-input" placeholder="Nombre del kiosco (ej: EVA5)..." style="flex:1;margin-bottom:0;">
+                <button onclick="agregarKioscoEva()" style="background:var(--accent);color:var(--bg);border:none;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Agregar</button>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="margin-top:18px;">
+            <button class="btn-modal-save blue" onclick="guardarListaKioscosEva()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarKioscosEva').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── EDITAR LISTA DE KIOSCOS EVA ─────────────────────
+const _EVA_DEFAULT = ["EVA1","EVA2","EVA3","EVA4"];
+let listaKioscosEva = (_cache["equiposEVA"]) ? [..._cache["equiposEVA"]] : [..._EVA_DEFAULT];
+
+function abrirModalEditarKioscosEva(){
+    if(esVisita()) return;
+    _renderListaEditarKioscosEva();
+    document.getElementById("nuevoKioscoEvaInput").value = "";
+    document.getElementById("modalEditarKioscosEva").classList.add("open");
+}
+
+function _renderListaEditarKioscosEva(){
+    let cont = document.getElementById("listaEditarKioscosEva");
+    if(!listaKioscosEva.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Lista vacía</span>';
+        return;
+    }
+    cont.innerHTML = listaKioscosEva.map((nombre, i) => {
+        let safe = nombre.replace(/"/g,'&quot;');
+        return '<div id="_eva_row_'+i+'" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">'
+            + '<span id="_eva_label_'+i+'" style="flex:1;font-size:13px;color:var(--white);">'+nombre+'</span>'
+            + '<input id="_eva_input_'+i+'" type="text" value="'+safe+'" style="display:none;flex:1;background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:5px 8px;font-size:13px;color:var(--white);outline:none;">'
+            + '<button id="_eva_btn_edit_'+i+'" onclick="_editarKioscoEva('+i+')" style="background:rgba(0,200,150,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✏️</button>'
+            + '<button id="_eva_btn_save_'+i+'" onclick="_guardarNombreKioscoEva('+i+')" style="display:none;background:rgba(0,200,150,.2);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✔</button>'
+            + '<button onclick="_eliminarKioscoEva('+i+')" style="background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕</button>'
+            + '</div>';
+    }).join('');
+}
+
+function _editarKioscoEva(idx){
+    document.getElementById('_eva_label_'+idx).style.display = 'none';
+    document.getElementById('_eva_input_'+idx).style.display = 'block';
+    document.getElementById('_eva_btn_edit_'+idx).style.display = 'none';
+    document.getElementById('_eva_btn_save_'+idx).style.display = 'block';
+    document.getElementById('_eva_input_'+idx).focus();
+}
+
+function _guardarNombreKioscoEva(idx){
+    let nuevo = document.getElementById('_eva_input_'+idx).value.trim();
+    if(!nuevo){ toast.warning("El nombre no puede estar vacío",""); return; }
+    if(listaKioscosEva.some((n,i) => n === nuevo && i !== idx)){ toast.warning("Ese nombre ya existe",""); return; }
+    listaKioscosEva[idx] = nuevo;
+    _renderListaEditarKioscosEva();
+}
+
+function _eliminarKioscoEva(idx){
+    listaKioscosEva.splice(idx, 1);
+    _renderListaEditarKioscosEva();
+}
+
+function agregarKioscoEva(){
+    let input = document.getElementById("nuevoKioscoEvaInput");
+    let nombre = input.value.trim();
+    if(!nombre){ toast.warning("Ingresá un nombre",""); return; }
+    if(listaKioscosEva.includes(nombre)){ toast.warning("Ese kiosco ya existe",""); return; }
+    listaKioscosEva.push(nombre);
+    input.value = "";
+    _renderListaEditarKioscosEva();
+}
+
+function guardarListaKioscosEva(){
+    _fbSet("equiposEVA", listaKioscosEva);
+    _localStorageOrig.setItem("equiposEVA", JSON.stringify(listaKioscosEva));
+    // Actualizar checkboxes del modal de nueva incidencia
+    let chkCont = document.querySelector(".evaKioscoCheck")?.closest("div");
+    if(chkCont){
+        chkCont.innerHTML = listaKioscosEva.map(k =>
+            '<label class="isla-check-label"><input type="checkbox" class="evaKioscoCheck" value="'+k+'"> '+k+'</label>'
+        ).join("");
+        document.querySelectorAll(".evaKioscoCheck").forEach(c => {
+            c.onchange = () => actualizarDetallesEva();
+        });
+    }
+    document.getElementById("modalEditarKioscosEva").classList.remove("open");
+    toast.success("Lista de kioscos actualizada ✅","");
+}
+</script>
 </body>
 </html>
