@@ -1620,9 +1620,12 @@ body {
                 <!-- SENSOR POM — PRIMERO -->
                 <div style="margin-bottom:16px;">
                     <div class="card-box">
-                        <div class="card-box-title" style="justify-content:space-between;">
+                        <div class="card-box-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
                             <span>🧾 Estado Sensor POM — Kioscos EVA</span>
-                            <span class="badge-count" id="badgeEvaPom">hoy</span>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <button onclick="abrirModalEvaEstadoDiario()" style="background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">➕ Nuevo Estado</button>
+                                <span class="badge-count" id="badgeEvaPom">hoy</span>
+                            </div>
                         </div>
                         <div id="dashEvaPom" style="overflow-x:auto;">
                             <div class="empty-state"><div class="empty-icon">🧾</div><p>Sin registros del día</p></div>
@@ -5802,29 +5805,49 @@ function guardarEvaIncidencia(){
 
 function abrirModalEvaEstadoDiario(){
     if(esVisita()) return;
-    document.getElementById("evaDiariaFecha").value = new Date().toISOString().split("T")[0];
-    let cont = document.getElementById("evaDiariaKioscos");
-    cont.innerHTML = ["EVA 1","EVA 2","EVA 3","EVA 4"].map((kiosco,i) => {
-        let key = `EVA${i+1}`;
-        return `
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
-            <div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:8px;">${kiosco}</div>
-            <div class="form-group" style="margin-bottom:8px;">
-                <label class="form-label">Estado Sensor POM</label>
-                <select id="evaPom_${key}" class="form-select" style="font-size:13px;">
-                    <option value="">— No revisado —</option>
-                    <option value="OK">✅ Sensor POM OK</option>
-                    <option value="Alerta">⚠️ Alerta / Con observación</option>
-                    <option value="Error">🔴 Error / Falla</option>
-                </select>
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Observación (opcional)</label>
-                <input type="text" id="evaObs_${key}" class="form-input" placeholder="Ej: Sensor E8, Transacciones OK..." style="font-size:13px;">
-            </div>
-        </div>`;
-    }).join("");
-    document.getElementById("modalEvaEstadoDiario").classList.add("open");
+    try {
+        let fechaEl = document.getElementById("evaDiariaFecha");
+        let tecEl   = document.getElementById("evaDiariaTecnico");
+        let cont    = document.getElementById("evaDiariaKioscos");
+        let modal   = document.getElementById("modalEvaEstadoDiario");
+        if(!fechaEl || !tecEl || !cont || !modal){
+            toast.warning("Error", "No se pudo abrir el formulario. Intentá desde la sección Kioscos EVA.");
+            return;
+        }
+        fechaEl.value = new Date().toISOString().split("T")[0];
+        // Pre-seleccionar el técnico logueado
+        if(usuarioActual?.nombre){
+            let opt = Array.from(tecEl.options).find(o => o.value === usuarioActual.nombre || o.text === usuarioActual.nombre);
+            if(opt) tecEl.value = opt.value;
+        }
+        let kioscos = (typeof listaKioscosEva !== "undefined" && listaKioscosEva.length)
+            ? listaKioscosEva
+            : ["EVA1","EVA2","EVA3","EVA4"];
+        cont.innerHTML = kioscos.map((kiosco, i) => {
+            let key = kiosco.replace(/\s+/g,'');
+            return `
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+                <div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:8px;">${kiosco}</div>
+                <div class="form-group" style="margin-bottom:8px;">
+                    <label class="form-label">Estado Sensor POM</label>
+                    <select id="evaPom_${key}" class="form-select" style="font-size:13px;">
+                        <option value="">— No revisado —</option>
+                        <option value="OK">✅ Sensor POM OK</option>
+                        <option value="Alerta">⚠️ Alerta / Con observación</option>
+                        <option value="Error">🔴 Error / Falla</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Observación (opcional)</label>
+                    <input type="text" id="evaObs_${key}" class="form-input" placeholder="Ej: Sensor E8, Transacciones OK..." style="font-size:13px;">
+                </div>
+            </div>`;
+        }).join("");
+        modal.classList.add("open");
+    } catch(e) {
+        console.error("[EVA] Error abriendo modal estado diario:", e);
+        toast.warning("Error", "No se pudo abrir el formulario.");
+    }
 }
 
 function cerrarModalEvaEstadoDiario(){
