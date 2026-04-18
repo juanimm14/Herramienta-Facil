@@ -365,6 +365,9 @@ body {
     justify-content: space-between;
     padding: 0 20px 0 24px;
     flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 .topbar-left {
     font-family: 'Rajdhani', sans-serif;
@@ -1492,6 +1495,7 @@ body {
             ⚡ HERRAMIENTA FÁCIL
         </div>
         <div class="topbar-right">
+            <span id="topbarFecha" style="font-size:12px;color:var(--muted);font-family:'DM Sans',sans-serif;white-space:nowrap;"></span>
             <div class="user-chip" onclick="abrirPerfil()" title="Mi perfil">
                 <span>👤</span>
                 <span id="infoNombre">—</span>
@@ -1500,6 +1504,20 @@ body {
             <button class="btn-logout" onclick="logout()">Salir</button>
         </div>
     </div>
+    <script>
+    (function() {
+        function actualizarFecha() {
+            var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+            var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+            var hoy = new Date();
+            var texto = dias[hoy.getDay()] + ', ' + hoy.getDate() + ' ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear();
+            var el = document.getElementById('topbarFecha');
+            if (el) el.textContent = texto;
+        }
+        actualizarFecha();
+        setInterval(actualizarFecha, 60000);
+    })();
+    </script>
 
     <div class="body-row">
 
