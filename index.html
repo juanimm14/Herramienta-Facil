@@ -3189,26 +3189,72 @@ body {
 
 <!-- ═══ MODAL CONTADORAS — PREVENTIVO ═══ -->
 <div id="modalContadoraPreventivo" class="modal">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:480px;">
         <div class="modal-title">🔧 Nuevo Preventivo — Contadoras</div>
         <div class="form-group">
             <label class="form-label">Fecha</label>
             <input type="date" id="cntPrevFecha" class="form-input">
         </div>
-        <div class="form-group">
-            <label class="form-label">Técnico</label>
-            <select id="cntPrevTecnico" class="form-select">
-                <option>Juan</option><option>Pedro</option><option>Pablo</option>
-                <option>Mauricio</option><option>Dionisio</option><option>Adrian</option>
-            </select>
+        <div class="grid2" style="gap:10px;">
+            <div class="form-group">
+                <label class="form-label">Técnico PQ</label>
+                <select id="cntPrevTecnicoPQ" class="form-select">
+                    <option value="">— Ninguno —</option>
+                    <option>Juan</option><option>Pedro</option><option>Pablo</option>
+                    <option>Mauricio</option><option>Dionisio</option><option>Adrian</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Técnico Presente Casino</label>
+                <select id="cntPrevTecnicoCasino" class="form-select">
+                    <option value="">— Ninguno —</option>
+                    <option>Juan</option><option>Pedro</option><option>Pablo</option>
+                    <option>Mauricio</option><option>Dionisio</option><option>Adrian</option>
+                </select>
+            </div>
         </div>
         <div class="form-group">
-            <label class="form-label">Máquinas intervenidas</label>
-            <input type="text" id="cntPrevEquipos" class="form-input" placeholder="Ej: Contadora 1, Contadora 2...">
+            <label class="form-label">Contadoras Intervenidas</label>
+            <div style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk0" value="Glory UW-F4 Serie:4824 / ADICIONAL:2829" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Glory UW-F4</strong> · Serie: 4824 / ADICIONAL: 2829</span>
+                </label>
+                <div style="height:1px;background:var(--border);"></div>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk1" value="Contadora 1 Glory GFS-220 Serie:30099 (contaje)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 1</strong> · Glory GFS-220 · Serie: 30099 <span style="color:var(--muted);">(contaje)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk2" value="Contadora 2 Glory GFS-220 Serie:5692 (contaje)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 2</strong> · Glory GFS-220 · Serie: 5692 <span style="color:var(--muted);">(contaje)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk3" value="Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 3</strong> · Glory GFS-220 · Serie: 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk4" value="Contadora 4 Glory GFS-220 Serie:41837 (bunker)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 4</strong> · Glory GFS-220 · Serie: 41837 <span style="color:var(--muted);">(bunker)</span></span>
+                </label>
+                <div style="height:1px;background:var(--border);"></div>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk5" value="Contadora GFS-120 (buro RA9)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GFS-120</strong> <span style="color:var(--muted);">(buró RA9)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk6" value="Contadora GFS-120 Serie:718190 (RA)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GFS-120</strong> · Serie: 718190 <span style="color:var(--muted);">(RA)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk7" value="Contadora GF-120 Serie:45100 (craps)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GF-120</strong> · Serie: 45100 <span style="color:var(--muted);">(craps)</span></span>
+                </label>
+            </div>
         </div>
         <div class="form-group">
-            <label class="form-label">Descripción del mantenimiento</label>
-            <textarea id="cntPrevNota" class="form-textarea" placeholder="¿Qué se realizó?..."></textarea>
+            <label class="form-label">Observaciones</label>
+            <textarea id="cntPrevNota" class="form-textarea" placeholder="Notas adicionales..."></textarea>
         </div>
         <div class="modal-footer">
             <button class="btn-modal-save blue" onclick="guardarContadoraPreventivo()">💾 Guardar</button>
@@ -6070,10 +6116,17 @@ function guardarContadoraIncidencia(){
 function abrirModalContadoraPreventivo(){
     if(esVisita()) return;
     document.getElementById("cntPrevFecha").value = new Date().toISOString().split("T")[0];
-    document.getElementById("cntPrevEquipos").value = "";
     document.getElementById("cntPrevNota").value = "";
-    let selTecCntPrev = document.getElementById("cntPrevTecnico");
-    if(selTecCntPrev && usuarioActual?.nombre) selTecCntPrev.value = usuarioActual.nombre;
+    // Preseleccionar técnico PQ con usuario actual
+    let selPQ = document.getElementById("cntPrevTecnicoPQ");
+    let selCasino = document.getElementById("cntPrevTecnicoCasino");
+    if(selPQ && usuarioActual?.nombre) selPQ.value = usuarioActual.nombre;
+    if(selCasino) selCasino.value = "";
+    // Desmarcar todos los checkboxes
+    for(let i=0; i<=7; i++){
+        let chk = document.getElementById("cntChk"+i);
+        if(chk) chk.checked = false;
+    }
     document.getElementById("modalContadoraPreventivo").classList.add("open");
 }
 function cerrarModalContadoraPreventivo(){
@@ -6081,14 +6134,23 @@ function cerrarModalContadoraPreventivo(){
 }
 function guardarContadoraPreventivo(){
     if(esVisita()) return;
-    let equipos = document.getElementById("cntPrevEquipos").value.trim();
-    if(!equipos){ alert("Ingresá los equipos"); return; }
+    // Recopilar contadoras seleccionadas
+    let seleccionadas = [];
+    for(let i=0; i<=7; i++){
+        let chk = document.getElementById("cntChk"+i);
+        if(chk && chk.checked) seleccionadas.push(chk.value);
+    }
+    if(seleccionadas.length === 0){ toast.warning("Seleccioná al menos una contadora",""); return; }
+    let tecPQ = document.getElementById("cntPrevTecnicoPQ").value;
+    let tecCasino = document.getElementById("cntPrevTecnicoCasino").value;
     let obj = {
         id: Date.now(),
         tipo: "Preventivo",
         fecha: document.getElementById("cntPrevFecha").value,
-        equipo: equipos,
-        tecnico: document.getElementById("cntPrevTecnico").value,
+        equipo: seleccionadas.join(", "),
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
         estado: "Realizado",
         nota: document.getElementById("cntPrevNota").value.trim(),
         comentarios: []
@@ -6097,7 +6159,7 @@ function guardarContadoraPreventivo(){
     localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
     cerrarModalContadoraPreventivo();
     renderContadoras();
-    alert("✔ Preventivo guardado");
+    toast.success("Preventivo guardado ✅", `${seleccionadas.length} contadora(s) registradas`);
 }
 
 function renderContadoras(){
@@ -6111,11 +6173,17 @@ function renderContadoras(){
 
     function mkCard(e){
         let estadoCls = e.estado === "Resuelto" || e.estado === "Realizado" ? "resuelto" : "en-curso";
+        let tecInfo = "";
+        if(e.tecnicoPQ || e.tecnicoCasino){
+            tecInfo = [e.tecnicoPQ ? `PQ: ${e.tecnicoPQ}` : null, e.tecnicoCasino ? `Casino: ${e.tecnicoCasino}` : null].filter(Boolean).join(" · ");
+        } else {
+            tecInfo = e.tecnico;
+        }
         return `
         <div style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;margin-bottom:8px;">
             <div style="display:flex;align-items:center;gap:10px;">
                 <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:600;color:var(--white);">${e.equipo} <span style="color:var(--muted);font-size:12px;">· ${e.fecha} · ${e.tecnico}</span></div>
+                    <div style="font-size:13px;font-weight:600;color:var(--white);">${e.equipo} <span style="color:var(--muted);font-size:12px;">· ${e.fecha} · ${tecInfo}</span></div>
                     ${e.nota ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${e.nota}</div>` : ""}
                 </div>
                 <span class="pill ${estadoCls}">${e.estado}</span>
