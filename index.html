@@ -2068,22 +2068,16 @@ body {
                     </div>
                     <div class="action-bar">
                         <button class="btn-primary" onclick="abrirModalContadoraNuevaIncidencia()">➕ Nueva Incidencia</button>
-                        <button class="btn-primary blue" onclick="abrirModalContadoraPreventivo()">🔧 Nuevo Preventivo</button>
                     </div>
                 </div>
 
-                <div class="grid2">
-                    <div class="card-box">
-                        <div class="card-box-title"><span>🔴 Correctivos Contadoras</span><span class="badge-count" id="badgeCntCorr">0</span></div>
-                        <div id="listaContadorasCorrectivos">
-                            <div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos</p></div>
-                        </div>
+                <div class="card-box">
+                    <div class="card-box-title">
+                        <span>📋 Historial de Incidencias</span>
+                        <span class="badge-count" id="badgeCntTotal">0</span>
                     </div>
-                    <div class="card-box">
-                        <div class="card-box-title"><span>🔧 Preventivos Contadoras</span><span class="badge-count" id="badgeCntPrev">0</span></div>
-                        <div id="listaContadorasPreventivos">
-                            <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos</p></div>
-                        </div>
+                    <div id="listaContadorasTodas">
+                        <div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>
                     </div>
                 </div>
             </div>
@@ -3160,29 +3154,40 @@ body {
 
 <!-- ═══ MODAL CONTADORAS — NUEVA INCIDENCIA ═══ -->
 <div id="modalContadoraNuevaIncidencia" class="modal">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width:480px;">
         <div class="modal-title">🔢 Nueva Incidencia — Contadoras</div>
         <div class="form-group">
             <label class="form-label">Fecha</label>
             <input type="date" id="cntFecha" class="form-input">
         </div>
         <div class="form-group">
-            <label class="form-label">Contadora / Equipo</label>
-            <input type="text" id="cntEquipo" class="form-input" placeholder="Ej: Contadora 1, Billetero A...">
+            <label class="form-label">Tipo</label>
+            <select id="cntTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
         </div>
         <div class="form-group">
-            <label class="form-label">Técnico</label>
-            <select id="cntTecnico" class="form-select">
-                <option>Juan</option><option>Pedro</option><option>Pablo</option>
-                <option>Mauricio</option><option>Dionisio</option><option>Adrian</option>
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="cntTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="cntTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
             </select>
         </div>
         <div class="form-group">
             <label class="form-label">Estado</label>
             <select id="cntEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
                 <option value="En Curso">En Curso</option>
-                <option value="Resuelto">Resuelto</option>
             </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Contadora / Equipo</label>
+            <input type="text" id="cntEquipo" class="form-input" placeholder="Ej: Contadora 1, Billetero A...">
         </div>
         <div class="form-group">
             <label class="form-label">Descripción / Nota</label>
@@ -3204,8 +3209,14 @@ body {
             <input type="date" id="cntPrevFecha" class="form-input">
         </div>
         <div class="form-group">
-            <label class="form-label">Técnico PQ</label>
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
             <input type="text" id="cntPrevTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="cntPrevTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
         </div>
         <div class="form-group">
             <label class="form-label">Tipo</label>
@@ -3217,11 +3228,64 @@ body {
         <div class="form-group">
             <label class="form-label">Estado</label>
             <select id="cntPrevEstado" class="form-select">
-                <option value="En Curso">En Curso</option>
                 <option value="Realizado">Realizado</option>
-                <option value="Resuelto">Resuelto</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
             </select>
         </div>
+        <div class="form-group">
+            <label class="form-label">Contadoras Intervenidas</label>
+            <div style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk0" value="Glory UW-F4 Serie:4824 / ADICIONAL:2829" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Glory UW-F4</strong> · Serie: 4824 / ADICIONAL: 2829</span>
+                </label>
+                <div style="height:1px;background:var(--border);"></div>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk1" value="Contadora 1 Glory GFS-220 Serie:30099 (contaje)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 1</strong> · GFS-220 · 30099 <span style="color:var(--muted);">(contaje)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk2" value="Contadora 2 Glory GFS-220 Serie:5692 (contaje)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 2</strong> · GFS-220 · 5692 <span style="color:var(--muted);">(contaje)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk3" value="Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 3</strong> · GFS-220 · 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk4" value="Contadora 4 Glory GFS-220 Serie:41837 (bunker)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 4</strong> · GFS-220 · 41837 <span style="color:var(--muted);">(bunker)</span></span>
+                </label>
+                <div style="height:1px;background:var(--border);"></div>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk5" value="Contadora GFS-120 (buro RA9)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GFS-120</strong> <span style="color:var(--muted);">(buró RA9)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk6" value="Contadora GFS-120 Serie:718190 (RA)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GFS-120</strong> · 718190 <span style="color:var(--muted);">(RA)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntChk7" value="Contadora GF-120 Serie:45100 (craps)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GF-120</strong> · 45100 <span style="color:var(--muted);">(craps)</span></span>
+                </label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada contadora?</label>
+            <div id="cntPrevDetallesPorContadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado / Observaciones generales</label>
+            <textarea id="cntPrevNota" class="form-textarea" placeholder="Observaciones generales..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarContadoraPreventivo()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalContadoraPreventivo()">Cancelar</button>
+        </div>
+    </div>
+</div>
         <div class="form-group">
             <label class="form-label">Contadoras Intervenidas</label>
             <div style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
@@ -6097,9 +6161,14 @@ function abrirModalContadoraNuevaIncidencia(){
     document.getElementById("cntFecha").value = new Date().toISOString().split("T")[0];
     document.getElementById("cntEquipo").value = "";
     document.getElementById("cntNota").value = "";
-    document.getElementById("cntEstado").value = "En Curso";
-    let selTecCnt = document.getElementById("cntTecnico");
-    if(selTecCnt && usuarioActual?.nombre) selTecCnt.value = usuarioActual.nombre;
+    document.getElementById("cntTipo").value = "Correctivo";
+    document.getElementById("cntEstado").value = "Realizado";
+    document.getElementById("cntTecnicoPQ").value = "";
+    // Poblar técnicos casino
+    let selCasino = document.getElementById("cntTecnicoCasino");
+    let tecnicos = getTecnicos();
+    selCasino.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
+    if(usuarioActual?.nombre) selCasino.value = usuarioActual.nombre;
     document.getElementById("modalContadoraNuevaIncidencia").classList.add("open");
 }
 function cerrarModalContadoraNuevaIncidencia(){
@@ -6108,13 +6177,17 @@ function cerrarModalContadoraNuevaIncidencia(){
 function guardarContadoraIncidencia(){
     if(esVisita()) return;
     let equipo = document.getElementById("cntEquipo").value.trim();
-    if(!equipo){ alert("Ingresá el equipo"); return; }
+    if(!equipo){ toast.warning("Ingresá el equipo",""); return; }
+    let tecPQ = document.getElementById("cntTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("cntTecnicoCasino").value;
     let obj = {
         id: Date.now(),
-        tipo: "Correctivo",
+        tipo: document.getElementById("cntTipo").value,
         fecha: document.getElementById("cntFecha").value,
         equipo,
-        tecnico: document.getElementById("cntTecnico").value,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
         estado: document.getElementById("cntEstado").value,
         nota: document.getElementById("cntNota").value.trim(),
         comentarios: []
@@ -6123,7 +6196,7 @@ function guardarContadoraIncidencia(){
     localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
     cerrarModalContadoraNuevaIncidencia();
     renderContadoras();
-    alert("✔ Incidencia guardada");
+    toast.success("Incidencia guardada ✅","");
 }
 
 function _cntPrevActualizarDetalles(){
@@ -6133,8 +6206,7 @@ function _cntPrevActualizarDetalles(){
     let html = "";
     checks.forEach(chk => {
         if(chk.checked){
-            let val = chk.value;
-            let label = chk.closest("label")?.querySelector("span")?.innerText || val;
+            let label = chk.closest("label")?.querySelector("span")?.innerText || chk.value;
             let safeId = "cntPrevDet_" + chk.id;
             let existing = document.getElementById(safeId);
             let prev = existing ? existing.value : "";
@@ -6151,15 +6223,18 @@ function abrirModalContadoraPreventivo(){
     if(esVisita()) return;
     document.getElementById("cntPrevFecha").value = new Date().toISOString().split("T")[0];
     document.getElementById("cntPrevNota").value = "";
-    let inpPQ = document.getElementById("cntPrevTecnicoPQ");
-    if(inpPQ) inpPQ.value = usuarioActual?.nombre || "";
+    document.getElementById("cntPrevTecnicoPQ").value = "";
     document.getElementById("cntPrevTipo").value = "Preventivo";
-    document.getElementById("cntPrevEstado").value = "En Curso";
+    document.getElementById("cntPrevEstado").value = "Realizado";
+    // Poblar técnicos casino
+    let selCasino = document.getElementById("cntPrevTecnicoCasino");
+    let tecnicos = getTecnicos();
+    selCasino.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
+    if(usuarioActual?.nombre) selCasino.value = usuarioActual.nombre;
     let checks = document.querySelectorAll(".cntPrevChk");
     checks.forEach(chk => { chk.checked = false; chk.onchange = _cntPrevActualizarDetalles; });
     document.getElementById("cntPrevDetallesPorContadora").innerHTML = "";
     document.getElementById("modalContadoraPreventivo").classList.add("open");
-    // Attach listeners after open
     setTimeout(() => {
         document.querySelectorAll(".cntPrevChk").forEach(chk => { chk.onchange = _cntPrevActualizarDetalles; });
     }, 50);
@@ -6180,13 +6255,15 @@ function guardarContadoraPreventivo(){
     });
     if(seleccionadas.length === 0){ toast.warning("Seleccioná al menos una contadora",""); return; }
     let tecPQ = document.getElementById("cntPrevTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("cntPrevTecnicoCasino").value;
     let obj = {
         id: Date.now(),
         tipo: document.getElementById("cntPrevTipo").value,
         fecha: document.getElementById("cntPrevFecha").value,
         equipo: seleccionadas.join(", "),
-        tecnico: tecPQ || "—",
+        tecnico: tecPQ || tecCasino || "—",
         tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
         detallesPorContadora: detalles,
         estado: document.getElementById("cntPrevEstado").value,
         nota: document.getElementById("cntPrevNota").value.trim(),
@@ -6199,34 +6276,68 @@ function guardarContadoraPreventivo(){
     toast.success("Preventivo guardado ✅", `${seleccionadas.length} contadora(s) registradas`);
 }
 
+// ─── MODAL DETALLE CONTADORA ────────────────────────────
+function abrirDetalleContadora(id){
+    let e = contadorasData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+    let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+    let tecInfo = "";
+    if(e.tecnicoPQ) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico PQ: <strong style="color:var(--white);">${e.tecnicoPQ}</strong></div>`;
+    if(e.tecnicoCasino) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico Casino: <strong style="color:var(--white);">${e.tecnicoCasino}</strong></div>`;
+    if(!e.tecnicoPQ && !e.tecnicoCasino && e.tecnico) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico: <strong style="color:var(--white);">${e.tecnico}</strong></div>`;
+    let detallesHtml = "";
+    if(e.detallesPorContadora && Object.keys(e.detallesPorContadora).length > 0){
+        detallesHtml = `<div style="margin-top:12px;"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">Detalle por contadora:</div>`;
+        for(let [k,v] of Object.entries(e.detallesPorContadora)){
+            if(v) detallesHtml += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:5px;">
+                <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:2px;">${k}</div>
+                <div style="font-size:12px;color:var(--white);">${v}</div>
+            </div>`;
+        }
+        detallesHtml += `</div>`;
+    }
+    document.getElementById("cntDetalleContenido").innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <span style="font-size:14px;">${tipoIcon} <strong>${e.tipo}</strong></span>
+            <span class="pill ${estadoCls}">${e.estado}</span>
+            <span style="font-size:12px;color:var(--muted);">📅 ${e.fecha}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:6px;">${e.equipo}</div>
+        ${tecInfo}
+        ${e.nota ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:8px 10px;">${e.nota}</div>` : ""}
+        ${detallesHtml}
+        ${usuarioActual?.rol==="Admin" ? `<div style="margin-top:14px;text-align:right;"><button onclick="eliminarContadoraItem('${e.id}');cerrarDetalleContadora();" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;">🗑️ Eliminar</button></div>` : ""}
+    `;
+    document.getElementById("modalCntDetalle").classList.add("open");
+}
+function cerrarDetalleContadora(){
+    document.getElementById("modalCntDetalle").classList.remove("open");
+}
+
 function renderContadoras(){
-    let corr = contadorasData.filter(c => c.tipo === "Correctivo");
-    let prev = contadorasData.filter(c => c.tipo === "Preventivo");
+    let todos = [...contadorasData].sort((a,b) => b.id - a.id);
+    let badge = document.getElementById("badgeCntTotal");
+    if(badge) badge.textContent = todos.length;
 
-    let bC = document.getElementById("badgeCntCorr");
-    let bP = document.getElementById("badgeCntPrev");
-    if(bC) bC.textContent = corr.length;
-    if(bP) bP.textContent = prev.length;
-
-    function mkCard(e){
-        let estadoCls = e.estado === "Resuelto" || e.estado === "Realizado" ? "resuelto" : "en-curso";
-        return `
-        <div style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;margin-bottom:8px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:600;color:var(--white);">${e.equipo} <span style="color:var(--muted);font-size:12px;">· ${e.fecha} · ${e.tecnico}</span></div>
-                    ${e.nota ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${e.nota}</div>` : ""}
-                </div>
-                <span class="pill ${estadoCls}">${e.estado}</span>
-                ${usuarioActual?.rol==="Admin" ? `<button onclick="eliminarContadoraItem('${e.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;">🗑️</button>` : ""}
+    function mkRow(e){
+        let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+        let tipoColor = e.tipo === "Preventivo" ? "var(--accent2)" : "#f87171";
+        let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+        return `<div onclick="abrirDetalleContadora('${e.id}')" style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${tipoColor};border-radius:9px;margin-bottom:7px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg2)'">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:700;color:${tipoColor};">${tipoIcon} ${e.tipo}</span>
+                <span class="pill ${estadoCls}" style="font-size:10px;">${e.estado}</span>
+                <span style="font-size:11px;color:var(--muted);margin-left:auto;">📅 ${e.fecha}</span>
             </div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">${e.equipo}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${e.tecnicoPQ ? '🔑 '+e.tecnicoPQ : ''}${e.tecnicoPQ && e.tecnicoCasino ? ' · ' : ''}${e.tecnicoCasino ? '🏠 '+e.tecnicoCasino : ''}</div>
+            ${e.nota ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${e.nota}</div>` : ""}
         </div>`;
     }
 
-    let contC = document.getElementById("listaContadorasCorrectivos");
-    let contP = document.getElementById("listaContadorasPreventivos");
-    if(contC) contC.innerHTML = corr.length ? corr.map(mkCard).join("") : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos</p></div>';
-    if(contP) contP.innerHTML = prev.length ? prev.map(mkCard).join("") : '<div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos</p></div>';
+    let cont = document.getElementById("listaContadorasTodas");
+    if(cont) cont.innerHTML = todos.length ? todos.map(mkRow).join("") : '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>';
 }
 
 function eliminarContadoraItem(id){
@@ -9855,6 +9966,17 @@ function confirmarQuienRealizoMulti(){
     toast.success("Tarea cerrada ✅", `Realizada por: ${t.realizadoPor}`);
 }
 </script>
+
+<!-- ═══ MODAL CONTADORA — DETALLE ═══ -->
+<div id="modalCntDetalle" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🔢 Detalle de Incidencia</div>
+        <div id="cntDetalleContenido"></div>
+        <div class="modal-footer" style="margin-top:14px;">
+            <button class="btn-modal-cancel" onclick="cerrarDetalleContadora()">Cerrar</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
