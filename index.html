@@ -1982,19 +1982,14 @@ body {
                         </div>
                     </div>
 
-                    <!-- Correctivos -->
-                    <div class="card-box" style="margin-bottom:16px;border-left:3px solid var(--red);">
-                        <div class="card-box-title"><span>🔴 Correctivos EVA</span><span class="badge-count" id="badgeEvaCorr" style="background:var(--red);">0</span></div>
-                        <div id="listaEvaCorrectivos">
-                            <div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>
+                    <!-- Historial unificado -->
+                    <div class="card-box">
+                        <div class="card-box-title">
+                            <span>📋 Historial de Incidencias</span>
+                            <span class="badge-count" id="badgeEvaTodas">0</span>
                         </div>
-                    </div>
-
-                    <!-- Preventivos -->
-                    <div class="card-box" style="border-left:3px solid var(--accent2);">
-                        <div class="card-box-title"><span>🔧 Preventivos EVA</span><span class="badge-count" id="badgeEvaPrev" style="background:var(--accent2);">0</span></div>
-                        <div id="listaEvaPreventivos">
-                            <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>
+                        <div id="listaEvaTodas">
+                            <div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias EVA</p></div>
                         </div>
                     </div>
                 </div>
@@ -5892,15 +5887,10 @@ function guardarEvaDiaria(){
 
 function renderKioscosEva(){
     let todos = [...evaIncidencias].sort((a,b) => b.id - a.id);
-    let corr = todos.filter(e => e.tipo === "Correctivo");
-    let prev = todos.filter(e => e.tipo === "Preventivo");
 
-    let contC = document.getElementById("listaEvaCorrectivos");
-    let contP = document.getElementById("listaEvaPreventivos");
-    let bC = document.getElementById("badgeEvaCorr");
-    let bP = document.getElementById("badgeEvaPrev");
-    if(bC) bC.textContent = corr.length;
-    if(bP) bP.textContent = prev.length;
+    let cont  = document.getElementById("listaEvaTodas");
+    let badge = document.getElementById("badgeEvaTodas");
+    if(badge) badge.textContent = todos.length;
 
     function mkEvaRow(e){
         let esCorr = e.tipo === "Correctivo";
@@ -5908,20 +5898,19 @@ function renderKioscosEva(){
         let tipoIcon  = esCorr ? "🔴" : "🔧";
         let estadoCls = (e.estado === "Resuelto" || e.estado === "Realizado") ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
         let nota = e.notaGeneral ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">'+e.notaGeneral+'</div>' : "";
-        let tec  = e.tecnico ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">\u{1F464} '+e.tecnico+'</div>' : "";
+        let tec  = e.tecnico ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">&#128100; '+e.tecnico+'</div>' : "";
         return '<div onclick="abrirDetalleEvaIncidencia(\''+e.id+'\')" style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid '+tipoColor+';border-radius:9px;margin-bottom:7px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'var(--bg2)\'">'
             + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
             + '<span style="font-size:12px;font-weight:700;color:'+tipoColor+';">'+tipoIcon+' '+e.tipo+'</span>'
             + '<span class="pill '+estadoCls+'" style="font-size:10px;">'+e.estado+'</span>'
-            + '<span style="font-size:11px;color:var(--muted);margin-left:auto;">📅 '+(e.fecha||"—")+'</span>'
+            + '<span style="font-size:11px;color:var(--muted);margin-left:auto;">&#128197; '+(e.fecha||"—")+'</span>'
             + '</div>'
             + '<div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">'+(e.kioscos||[]).join(", ")+'</div>'
             + tec + nota
             + '</div>';
     }
 
-    if(contC) contC.innerHTML = corr.length ? corr.map(mkEvaRow).join("") : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>';
-    if(contP) contP.innerHTML = prev.length ? prev.map(mkEvaRow).join("") : '<div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>';
+    if(cont) cont.innerHTML = todos.length ? todos.map(mkEvaRow).join("") : '<div class="empty-state"><div class="empty-icon">&#128203;</div><p>Sin incidencias EVA</p></div>';
 }
 function renderEstadosEva(){
     let contH = document.getElementById("historialEvaDiario");
