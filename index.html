@@ -88,7 +88,7 @@ const _FB_KEYS = new Set([
     "mgiCronogramas","mgiPlanes",
     "ppPreventivos","ppTareas",
     "evaIncidencias","evaDiarios",
-    "fdsData","contadorasData","cartelesData",
+    "fdsData","contadorasData","cartelesData","listaContadoras",
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
     "equiposCilindros","equiposRA","equiposEVA"
@@ -160,6 +160,7 @@ async function _cargarDatosFirebase() {
         if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
         if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
         if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
+        if (_cache["listaContadoras"]) listaContadoras = _cache["listaContadoras"];
         if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
         if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
     } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
@@ -197,6 +198,7 @@ function _activarListenersTiempoReal() {
             if (_cache["evaDiarios"]     !== undefined) evaDiarios     = _cache["evaDiarios"]     ?? [];
             if (_cache["fdsData"]        !== undefined) fdsData        = _cache["fdsData"]        ?? [];
             if (_cache["contadorasData"] !== undefined) contadorasData = _cache["contadorasData"] ?? [];
+            if (_cache["listaContadoras"] !== undefined) listaContadoras = _cache["listaContadoras"] ?? [..._CNT_DEFAULT];
             if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
             if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
             // Re-render si la app ya está iniciada
@@ -2067,6 +2069,7 @@ body {
                         <div class="page-subtitle">Correctivos, preventivos y seguimiento de contadoras</div>
                     </div>
                     <div class="action-bar">
+                        <button class="btn-secondary" onclick="abrirModalEditarListaContadoras()" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">✏️ Editar Contadoras</button>
                         <button class="btn-primary" onclick="abrirModalContadoraNuevaIncidencia()">➕ Nueva Incidencia</button>
                     </div>
                 </div>
@@ -3187,42 +3190,7 @@ body {
         </div>
         <div class="form-group">
             <label class="form-label">Contadoras Intervenidas</label>
-            <div style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntIChk0" value="Glory UW-F4 Serie:4824 / ADICIONAL:2829" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Glory UW-F4</strong> · Serie: 4824 / ADICIONAL: 2829</span>
-                </label>
-                <div style="height:1px;background:var(--border);"></div>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntIChk1" value="Contadora 1 Glory GFS-220 Serie:30099 (contaje)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 1</strong> · GFS-220 · 30099 <span style="color:var(--muted);">(contaje)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntIChk2" value="Contadora 2 Glory GFS-220 Serie:5692 (contaje)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 2</strong> · GFS-220 · 5692 <span style="color:var(--muted);">(contaje)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntIChk3" value="Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 3</strong> · GFS-220 · 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntIChk4" value="Contadora 4 Glory GFS-220 Serie:41837 (bunker)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 4</strong> · GFS-220 · 41837 <span style="color:var(--muted);">(bunker)</span></span>
-                </label>
-                <div style="height:1px;background:var(--border);"></div>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntIChk5" value="Contadora GFS-120 (buro RA9)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GFS-120</strong> <span style="color:var(--muted);">(buró RA9)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntIChk6" value="Contadora GFS-120 Serie:718190 (RA)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GFS-120</strong> · 718190 <span style="color:var(--muted);">(RA)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntIChk7" value="Contadora GF-120 Serie:45100 (craps)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GF-120</strong> · 45100 <span style="color:var(--muted);">(craps)</span></span>
-                </label>
-            </div>
+            <div id="cntIncChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
         </div>
         <div class="form-group">
             <label class="form-label">¿Qué se hizo en cada contadora?</label>
@@ -3274,42 +3242,7 @@ body {
         </div>
         <div class="form-group">
             <label class="form-label">Contadoras Intervenidas</label>
-            <div style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntChk0" value="Glory UW-F4 Serie:4824 / ADICIONAL:2829" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Glory UW-F4</strong> · Serie: 4824 / ADICIONAL: 2829</span>
-                </label>
-                <div style="height:1px;background:var(--border);"></div>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntChk1" value="Contadora 1 Glory GFS-220 Serie:30099 (contaje)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 1</strong> · GFS-220 · 30099 <span style="color:var(--muted);">(contaje)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntChk2" value="Contadora 2 Glory GFS-220 Serie:5692 (contaje)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 2</strong> · GFS-220 · 5692 <span style="color:var(--muted);">(contaje)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntChk3" value="Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 3</strong> · GFS-220 · 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntChk4" value="Contadora 4 Glory GFS-220 Serie:41837 (bunker)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 4</strong> · GFS-220 · 41837 <span style="color:var(--muted);">(bunker)</span></span>
-                </label>
-                <div style="height:1px;background:var(--border);"></div>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntChk5" value="Contadora GFS-120 (buro RA9)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GFS-120</strong> <span style="color:var(--muted);">(buró RA9)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntChk6" value="Contadora GFS-120 Serie:718190 (RA)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GFS-120</strong> · 718190 <span style="color:var(--muted);">(RA)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntChk7" value="Contadora GF-120 Serie:45100 (craps)" class="cntPrevChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GF-120</strong> · 45100 <span style="color:var(--muted);">(craps)</span></span>
-                </label>
-            </div>
+            <div id="cntPrevChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
         </div>
         <div class="form-group">
             <label class="form-label">¿Qué se hizo en cada contadora?</label>
@@ -6145,6 +6078,84 @@ function guardarComentarioTarea(){
 let contadorasData = JSON.parse(localStorage.getItem("contadorasData")) || [];
 let fdsData = JSON.parse(localStorage.getItem("fdsData")) || [];
 
+// ─── LISTA DINÁMICA DE CONTADORAS ────────────────
+const _CNT_DEFAULT = [
+    "Glory UW-F4 Serie:4824 / ADICIONAL:2829",
+    "Contadora 1 Glory GFS-220 Serie:30099 (contaje)",
+    "Contadora 2 Glory GFS-220 Serie:5692 (contaje)",
+    "Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)",
+    "Contadora 4 Glory GFS-220 Serie:41837 (bunker)",
+    "Contadora GFS-120 (buro RA9)",
+    "Contadora GFS-120 Serie:718190 (RA)",
+    "Contadora GF-120 Serie:45100 (craps)"
+];
+let listaContadoras = (_cache["listaContadoras"]) ? [..._cache["listaContadoras"]] : [..._CNT_DEFAULT];
+
+// Renderiza los checkboxes dinámicamente en un contenedor
+function _cntRenderChks(containerId, chkClass, onChangeCallback, preselected=[]) {
+    let cont = document.getElementById(containerId);
+    if(!cont) return;
+    if(!listaContadoras.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Sin contadoras configuradas. Usá "Editar Contadoras" para agregar.</span>';
+        return;
+    }
+    cont.innerHTML = listaContadoras.map((nombre, i) => `
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+            <input type="checkbox" id="${chkClass}_${i}" value="${nombre.replace(/"/g,'&quot;')}" class="${chkClass}"
+                   style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;"
+                   ${preselected.includes(nombre) ? 'checked' : ''}>
+            <span>${nombre}</span>
+        </label>
+    `).join('<div style="height:1px;background:var(--border);margin:2px 0;"></div>');
+    // Bind onchange
+    document.querySelectorAll('.'+chkClass).forEach(chk => {
+        chk.onchange = onChangeCallback;
+    });
+}
+
+// ─── MODAL EDITAR LISTA DE CONTADORAS ────────────
+function abrirModalEditarListaContadoras(){
+    _renderListaEditar();
+    document.getElementById("nuevaContadoraInput").value = "";
+    document.getElementById("modalEditarListaContadoras").classList.add("open");
+}
+
+function _renderListaEditar(){
+    let cont = document.getElementById("listaEditarContadoras");
+    if(!listaContadoras.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Lista vacía</span>';
+        return;
+    }
+    cont.innerHTML = listaContadoras.map((nombre, i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
+            <span style="flex:1;font-size:13px;color:var(--white);">${nombre}</span>
+            <button onclick="_eliminarContadoraLista(${i})" style="background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ Quitar</button>
+        </div>
+    `).join('');
+}
+
+function _eliminarContadoraLista(idx){
+    listaContadoras.splice(idx, 1);
+    _renderListaEditar();
+}
+
+function agregarContadoraLista(){
+    let input = document.getElementById("nuevaContadoraInput");
+    let nombre = input.value.trim();
+    if(!nombre){ toast.warning("Ingresá un nombre para la contadora",""); return; }
+    if(listaContadoras.includes(nombre)){ toast.warning("Esa contadora ya existe en la lista",""); return; }
+    listaContadoras.push(nombre);
+    input.value = "";
+    _renderListaEditar();
+}
+
+function guardarListaContadoras(){
+    _fbSet("listaContadoras", listaContadoras);
+    _localStorageOrig.setItem("listaContadoras", JSON.stringify(listaContadoras));
+    document.getElementById("modalEditarListaContadoras").classList.remove("open");
+    toast.success("Lista de contadoras actualizada ✅","");
+}
+
 // ─── helpers para checkboxes + detalles ─────────
 function _cntActualizarDetalles(chkClass, contId){
     let cont = document.getElementById(contId);
@@ -6201,10 +6212,9 @@ function abrirModalContadoraNuevaIncidencia(){
     _cntPoblarCasino("cntTecnicoCasino");
     let sel = document.getElementById("cntTecnicoCasino");
     if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
-    document.querySelectorAll(".cntIncChk").forEach(chk => { chk.checked = false; chk.onchange = ()=>_cntActualizarDetalles("cntIncChk","cntIncDetallesPorContadora"); });
+    _cntRenderChks("cntIncChkContainer","cntIncChk",()=>_cntActualizarDetalles("cntIncChk","cntIncDetallesPorContadora"));
     document.getElementById("cntIncDetallesPorContadora").innerHTML = "";
     document.getElementById("modalContadoraNuevaIncidencia").classList.add("open");
-    setTimeout(()=>{ document.querySelectorAll(".cntIncChk").forEach(chk => { chk.onchange = ()=>_cntActualizarDetalles("cntIncChk","cntIncDetallesPorContadora"); }); }, 50);
 }
 function cerrarModalContadoraNuevaIncidencia(){
     document.getElementById("modalContadoraNuevaIncidencia").classList.remove("open");
@@ -6251,10 +6261,9 @@ function abrirModalContadoraPreventivo(){
     _cntPoblarCasino("cntPrevTecnicoCasino");
     let sel = document.getElementById("cntPrevTecnicoCasino");
     if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
-    document.querySelectorAll(".cntPrevChk").forEach(chk => { chk.checked = false; chk.onchange = _cntPrevActualizarDetalles; });
+    _cntRenderChks("cntPrevChkContainer","cntPrevChk",_cntPrevActualizarDetalles);
     document.getElementById("cntPrevDetallesPorContadora").innerHTML = "";
     document.getElementById("modalContadoraPreventivo").classList.add("open");
-    setTimeout(()=>{ document.querySelectorAll(".cntPrevChk").forEach(chk => { chk.onchange = _cntPrevActualizarDetalles; }); }, 50);
 }
 function cerrarModalContadoraPreventivo(){
     document.getElementById("modalContadoraPreventivo").classList.remove("open");
@@ -6299,15 +6308,11 @@ function abrirEditarContadora(id){
     _cntPoblarCasino("cntEditTecnicoCasino");
     let selC = document.getElementById("cntEditTecnicoCasino");
     if(e.tecnicoCasino){ let op = [...selC.options].find(o=>o.value===e.tecnicoCasino); if(op) selC.value=e.tecnicoCasino; }
-    // Marcar checkboxes de las contadoras que estaban seleccionadas
+    // Renderizar checkboxes dinámicos, preseleccionando las guardadas
     let equipoList = e.equipo ? e.equipo.split(", ") : [];
-    document.querySelectorAll(".cntEditChk").forEach(chk => {
-        chk.checked = equipoList.includes(chk.value);
-        chk.onchange = ()=>_cntActualizarDetalles("cntEditChk","cntEditDetallesPorContadora");
-    });
+    _cntRenderChks("cntEditChkContainer","cntEditChk",()=>_cntActualizarDetalles("cntEditChk","cntEditDetallesPorContadora"), equipoList);
     // Renderizar detalles preexistentes
-    let cont = document.getElementById("cntEditDetallesPorContadora");
-    cont.innerHTML = "";
+    document.getElementById("cntEditDetallesPorContadora").innerHTML = "";
     _cntActualizarDetalles("cntEditChk","cntEditDetallesPorContadora");
     // Rellenar los textareas con los datos guardados
     if(e.detallesPorContadora){
@@ -6322,7 +6327,6 @@ function abrirEditarContadora(id){
     }
     document.getElementById("modalCntDetalle").classList.remove("open");
     document.getElementById("modalCntEditar").classList.add("open");
-    setTimeout(()=>{ document.querySelectorAll(".cntEditChk").forEach(chk => { chk.onchange = ()=>_cntActualizarDetalles("cntEditChk","cntEditDetallesPorContadora"); }); }, 50);
 }
 
 function guardarEdicionContadora(){
@@ -10083,42 +10087,7 @@ function confirmarQuienRealizoMulti(){
         </div>
         <div class="form-group">
             <label class="form-label">Contadoras Intervenidas</label>
-            <div style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntEChk0" value="Glory UW-F4 Serie:4824 / ADICIONAL:2829" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Glory UW-F4</strong> · Serie: 4824 / ADICIONAL: 2829</span>
-                </label>
-                <div style="height:1px;background:var(--border);"></div>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntEChk1" value="Contadora 1 Glory GFS-220 Serie:30099 (contaje)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 1</strong> · GFS-220 · 30099 <span style="color:var(--muted);">(contaje)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntEChk2" value="Contadora 2 Glory GFS-220 Serie:5692 (contaje)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 2</strong> · GFS-220 · 5692 <span style="color:var(--muted);">(contaje)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntEChk3" value="Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 3</strong> · GFS-220 · 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntEChk4" value="Contadora 4 Glory GFS-220 Serie:41837 (bunker)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>Contadora 4</strong> · GFS-220 · 41837 <span style="color:var(--muted);">(bunker)</span></span>
-                </label>
-                <div style="height:1px;background:var(--border);"></div>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntEChk5" value="Contadora GFS-120 (buro RA9)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GFS-120</strong> <span style="color:var(--muted);">(buró RA9)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntEChk6" value="Contadora GFS-120 Serie:718190 (RA)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GFS-120</strong> · 718190 <span style="color:var(--muted);">(RA)</span></span>
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
-                    <input type="checkbox" id="cntEChk7" value="Contadora GF-120 Serie:45100 (craps)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-                    <span><strong>GF-120</strong> · 45100 <span style="color:var(--muted);">(craps)</span></span>
-                </label>
-            </div>
+            <div id="cntEditChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
         </div>
         <div class="form-group">
             <label class="form-label">¿Qué se hizo en cada contadora?</label>
@@ -10142,6 +10111,33 @@ function confirmarQuienRealizoMulti(){
         <div id="cntDetalleContenido"></div>
         <div class="modal-footer" style="margin-top:14px;">
             <button class="btn-modal-cancel" onclick="cerrarDetalleContadora()">Cerrar</button>
+        </div>
+    </div>
+</div>
+<!-- ═══ MODAL EDITAR LISTA DE CONTADORAS ═══ -->
+<div id="modalEditarListaContadoras" class="modal">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="modal-title">✏️ Editar Lista de Contadoras</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Agregá o quitá contadoras de la lista. Los cambios aplican a todos los formularios.</p>
+
+        <!-- Lista actual -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Contadoras actuales</div>
+            <div id="listaEditarContadoras" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+
+        <!-- Agregar nueva -->
+        <div style="background:var(--bg3);border:1px solid var(--accent);border-radius:10px;padding:12px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;">➕ Agregar contadora</div>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="nuevaContadoraInput" class="form-input" placeholder="Nombre / descripción de la contadora..." style="flex:1;margin-bottom:0;">
+                <button onclick="agregarContadoraLista()" style="background:var(--accent);color:var(--bg);border:none;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Agregar</button>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="margin-top:18px;">
+            <button class="btn-modal-save blue" onclick="guardarListaContadoras()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarListaContadoras').classList.remove('open')">Cancelar</button>
         </div>
     </div>
 </div>
