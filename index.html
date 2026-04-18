@@ -1566,9 +1566,6 @@ body {
             <button class="menu-btn" id="nav-kioscos-eva" onclick="mostrar('kioscos-eva')">
                 <span class="icon">🎫</span> Kioscos EVA
             </button>
-            <button class="menu-btn" id="nav-estados-eva" onclick="mostrar('estados-eva')">
-                <span class="icon">📊</span> Estados Kioscos EVA
-            </button>
             <button class="menu-btn" id="nav-contadoras" onclick="mostrar('contadoras')">
                 <span class="icon">🔢</span> Contadoras
             </button>
@@ -1950,48 +1947,54 @@ body {
 
             <!-- ═══ KIOSCOS EVA ═══ -->
             <div id="kioscos-eva" class="section">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">🧾 Kioscos EVA</div>
-                        <div class="page-subtitle">Correctivos y preventivos de los kioscos EVA</div>
+
+                <!-- Vista principal -->
+                <div id="evaVistaPrincipal">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">🧾 Kioscos EVA</div>
+                            <div class="page-subtitle">Correctivos y preventivos de los kioscos EVA</div>
+                        </div>
+                        <div class="action-bar">
+                            <button class="btn-primary" onclick="abrirModalEvaNuevaIncidencia()">➕ Nueva Incidencia EVA</button>
+                            <button class="btn-primary blue" onclick="mostrarVistaEstadosEva()">📊 Estado Kioscos EVA</button>
+                            <button class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);" onclick="abrirModalEditarKioscosEva()">✏️ Editar Kioscos</button>
+                        </div>
                     </div>
-                    <div class="action-bar">
-                        <button class="btn-primary" onclick="abrirModalEvaNuevaIncidencia()">➕ Nueva Incidencia EVA</button>
-                        <button class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);" onclick="abrirModalEditarKioscosEva()">✏️ Editar Kioscos</button>
+
+                    <!-- Correctivos -->
+                    <div class="card-box" style="margin-bottom:16px;border-left:3px solid var(--red);">
+                        <div class="card-box-title"><span>🔴 Correctivos EVA</span><span class="badge-count" id="badgeEvaCorr" style="background:var(--red);">0</span></div>
+                        <div id="listaEvaCorrectivos">
+                            <div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>
+                        </div>
+                    </div>
+
+                    <!-- Preventivos -->
+                    <div class="card-box" style="border-left:3px solid var(--accent2);">
+                        <div class="card-box-title"><span>🔧 Preventivos EVA</span><span class="badge-count" id="badgeEvaPrev" style="background:var(--accent2);">0</span></div>
+                        <div id="listaEvaPreventivos">
+                            <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Correctivos -->
-                <div class="card-box" style="margin-bottom:16px;border-left:3px solid var(--red);">
-                    <div class="card-box-title"><span>🔴 Correctivos EVA</span><span class="badge-count" id="badgeEvaCorr" style="background:var(--red);">0</span></div>
-                    <div id="listaEvaCorrectivos">
-                        <div class="empty-state"><div class="empty-icon">✅</div><p>Sin correctivos EVA</p></div>
+                <!-- Sub-vista: Estados -->
+                <div id="evaVistaEstados" style="display:none;">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">📊 Estado Kioscos EVA</div>
+                            <div class="page-subtitle">Historial de estado diario (Sensor POM)</div>
+                        </div>
+                        <div class="action-bar">
+                            <button class="btn-primary blue" onclick="abrirModalEvaEstadoDiario()">📊 Cargar Estado Diario</button>
+                            <button class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);" onclick="volverVistaEva()">← Volver</button>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Preventivos -->
-                <div class="card-box" style="border-left:3px solid var(--accent2);">
-                    <div class="card-box-title"><span>🔧 Preventivos EVA</span><span class="badge-count" id="badgeEvaPrev" style="background:var(--accent2);">0</span></div>
-                    <div id="listaEvaPreventivos">
-                        <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos EVA</p></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ═══ ESTADOS KIOSCOS EVA ═══ -->
-            <div id="estados-eva" class="section">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📊 Estados Kioscos EVA</div>
-                        <div class="page-subtitle">Historial de estado diario (Sensor POM)</div>
-                    </div>
-                    <div class="action-bar">
-                        <button class="btn-primary blue" onclick="abrirModalEvaEstadoDiario()">📊 Cargar Estado Diario</button>
-                    </div>
-                </div>
-                <div class="card-box">
-                    <div id="historialEvaDiario" style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto;">
-                        <div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros</p></div>
+                    <div class="card-box">
+                        <div id="historialEvaDiario" style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto;">
+                            <div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros</p></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3721,7 +3724,7 @@ function mostrar(sec){
     }
     if(sec === 'dashboard'){ renderDashboard(); renderDashboardEvaPom(); renderCartelesDashboard(); }
     if(sec === 'incidencias-prev'){ cargarAniosPrev(); renderIncidenciasPreventivos(); }
-    if(sec === 'kioscos-eva') renderKioscosEva();
+    if(sec === 'kioscos-eva') { volverVistaEva(); renderKioscosEva(); }
     if(sec === 'estados-eva') renderEstadosEva();
     if(sec === 'contadoras') renderContadoras();
     if(sec === 'fuera-servicio') renderFds();
@@ -5725,6 +5728,17 @@ function actualizarBadgeIslasCard(idx, cardId){
 let evaIncidencias = JSON.parse(localStorage.getItem("evaIncidencias")) || [];
 let evaDiarios = JSON.parse(localStorage.getItem("evaDiarios")) || [];
 
+function mostrarVistaEstadosEva(){
+    document.getElementById("evaVistaPrincipal").style.display = "none";
+    document.getElementById("evaVistaEstados").style.display = "block";
+    renderEstadosEva();
+}
+
+function volverVistaEva(){
+    document.getElementById("evaVistaEstados").style.display = "none";
+    document.getElementById("evaVistaPrincipal").style.display = "block";
+}
+
 function abrirModalEvaNuevaIncidencia(){
     if(esVisita()) return;
     document.getElementById("evaFecha").value = new Date().toISOString().split("T")[0];
@@ -6148,11 +6162,30 @@ function _renderListaEditar(){
         return;
     }
     cont.innerHTML = listaContadoras.map((nombre, i) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
-            <span style="flex:1;font-size:13px;color:var(--white);">${nombre}</span>
-            <button onclick="_eliminarContadoraLista(${i})" style="background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕ Quitar</button>
+        <div id="_cnt_row_${i}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
+            <span id="_cnt_label_${i}" style="flex:1;font-size:13px;color:var(--white);">${nombre}</span>
+            <input id="_cnt_input_${i}" type="text" value="${nombre.replace(/"/g,'&quot;')}" style="display:none;flex:1;background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:5px 8px;font-size:13px;color:var(--white);outline:none;">
+            <button id="_cnt_btn_edit_${i}" onclick="_editarContadoraLista(${i})" style="background:rgba(0,200,150,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✏️</button>
+            <button id="_cnt_btn_save_${i}" onclick="_guardarNombreContadora(${i})" style="display:none;background:rgba(0,200,150,.2);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✔</button>
+            <button onclick="_eliminarContadoraLista(${i})" style="background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕</button>
         </div>
     `).join('');
+}
+
+function _editarContadoraLista(idx){
+    document.getElementById(`_cnt_label_${idx}`).style.display = 'none';
+    document.getElementById(`_cnt_input_${idx}`).style.display = 'block';
+    document.getElementById(`_cnt_btn_edit_${idx}`).style.display = 'none';
+    document.getElementById(`_cnt_btn_save_${idx}`).style.display = 'block';
+    document.getElementById(`_cnt_input_${idx}`).focus();
+}
+
+function _guardarNombreContadora(idx){
+    let nuevoNombre = document.getElementById(`_cnt_input_${idx}`).value.trim();
+    if(!nuevoNombre){ toast.warning("El nombre no puede estar vacío",""); return; }
+    if(listaContadoras.some((n,i) => n === nuevoNombre && i !== idx)){ toast.warning("Ese nombre ya existe en la lista",""); return; }
+    listaContadoras[idx] = nuevoNombre;
+    _renderListaEditar();
 }
 
 function _eliminarContadoraLista(idx){
