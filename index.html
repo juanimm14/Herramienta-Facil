@@ -3186,11 +3186,50 @@ body {
             </select>
         </div>
         <div class="form-group">
-            <label class="form-label">Contadora / Equipo</label>
-            <input type="text" id="cntEquipo" class="form-input" placeholder="Ej: Contadora 1, Billetero A...">
+            <label class="form-label">Contadoras Intervenidas</label>
+            <div style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntIChk0" value="Glory UW-F4 Serie:4824 / ADICIONAL:2829" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Glory UW-F4</strong> · Serie: 4824 / ADICIONAL: 2829</span>
+                </label>
+                <div style="height:1px;background:var(--border);"></div>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntIChk1" value="Contadora 1 Glory GFS-220 Serie:30099 (contaje)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 1</strong> · GFS-220 · 30099 <span style="color:var(--muted);">(contaje)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntIChk2" value="Contadora 2 Glory GFS-220 Serie:5692 (contaje)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 2</strong> · GFS-220 · 5692 <span style="color:var(--muted);">(contaje)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntIChk3" value="Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 3</strong> · GFS-220 · 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntIChk4" value="Contadora 4 Glory GFS-220 Serie:41837 (bunker)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 4</strong> · GFS-220 · 41837 <span style="color:var(--muted);">(bunker)</span></span>
+                </label>
+                <div style="height:1px;background:var(--border);"></div>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntIChk5" value="Contadora GFS-120 (buro RA9)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GFS-120</strong> <span style="color:var(--muted);">(buró RA9)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntIChk6" value="Contadora GFS-120 Serie:718190 (RA)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GFS-120</strong> · 718190 <span style="color:var(--muted);">(RA)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntIChk7" value="Contadora GF-120 Serie:45100 (craps)" class="cntIncChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GF-120</strong> · 45100 <span style="color:var(--muted);">(craps)</span></span>
+                </label>
+            </div>
         </div>
         <div class="form-group">
-            <label class="form-label">Descripción / Nota</label>
+            <label class="form-label">¿Qué se hizo en cada contadora?</label>
+            <div id="cntIncDetallesPorContadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
             <textarea id="cntNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
         </div>
         <div class="modal-footer">
@@ -6106,58 +6145,16 @@ function guardarComentarioTarea(){
 let contadorasData = JSON.parse(localStorage.getItem("contadorasData")) || [];
 let fdsData = JSON.parse(localStorage.getItem("fdsData")) || [];
 
-function abrirModalContadoraNuevaIncidencia(){
-    if(esVisita()) return;
-    document.getElementById("cntFecha").value = new Date().toISOString().split("T")[0];
-    document.getElementById("cntEquipo").value = "";
-    document.getElementById("cntNota").value = "";
-    document.getElementById("cntTipo").value = "Correctivo";
-    document.getElementById("cntEstado").value = "Realizado";
-    document.getElementById("cntTecnicoPQ").value = "";
-    // Poblar técnicos casino
-    let selCasino = document.getElementById("cntTecnicoCasino");
-    let tecnicos = getTecnicos();
-    selCasino.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
-    if(usuarioActual?.nombre) selCasino.value = usuarioActual.nombre;
-    document.getElementById("modalContadoraNuevaIncidencia").classList.add("open");
-}
-function cerrarModalContadoraNuevaIncidencia(){
-    document.getElementById("modalContadoraNuevaIncidencia").classList.remove("open");
-}
-function guardarContadoraIncidencia(){
-    if(esVisita()) return;
-    let equipo = document.getElementById("cntEquipo").value.trim();
-    if(!equipo){ toast.warning("Ingresá el equipo",""); return; }
-    let tecPQ = document.getElementById("cntTecnicoPQ").value.trim();
-    let tecCasino = document.getElementById("cntTecnicoCasino").value;
-    let obj = {
-        id: Date.now(),
-        tipo: document.getElementById("cntTipo").value,
-        fecha: document.getElementById("cntFecha").value,
-        equipo,
-        tecnico: tecPQ || tecCasino || "—",
-        tecnicoPQ: tecPQ,
-        tecnicoCasino: tecCasino,
-        estado: document.getElementById("cntEstado").value,
-        nota: document.getElementById("cntNota").value.trim(),
-        comentarios: []
-    };
-    contadorasData.unshift(obj);
-    localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
-    cerrarModalContadoraNuevaIncidencia();
-    renderContadoras();
-    toast.success("Incidencia guardada ✅","");
-}
-
-function _cntPrevActualizarDetalles(){
-    let cont = document.getElementById("cntPrevDetallesPorContadora");
+// ─── helpers para checkboxes + detalles ─────────
+function _cntActualizarDetalles(chkClass, contId){
+    let cont = document.getElementById(contId);
     if(!cont) return;
-    let checks = document.querySelectorAll(".cntPrevChk");
+    let checks = document.querySelectorAll("."+chkClass);
     let html = "";
     checks.forEach(chk => {
         if(chk.checked){
             let label = chk.closest("label")?.querySelector("span")?.innerText || chk.value;
-            let safeId = "cntPrevDet_" + chk.id;
+            let safeId = contId + "_det_" + chk.id;
             let existing = document.getElementById(safeId);
             let prev = existing ? existing.value : "";
             html += `<div style="background:var(--bg3);border:1px solid var(--accent);border-radius:9px;padding:10px 12px;">
@@ -6169,6 +6166,81 @@ function _cntPrevActualizarDetalles(){
     cont.innerHTML = html || "";
 }
 
+function _cntRecogerDetalles(chkClass, contId){
+    let detalles = {};
+    document.querySelectorAll("."+chkClass).forEach(chk => {
+        if(chk.checked){
+            let ta = document.getElementById(contId + "_det_" + chk.id);
+            detalles[chk.value] = ta ? ta.value.trim() : "";
+        }
+    });
+    return detalles;
+}
+
+function _cntRecogerSeleccionadas(chkClass){
+    let sel = [];
+    document.querySelectorAll("."+chkClass).forEach(chk => { if(chk.checked) sel.push(chk.value); });
+    return sel;
+}
+
+function _cntPoblarCasino(selectId){
+    let sel = document.getElementById(selectId);
+    if(!sel) return;
+    let tecnicos = getTecnicos();
+    sel.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+// ─── NUEVA INCIDENCIA ────────────────────────────
+function abrirModalContadoraNuevaIncidencia(){
+    if(esVisita()) return;
+    document.getElementById("cntFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("cntNota").value = "";
+    document.getElementById("cntTipo").value = "Correctivo";
+    document.getElementById("cntEstado").value = "Realizado";
+    document.getElementById("cntTecnicoPQ").value = "";
+    _cntPoblarCasino("cntTecnicoCasino");
+    let sel = document.getElementById("cntTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    document.querySelectorAll(".cntIncChk").forEach(chk => { chk.checked = false; chk.onchange = ()=>_cntActualizarDetalles("cntIncChk","cntIncDetallesPorContadora"); });
+    document.getElementById("cntIncDetallesPorContadora").innerHTML = "";
+    document.getElementById("modalContadoraNuevaIncidencia").classList.add("open");
+    setTimeout(()=>{ document.querySelectorAll(".cntIncChk").forEach(chk => { chk.onchange = ()=>_cntActualizarDetalles("cntIncChk","cntIncDetallesPorContadora"); }); }, 50);
+}
+function cerrarModalContadoraNuevaIncidencia(){
+    document.getElementById("modalContadoraNuevaIncidencia").classList.remove("open");
+}
+function guardarContadoraIncidencia(){
+    if(esVisita()) return;
+    let seleccionadas = _cntRecogerSeleccionadas("cntIncChk");
+    let detalles = _cntRecogerDetalles("cntIncChk","cntIncDetallesPorContadora");
+    let tecPQ = document.getElementById("cntTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("cntTecnicoCasino").value;
+    let equipo = seleccionadas.length > 0 ? seleccionadas.join(", ") : "(sin especificar)";
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("cntTipo").value,
+        fecha: document.getElementById("cntFecha").value,
+        equipo,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorContadora: detalles,
+        estado: document.getElementById("cntEstado").value,
+        nota: document.getElementById("cntNota").value.trim(),
+        comentarios: []
+    };
+    contadorasData.unshift(obj);
+    localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
+    cerrarModalContadoraNuevaIncidencia();
+    renderContadoras();
+    toast.success("Incidencia guardada ✅","");
+}
+
+// ─── PREVENTIVO ──────────────────────────────────
+function _cntPrevActualizarDetalles(){
+    _cntActualizarDetalles("cntPrevChk","cntPrevDetallesPorContadora");
+}
+
 function abrirModalContadoraPreventivo(){
     if(esVisita()) return;
     document.getElementById("cntPrevFecha").value = new Date().toISOString().split("T")[0];
@@ -6176,33 +6248,21 @@ function abrirModalContadoraPreventivo(){
     document.getElementById("cntPrevTecnicoPQ").value = "";
     document.getElementById("cntPrevTipo").value = "Preventivo";
     document.getElementById("cntPrevEstado").value = "Realizado";
-    // Poblar técnicos casino
-    let selCasino = document.getElementById("cntPrevTecnicoCasino");
-    let tecnicos = getTecnicos();
-    selCasino.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
-    if(usuarioActual?.nombre) selCasino.value = usuarioActual.nombre;
-    let checks = document.querySelectorAll(".cntPrevChk");
-    checks.forEach(chk => { chk.checked = false; chk.onchange = _cntPrevActualizarDetalles; });
+    _cntPoblarCasino("cntPrevTecnicoCasino");
+    let sel = document.getElementById("cntPrevTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    document.querySelectorAll(".cntPrevChk").forEach(chk => { chk.checked = false; chk.onchange = _cntPrevActualizarDetalles; });
     document.getElementById("cntPrevDetallesPorContadora").innerHTML = "";
     document.getElementById("modalContadoraPreventivo").classList.add("open");
-    setTimeout(() => {
-        document.querySelectorAll(".cntPrevChk").forEach(chk => { chk.onchange = _cntPrevActualizarDetalles; });
-    }, 50);
+    setTimeout(()=>{ document.querySelectorAll(".cntPrevChk").forEach(chk => { chk.onchange = _cntPrevActualizarDetalles; }); }, 50);
 }
 function cerrarModalContadoraPreventivo(){
     document.getElementById("modalContadoraPreventivo").classList.remove("open");
 }
 function guardarContadoraPreventivo(){
     if(esVisita()) return;
-    let seleccionadas = [];
-    let detalles = {};
-    document.querySelectorAll(".cntPrevChk").forEach(chk => {
-        if(chk.checked){
-            seleccionadas.push(chk.value);
-            let ta = document.getElementById("cntPrevDet_" + chk.id);
-            detalles[chk.value] = ta ? ta.value.trim() : "";
-        }
-    });
+    let seleccionadas = _cntRecogerSeleccionadas("cntPrevChk");
+    let detalles = _cntRecogerDetalles("cntPrevChk","cntPrevDetallesPorContadora");
     if(seleccionadas.length === 0){ toast.warning("Seleccioná al menos una contadora",""); return; }
     let tecPQ = document.getElementById("cntPrevTecnicoPQ").value.trim();
     let tecCasino = document.getElementById("cntPrevTecnicoCasino").value;
@@ -6226,19 +6286,84 @@ function guardarContadoraPreventivo(){
     toast.success("Preventivo guardado ✅", `${seleccionadas.length} contadora(s) registradas`);
 }
 
-// ─── MODAL DETALLE CONTADORA ────────────────────────────
+// ─── EDICIÓN (solo Admin) ─────────────────────────
+function abrirEditarContadora(id){
+    let e = contadorasData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    document.getElementById("cntEditId").value = e.id;
+    document.getElementById("cntEditFecha").value = e.fecha || "";
+    document.getElementById("cntEditTipo").value = e.tipo || "Correctivo";
+    document.getElementById("cntEditTecnicoPQ").value = e.tecnicoPQ || e.tecnico || "";
+    document.getElementById("cntEditEstado").value = e.estado || "Realizado";
+    document.getElementById("cntEditNota").value = e.nota || "";
+    _cntPoblarCasino("cntEditTecnicoCasino");
+    let selC = document.getElementById("cntEditTecnicoCasino");
+    if(e.tecnicoCasino){ let op = [...selC.options].find(o=>o.value===e.tecnicoCasino); if(op) selC.value=e.tecnicoCasino; }
+    // Marcar checkboxes de las contadoras que estaban seleccionadas
+    let equipoList = e.equipo ? e.equipo.split(", ") : [];
+    document.querySelectorAll(".cntEditChk").forEach(chk => {
+        chk.checked = equipoList.includes(chk.value);
+        chk.onchange = ()=>_cntActualizarDetalles("cntEditChk","cntEditDetallesPorContadora");
+    });
+    // Renderizar detalles preexistentes
+    let cont = document.getElementById("cntEditDetallesPorContadora");
+    cont.innerHTML = "";
+    _cntActualizarDetalles("cntEditChk","cntEditDetallesPorContadora");
+    // Rellenar los textareas con los datos guardados
+    if(e.detallesPorContadora){
+        setTimeout(()=>{
+            document.querySelectorAll(".cntEditChk").forEach(chk => {
+                if(chk.checked && e.detallesPorContadora[chk.value]){
+                    let ta = document.getElementById("cntEditDetallesPorContadora_det_"+chk.id);
+                    if(ta) ta.value = e.detallesPorContadora[chk.value];
+                }
+            });
+        }, 30);
+    }
+    document.getElementById("modalCntDetalle").classList.remove("open");
+    document.getElementById("modalCntEditar").classList.add("open");
+    setTimeout(()=>{ document.querySelectorAll(".cntEditChk").forEach(chk => { chk.onchange = ()=>_cntActualizarDetalles("cntEditChk","cntEditDetallesPorContadora"); }); }, 50);
+}
+
+function guardarEdicionContadora(){
+    let id = document.getElementById("cntEditId").value;
+    let idx = contadorasData.findIndex(c => String(c.id) === String(id));
+    if(idx === -1) return;
+    let seleccionadas = _cntRecogerSeleccionadas("cntEditChk");
+    let detalles = _cntRecogerDetalles("cntEditChk","cntEditDetallesPorContadora");
+    let tecPQ = document.getElementById("cntEditTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("cntEditTecnicoCasino").value;
+    contadorasData[idx] = {
+        ...contadorasData[idx],
+        tipo: document.getElementById("cntEditTipo").value,
+        fecha: document.getElementById("cntEditFecha").value,
+        equipo: seleccionadas.length > 0 ? seleccionadas.join(", ") : contadorasData[idx].equipo,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorContadora: detalles,
+        estado: document.getElementById("cntEditEstado").value,
+        nota: document.getElementById("cntEditNota").value.trim(),
+    };
+    localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
+    document.getElementById("modalCntEditar").classList.remove("open");
+    renderContadoras();
+    toast.success("Incidencia actualizada ✅","");
+}
+
+// ─── DETALLE ──────────────────────────────────────
 function abrirDetalleContadora(id){
     let e = contadorasData.find(c => String(c.id) === String(id));
     if(!e) return;
     let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
     let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
     let tecInfo = "";
-    if(e.tecnicoPQ) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico PQ: <strong style="color:var(--white);">${e.tecnicoPQ}</strong></div>`;
-    if(e.tecnicoCasino) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico Casino: <strong style="color:var(--white);">${e.tecnicoCasino}</strong></div>`;
+    if(e.tecnicoPQ) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🔑 Técnico PQ: <strong style="color:var(--white);">${e.tecnicoPQ}</strong></div>`;
+    if(e.tecnicoCasino) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🏠 Técnico Casino: <strong style="color:var(--white);">${e.tecnicoCasino}</strong></div>`;
     if(!e.tecnicoPQ && !e.tecnicoCasino && e.tecnico) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico: <strong style="color:var(--white);">${e.tecnico}</strong></div>`;
     let detallesHtml = "";
-    if(e.detallesPorContadora && Object.keys(e.detallesPorContadora).length > 0){
-        detallesHtml = `<div style="margin-top:12px;"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">Detalle por contadora:</div>`;
+    if(e.detallesPorContadora && Object.keys(e.detallesPorContadora).some(k=>e.detallesPorContadora[k])){
+        detallesHtml = `<div style="margin-top:10px;"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">Detalle por contadora:</div>`;
         for(let [k,v] of Object.entries(e.detallesPorContadora)){
             if(v) detallesHtml += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:5px;">
                 <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:2px;">${k}</div>
@@ -6247,17 +6372,22 @@ function abrirDetalleContadora(id){
         }
         detallesHtml += `</div>`;
     }
+    let adminBtns = usuarioActual?.rol==="Admin" ? `
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="abrirEditarContadora('${e.id}')" style="flex:1;background:var(--accent2);border:none;color:var(--white);border-radius:8px;padding:8px 0;cursor:pointer;font-size:13px;font-weight:600;">✏️ Editar</button>
+            <button onclick="if(confirm('¿Eliminar?')){eliminarContadoraItem('${e.id}');cerrarDetalleContadora();}" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;">🗑️</button>
+        </div>` : "";
     document.getElementById("cntDetalleContenido").innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <span style="font-size:14px;">${tipoIcon} <strong>${e.tipo}</strong></span>
             <span class="pill ${estadoCls}">${e.estado}</span>
             <span style="font-size:12px;color:var(--muted);">📅 ${e.fecha}</span>
         </div>
-        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:6px;">${e.equipo}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;">${e.equipo}</div>
         ${tecInfo}
         ${e.nota ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:8px 10px;">${e.nota}</div>` : ""}
         ${detallesHtml}
-        ${usuarioActual?.rol==="Admin" ? `<div style="margin-top:14px;text-align:right;"><button onclick="eliminarContadoraItem('${e.id}');cerrarDetalleContadora();" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;">🗑️ Eliminar</button></div>` : ""}
+        ${adminBtns}
     `;
     document.getElementById("modalCntDetalle").classList.add("open");
 }
@@ -6265,6 +6395,7 @@ function cerrarDetalleContadora(){
     document.getElementById("modalCntDetalle").classList.remove("open");
 }
 
+// ─── RENDER ───────────────────────────────────────
 function renderContadoras(){
     let todos = [...contadorasData].sort((a,b) => b.id - a.id);
     let badge = document.getElementById("badgeCntTotal");
@@ -6292,7 +6423,6 @@ function renderContadoras(){
 
 function eliminarContadoraItem(id){
     if(esVisita()) return;
-    if(!confirm("¿Eliminar?")) return;
     contadorasData = contadorasData.filter(c => String(c.id) !== String(id));
     localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
     renderContadoras();
@@ -9916,6 +10046,94 @@ function confirmarQuienRealizoMulti(){
     toast.success("Tarea cerrada ✅", `Realizada por: ${t.realizadoPor}`);
 }
 </script>
+
+<!-- ═══ MODAL CONTADORA — EDITAR ═══ -->
+<div id="modalCntEditar" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">✏️ Editar Incidencia — Contadoras</div>
+        <input type="hidden" id="cntEditId">
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="cntEditFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="cntEditTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="cntEditTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="cntEditTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="cntEditEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Contadoras Intervenidas</label>
+            <div style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntEChk0" value="Glory UW-F4 Serie:4824 / ADICIONAL:2829" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Glory UW-F4</strong> · Serie: 4824 / ADICIONAL: 2829</span>
+                </label>
+                <div style="height:1px;background:var(--border);"></div>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntEChk1" value="Contadora 1 Glory GFS-220 Serie:30099 (contaje)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 1</strong> · GFS-220 · 30099 <span style="color:var(--muted);">(contaje)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntEChk2" value="Contadora 2 Glory GFS-220 Serie:5692 (contaje)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 2</strong> · GFS-220 · 5692 <span style="color:var(--muted);">(contaje)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntEChk3" value="Contadora 3 Glory GFS-220 Serie:5746 (caja dolar)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 3</strong> · GFS-220 · 5746 <span style="color:var(--muted);">(caja dólar)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntEChk4" value="Contadora 4 Glory GFS-220 Serie:41837 (bunker)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>Contadora 4</strong> · GFS-220 · 41837 <span style="color:var(--muted);">(bunker)</span></span>
+                </label>
+                <div style="height:1px;background:var(--border);"></div>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntEChk5" value="Contadora GFS-120 (buro RA9)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GFS-120</strong> <span style="color:var(--muted);">(buró RA9)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntEChk6" value="Contadora GFS-120 Serie:718190 (RA)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GFS-120</strong> · 718190 <span style="color:var(--muted);">(RA)</span></span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+                    <input type="checkbox" id="cntEChk7" value="Contadora GF-120 Serie:45100 (craps)" class="cntEditChk" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                    <span><strong>GF-120</strong> · 45100 <span style="color:var(--muted);">(craps)</span></span>
+                </label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada contadora?</label>
+            <div id="cntEditDetallesPorContadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="cntEditNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarEdicionContadora()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalCntEditar').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
 
 <!-- ═══ MODAL CONTADORA — DETALLE ═══ -->
 <div id="modalCntDetalle" class="modal">
