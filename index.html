@@ -5892,19 +5892,52 @@ function renderEstadosEva(){
         contH.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros</p></div>';
         return;
     }
-    contH.innerHTML = evaDiarios.map(d => {
-        let kioscos = getEquiposGen ? getEquiposGen("eva") : ["EVA1","EVA2","EVA3","EVA4"];
-        let pomBadges = kioscos.map(k => {
-            if(!d.kioscos[k]) return "";
-            let color = d.kioscos[k].estado === "OK" ? "var(--accent)" : d.kioscos[k].estado === "Alerta" ? "var(--yellow)" : "var(--red)";
-            return `<span style="background:var(--bg2);border:1px solid ${color};color:${color};border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">${k}: ${d.kioscos[k].estado}${d.kioscos[k].obs ? " — "+d.kioscos[k].obs : ""}</span>`;
-        }).filter(Boolean).join(" ");
-        return `
-        <div style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;">
-            <div style="font-size:12px;font-weight:600;color:var(--white);margin-bottom:6px;">${d.fecha} · <span style="color:var(--muted);">${d.tecnico}</span></div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">${pomBadges}</div>
-        </div>`;
+    contH.innerHTML = evaDiarios.map((d, idx) => {
+        // Obtener todas las claves de kioscos presentes en este registro
+        let keys = Object.keys(d.kioscos || {});
+        // Resumen: badges de color en el header
+        let resumen = keys.map(k => {
+            let est = d.kioscos[k].estado;
+            let color = est === "OK" ? "var(--accent)" : est === "Alerta" ? "var(--yellow)" : "var(--red)";
+            return '<span style="background:rgba(0,0,0,.3);border:1px solid '+color+';color:'+color+';border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700;">'+k+': '+est+'</span>';
+        }).join(" ");
+        // Detalle: una fila por kiosco con observación
+        let detalle = keys.map(k => {
+            let est = d.kioscos[k].estado;
+            let obs = d.kioscos[k].obs || "";
+            let color = est === "OK" ? "var(--accent)" : est === "Alerta" ? "var(--yellow)" : "var(--red)";
+            return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">'
+                + '<div style="min-width:60px;font-size:13px;font-weight:700;color:var(--white);">'+k+'</div>'
+                + '<div style="flex:1;">'
+                + '<span style="font-size:12px;font-weight:700;color:'+color+';">'+est+'</span>'
+                + (obs ? '<div style="font-size:12px;color:var(--muted);margin-top:2px;">'+obs+'</div>' : "")
+                + '</div>'
+                + '</div>';
+        }).join("");
+        return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:6px;">'
+            + '<div onclick="togglePrevDetail(\'eva-estado-'+idx+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'
+            + '<div style="flex:1;">'
+            + '<div style="font-size:13px;font-weight:700;color:var(--white);">'+d.fecha+' <span style="color:var(--muted);font-weight:400;font-size:12px;">· '+d.tecnico+'</span></div>'
+            + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;">'+resumen+'</div>'
+            + '</div>'
+            + '<span style="color:var(--muted);font-size:16px;">▾</span>'
+            + '</div>'
+            + '<div id="eva-estado-'+idx+'" style="display:none;padding:4px 14px 12px;border-top:1px solid var(--border);background:var(--bg3);">'
+            + (keys.length ? detalle : '<div style="font-size:13px;color:var(--muted);padding:8px 0;">Sin datos registrados</div>')
+            + (usuarioActual?.rol === "Admin" ? '<div style="margin-top:8px;"><button onclick="eliminarEstadoEva(\''+d.id+'\')" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:7px;padding:4px 12px;cursor:pointer;font-size:12px;">🗑️ Eliminar</button></div>' : "")
+            + '</div>'
+            + '</div>';
     }).join("");
+}
+
+function eliminarEstadoEva(id){
+    if(esVisita()) return;
+    if(!confirm("¿Eliminar este registro de estado?")) return;
+    evaDiarios = evaDiarios.filter(d => String(d.id) !== String(id));
+    _fbSet("evaDiarios", evaDiarios);
+    _localStorageOrig.setItem("evaDiarios", JSON.stringify(evaDiarios));
+    renderEstadosEva();
+    renderDashboardEvaPom();
 }
 
 function renderDashboardEvaPom(){
