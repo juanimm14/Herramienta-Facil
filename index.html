@@ -2212,7 +2212,7 @@ body {
                                 style="width:17px;height:17px;accent-color:var(--red);cursor:pointer;flex-shrink:0;">
                             <span style="font-size:13px;font-weight:700;color:var(--red);">🔴 Crear correctivo de slot automáticamente</span>
                         </label>
-                        <div id="valCorrectivoDetalle" style="display:none;margin-top:12px;display:none;">
+                        <div id="valCorrectivoDetalle" style="display:none;margin-top:12px;">
                             <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Descripción del problema *</div>
                             <textarea id="valCorrectivoNota" class="form-input" rows="2"
                                 placeholder="Ej: Validador no lee billetes, requiere calibración"
@@ -10814,12 +10814,14 @@ function valAbrirRegistrar(loteIdx, itemIdx) {
     document.getElementById("valRegDetalle").value      = item.detalle || "";
     document.getElementById("valRegFecha").value        = new Date().toISOString().slice(0,10);
 
-    // Poblar técnicos
+    // Poblar técnicos — asegurar que siempre haya opciones
     let sel = document.getElementById("valRegTecnico");
     let tecnicos = getTecnicos();
+    if (!tecnicos.length && usuarioActual?.nombre) tecnicos = [usuarioActual.nombre];
     sel.innerHTML = '<option value="">— Seleccionar técnico —</option>' +
         tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
     if (item.tecnico) sel.value = item.tecnico;
+    else if (usuarioActual?.nombre && tecnicos.includes(usuarioActual.nombre)) sel.value = usuarioActual.nombre;
 
     document.getElementById("modalRegistrarValidador").classList.add("open");
 
