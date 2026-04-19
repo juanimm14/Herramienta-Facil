@@ -89,6 +89,7 @@ const _FB_KEYS = new Set([
     "ppPreventivos","ppTareas",
     "evaIncidencias","evaDiarios",
     "fdsData","contadorasData","cartelesData","listaContadoras",
+    "validadoresData",
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
     "equiposCilindros","equiposRA","equiposEVA"
@@ -158,6 +159,7 @@ async function _cargarDatosFirebase() {
         if (_cache["ppTareas"])       ppTareas       = _cache["ppTareas"];
         if (_cache["evaIncidencias"]) evaIncidencias = _cache["evaIncidencias"];
         if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
+        if (_cache["validadoresData"]) validadoresData = _cache["validadoresData"];
         if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
         if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
         if (_cache["listaContadoras"]) listaContadoras = _cache["listaContadoras"];
@@ -197,6 +199,7 @@ function _activarListenersTiempoReal() {
             if (_cache["ppTareas"]       !== undefined) ppTareas       = _cache["ppTareas"]       ?? [];
             if (_cache["evaIncidencias"] !== undefined) evaIncidencias = _cache["evaIncidencias"] ?? [];
             if (_cache["evaDiarios"]     !== undefined) evaDiarios     = _cache["evaDiarios"]     ?? [];
+            if (_cache["validadoresData"] !== undefined) validadoresData = _cache["validadoresData"] ?? [];
             if (_cache["fdsData"]        !== undefined) fdsData        = _cache["fdsData"]        ?? [];
             if (_cache["contadorasData"] !== undefined) contadorasData = _cache["contadorasData"] ?? [];
             if (_cache["listaContadoras"] !== undefined) listaContadoras = _cache["listaContadoras"] ?? [..._CNT_DEFAULT];
@@ -208,6 +211,7 @@ function _activarListenersTiempoReal() {
                 renderDashboard?.();
                 renderCorrectivos?.();
                 renderTareas?.();
+                renderValidadores?.();
                 poblarSelectsTecnicos?.();
                 cargarAniosPrev?.();
                 renderIncidenciasPreventivos?.();
@@ -1572,7 +1576,7 @@ body {
                 <span class="icon">🚫</span> Fuera de Servicio
                 <span id="badgeFdsBadge" style="display:none;background:var(--red);color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;margin-left:auto;">0</span>
             </button>
-            <button class="menu-btn" id="nav-validadores" onclick="mostrar('validadores')" style="opacity:.55; cursor:not-allowed;" title="En desarrollo">
+            <button class="menu-btn" id="nav-validadores" onclick="mostrar('validadores')">
                 <span class="icon">💳</span> Validadores
             </button>
             <button class="menu-btn" id="nav-control-ppt" onclick="mostrar('control-ppt')" style="opacity:.55; cursor:not-allowed;" title="En desarrollo">
@@ -2064,18 +2068,147 @@ body {
                 </div>
             </div>
 
-            <!-- ═══ VALIDADORES (placeholder) ═══ -->
+            <!-- ═══ VALIDADORES ═══ -->
             <div id="validadores" class="section">
                 <div class="page-header">
                     <div>
                         <div class="page-title">💳 Validadores</div>
-                        <div class="page-subtitle">Gestión de validadores</div>
+                        <div class="page-subtitle">Revisión mensual de validadores por slot</div>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn-primary" onclick="abrirModalCargaValidadores()">📋 Cargar Lista del Mes</button>
                     </div>
                 </div>
-                <div class="empty-state" style="padding:80px 20px;">
-                    <div class="empty-icon" style="font-size:60px;">💳</div>
-                    <p style="font-size:16px;color:var(--muted);">Módulo en desarrollo</p>
-                    <p style="font-size:13px;color:var(--border);margin-top:8px;">Próximamente disponible</p>
+
+                <!-- Tarea activa banner -->
+                <div id="validadoresTareaBanner" style="display:none;background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:none;align-items:center;gap:12px;">
+                    <span style="font-size:22px;">📋</span>
+                    <div style="flex:1;">
+                        <div style="font-size:13px;font-weight:700;color:var(--accent);">TAREA ACTIVA</div>
+                        <div id="validadoresTareaDesc" style="font-size:14px;color:var(--white);margin-top:2px;"></div>
+                    </div>
+                    <div id="validadoresTareaProgress" style="font-size:13px;color:var(--muted);"></div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="card-box" style="margin-bottom:16px;">
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <select id="filtroValPeriodo" onchange="renderValidadores()" class="form-input" style="margin:0;min-width:160px;">
+                            <option value="">— Todos los períodos —</option>
+                        </select>
+                        <select id="filtroValEstado" onchange="renderValidadores()" class="form-input" style="margin:0;min-width:140px;">
+                            <option value="">— Todos los estados —</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="REALIZADO">Realizado</option>
+                        </select>
+                        <select id="filtroValTecnico" onchange="renderValidadores()" class="form-input" style="margin:0;min-width:140px;">
+                            <option value="">— Todos los técnicos —</option>
+                        </select>
+                        <input type="text" id="filtroValBuscar" class="form-input" placeholder="Buscar slot, isla, validador..." oninput="renderValidadores()" style="margin:0;flex:1;min-width:180px;">
+                    </div>
+                </div>
+
+                <!-- Tabla -->
+                <div class="card-box" style="overflow-x:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;">
+                        <div class="card-box-title" style="margin-bottom:0;">📋 Lista de Validadores</div>
+                        <div id="validadoresResumen" style="display:flex;gap:10px;"></div>
+                    </div>
+                    <table id="tablaValidadores" style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead>
+                            <tr style="background:var(--bg3);color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase;">
+                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Slot</th>
+                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Isla</th>
+                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Validador</th>
+                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);min-width:200px;">Detalle revisión</th>
+                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Técnico</th>
+                                <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Estado</th>
+                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Fecha realizado</th>
+                                <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="validadoresTbody">
+                            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted);">No hay validadores cargados</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ MODAL CARGAR LISTA VALIDADORES ═══ -->
+            <div id="modalCargaValidadores" class="modal">
+                <div class="modal-box" style="max-width:680px;">
+                    <div class="modal-title">📋 Cargar Lista de Validadores del Mes</div>
+                    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Ingresá todos los validadores a revisar este mes. Se creará una tarea "Revisar Validadores" asignada a <strong>Todos</strong>.</p>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                        <div>
+                            <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Período (ej: Marzo*26)</label>
+                            <input type="text" id="valPeriodoInput" class="form-input" placeholder="Ej: Marzo*26" style="margin:0;">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Validador por defecto</label>
+                            <input type="text" id="valModelo" class="form-input" placeholder="Ej: SCN66" style="margin:0;" value="SCN66">
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+                        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Slots a revisar</div>
+                        <div id="valFilasContainer" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;"></div>
+                        <button onclick="valAgregarFila()" style="margin-top:10px;background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">➕ Agregar fila</button>
+                    </div>
+
+                    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">💡 Tip: podés pegar varios slots separados por comas o saltos de línea en el primer campo de cualquier fila</div>
+
+                    <div class="modal-footer">
+                        <button class="btn-modal-save" onclick="guardarCargaValidadores()">📋 Crear Lista + Tarea</button>
+                        <button class="btn-modal-cancel" onclick="document.getElementById('modalCargaValidadores').classList.remove('open')">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ MODAL REGISTRAR REVISIÓN VALIDADOR ═══ -->
+            <div id="modalRegistrarValidador" class="modal">
+                <div class="modal-box" style="max-width:500px;">
+                    <div class="modal-title">✅ Registrar Revisión</div>
+                    <input type="hidden" id="valRegPeriodo">
+                    <input type="hidden" id="valRegIdx">
+
+                    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+                            <div>
+                                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Slot</div>
+                                <div id="valRegSlot" style="font-size:16px;font-weight:700;color:var(--accent);"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Isla</div>
+                                <div id="valRegIsla" style="font-size:16px;font-weight:700;color:var(--white);"></div>
+                            </div>
+                            <div>
+                                <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Validador</div>
+                                <div id="valRegModelo" style="font-size:14px;font-weight:600;color:var(--white);"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Detalle de la revisión *</label>
+                        <textarea id="valRegDetalle" class="form-input" rows="3" placeholder="Ej: Limpieza + calibración + Prueba de billetes en Slot" style="margin:0;resize:vertical;"></textarea>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                        <div>
+                            <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Técnico *</label>
+                            <select id="valRegTecnico" class="form-input" style="margin:0;"></select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Fecha realizado</label>
+                            <input type="date" id="valRegFecha" class="form-input" style="margin:0;">
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn-modal-save" onclick="guardarRevisionValidador()">✅ Guardar revisión</button>
+                        <button class="btn-modal-cancel" onclick="document.getElementById('modalRegistrarValidador').classList.remove('open')">Cancelar</button>
+                    </div>
                 </div>
             </div>
 
@@ -10385,6 +10518,341 @@ function guardarListaKioscosEva(){
     }
     document.getElementById("modalEditarKioscosEva").classList.remove("open");
     toast.success("Lista de kioscos actualizada ✅","");
+}
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  MÓDULO VALIDADORES
+// ══════════════════════════════════════════════════════
+
+let validadoresData = (_cache["validadoresData"]) ? [..._cache["validadoresData"]] : [];
+// validadoresData = [{ periodo, createdAt, items:[{slot,isla,modelo,detalle,tecnico,estado,fechaRealizado}], tareaId }]
+
+// ─── Helpers ─────────────────────────────────────────
+
+function valGetPeriodoActual() {
+    let raw = document.getElementById("filtroValPeriodo")?.value || "";
+    if (raw) return raw;
+    // ultimo periodo cargado
+    if (validadoresData.length) {
+        return validadoresData[validadoresData.length - 1].periodo;
+    }
+    return null;
+}
+
+function valGuardar() {
+    _fbSet("validadoresData", validadoresData);
+    _localStorageOrig.setItem("validadoresData", JSON.stringify(validadoresData));
+}
+
+// ─── Render principal ─────────────────────────────────
+
+function renderValidadores() {
+    _poblarFiltrosValidadores();
+    _renderBannerTareaValidadores();
+
+    let periodoF = document.getElementById("filtroValPeriodo")?.value || "";
+    let estadoF  = document.getElementById("filtroValEstado")?.value  || "";
+    let tecnicoF = document.getElementById("filtroValTecnico")?.value || "";
+    let buscarF  = (document.getElementById("filtroValBuscar")?.value || "").toLowerCase();
+
+    // Flatten items con su periodo
+    let filas = [];
+    validadoresData.forEach(lote => {
+        lote.items.forEach((item, idx) => {
+            filas.push({ ...item, periodo: lote.periodo, loteIdx: validadoresData.indexOf(lote), itemIdx: idx });
+        });
+    });
+
+    if (periodoF) filas = filas.filter(f => f.periodo === periodoF);
+    if (estadoF)  filas = filas.filter(f => f.estado === estadoF);
+    if (tecnicoF) filas = filas.filter(f => f.tecnico === tecnicoF);
+    if (buscarF)  filas = filas.filter(f =>
+        String(f.slot).toLowerCase().includes(buscarF) ||
+        String(f.isla).toLowerCase().includes(buscarF) ||
+        String(f.modelo).toLowerCase().includes(buscarF) ||
+        String(f.detalle||"").toLowerCase().includes(buscarF)
+    );
+
+    let pendientes = filas.filter(f => f.estado === "PENDIENTE").length;
+    let realizados = filas.filter(f => f.estado === "REALIZADO").length;
+    let total      = filas.length;
+
+    // Resumen pills
+    document.getElementById("validadoresResumen").innerHTML = `
+        <span style="background:rgba(255,77,109,.15);color:var(--red);border:1px solid var(--red);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;">⏳ ${pendientes} pendientes</span>
+        <span style="background:rgba(0,212,168,.15);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;">✅ ${realizados} realizados</span>
+        <span style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--muted);">📋 ${total} total</span>
+    `;
+
+    let tbody = document.getElementById("validadoresTbody");
+    if (!filas.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted);">No hay validadores para mostrar</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filas.map(f => {
+        let esRealizado = f.estado === "REALIZADO";
+        let rowBg = esRealizado ? "rgba(0,212,168,.04)" : "";
+        let estadoBadge = esRealizado
+            ? `<span style="background:rgba(0,212,168,.15);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">REALIZADO</span>`
+            : `<span style="background:rgba(255,77,109,.12);color:var(--red);border:1px solid var(--red);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">PENDIENTE</span>`;
+        let btnAccion = esRealizado
+            ? `<button onclick="valAbrirEditar(${f.loteIdx},${f.itemIdx})" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;">✏️ Editar</button>`
+            : `<button onclick="valAbrirRegistrar(${f.loteIdx},${f.itemIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✅ Registrar</button>`;
+
+        return `<tr style="border-bottom:1px solid var(--border);background:${rowBg};transition:background .15s;" 
+                    onmouseover="this.style.background='var(--bg3)'" 
+                    onmouseout="this.style.background='${rowBg}'">
+            <td style="padding:10px 12px;font-weight:700;color:var(--accent);font-size:14px;">${f.slot}</td>
+            <td style="padding:10px 12px;color:var(--muted);">${f.isla}</td>
+            <td style="padding:10px 12px;font-weight:600;color:var(--white);">${f.modelo}</td>
+            <td style="padding:10px 12px;color:var(--muted);font-size:12px;max-width:240px;">${f.detalle || '<span style="opacity:.4;">—</span>'}</td>
+            <td style="padding:10px 12px;color:var(--accent2);font-size:12px;font-weight:600;">${f.tecnico || '<span style="opacity:.4;color:var(--muted);">—</span>'}</td>
+            <td style="padding:10px 12px;text-align:center;">${estadoBadge}</td>
+            <td style="padding:10px 12px;color:var(--muted);font-size:12px;">${f.fechaRealizado || '<span style="opacity:.4;">—</span>'}</td>
+            <td style="padding:10px 12px;text-align:center;">${btnAccion}</td>
+        </tr>`;
+    }).join("");
+}
+
+function _poblarFiltrosValidadores() {
+    // Periodos
+    let selPer = document.getElementById("filtroValPeriodo");
+    let curPer = selPer?.value || "";
+    let periodos = [...new Set(validadoresData.map(l => l.periodo))];
+    if (selPer) {
+        selPer.innerHTML = '<option value="">— Todos los períodos —</option>'
+            + periodos.map(p => `<option value="${p}" ${p===curPer?"selected":""}>${p}</option>`).join("");
+    }
+    // Tecnicos
+    let selTec = document.getElementById("filtroValTecnico");
+    let curTec = selTec?.value || "";
+    let tecnicos = getTecnicos();
+    if (selTec) {
+        selTec.innerHTML = '<option value="">— Todos los técnicos —</option>'
+            + tecnicos.map(t => `<option value="${t}" ${t===curTec?"selected":""}>${t}</option>`).join("");
+    }
+}
+
+function _renderBannerTareaValidadores() {
+    // Buscar tarea activa de validadores (pendiente o en-curso)
+    let tareaBanner = document.getElementById("validadoresTareaBanner");
+    if (!tareaBanner) return;
+
+    let ultimoLote = validadoresData.length ? validadoresData[validadoresData.length - 1] : null;
+    if (!ultimoLote) { tareaBanner.style.display = "none"; return; }
+
+    // Verificar si hay items pendientes
+    let pendientes = ultimoLote.items.filter(i => i.estado === "PENDIENTE").length;
+    let total = ultimoLote.items.length;
+    let realizados = total - pendientes;
+
+    // Buscar la tarea asociada
+    let tarea = ultimoLote.tareaId ? tareas.find(t => t.id === ultimoLote.tareaId) : null;
+    let tareaActiva = tarea && tarea.estado !== "realizado";
+
+    if (pendientes > 0) {
+        tareaBanner.style.display = "flex";
+        document.getElementById("validadoresTareaDesc").textContent =
+            `Revisión de Validadores — ${ultimoLote.periodo}`;
+        document.getElementById("validadoresTareaProgress").innerHTML =
+            `<strong style="color:var(--accent);">${realizados}/${total}</strong> completados`;
+    } else {
+        tareaBanner.style.display = "none";
+    }
+}
+
+// ─── Modal Cargar Lista ───────────────────────────────
+
+function abrirModalCargaValidadores() {
+    if(esVisita()) return;
+    // Prellenar período con mes actual
+    let ahora = new Date();
+    let meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    let periodo = meses[ahora.getMonth()] + "*" + String(ahora.getFullYear()).slice(2);
+    document.getElementById("valPeriodoInput").value = periodo;
+    document.getElementById("valModelo").value = "SCN66";
+
+    // Init con 5 filas vacías
+    let cont = document.getElementById("valFilasContainer");
+    cont.innerHTML = "";
+    _valFilas = [];
+    for (let i = 0; i < 5; i++) valAgregarFila();
+
+    document.getElementById("modalCargaValidadores").classList.add("open");
+}
+
+let _valFilas = [];
+let _valFilaId = 0;
+
+function valAgregarFila(slot="", isla="", modelo="") {
+    let id = _valFilaId++;
+    _valFilas.push(id);
+    let modeloDefault = document.getElementById("valModelo")?.value || "SCN66";
+    let cont = document.getElementById("valFilasContainer");
+    let div = document.createElement("div");
+    div.id = "valFila_" + id;
+    div.style.cssText = "display:grid;grid-template-columns:90px 80px 100px 1fr 32px;gap:6px;align-items:center;";
+    div.innerHTML = `
+        <input type="text" placeholder="Slot" value="${slot}" class="form-input val-slot" data-id="${id}" style="margin:0;text-align:center;font-weight:700;" oninput="valIntentarPegar(this)">
+        <input type="text" placeholder="Isla" value="${isla}" class="form-input val-isla" data-id="${id}" style="margin:0;text-align:center;">
+        <input type="text" placeholder="Modelo" value="${modelo||modeloDefault}" class="form-input val-modelo" data-id="${id}" style="margin:0;text-align:center;">
+        <input type="text" placeholder="Detalle (opcional)" class="form-input val-detalle" data-id="${id}" style="margin:0;">
+        <button onclick="valEliminarFila(${id})" style="background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 8px;font-size:14px;cursor:pointer;line-height:1;">✕</button>
+    `;
+    cont.appendChild(div);
+}
+
+function valEliminarFila(id) {
+    document.getElementById("valFila_" + id)?.remove();
+    _valFilas = _valFilas.filter(x => x !== id);
+}
+
+function valIntentarPegar(input) {
+    // Detectar si pegaron múltiples valores (comas o saltos)
+    let val = input.value;
+    if (val.includes(",") || val.includes("\n")) {
+        let slots = val.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+        if (slots.length > 1) {
+            input.value = slots[0]; // primer valor en el campo actual
+            for (let i = 1; i < slots.length; i++) {
+                valAgregarFila(slots[i]);
+            }
+        }
+    }
+}
+
+function guardarCargaValidadores() {
+    let periodo = document.getElementById("valPeriodoInput").value.trim();
+    if (!periodo) { toast.warning("Ingresá el período",""); return; }
+
+    // Verificar que no exista ya ese periodo
+    if (validadoresData.find(l => l.periodo === periodo)) {
+        if (!confirm(`Ya existe una lista para "${periodo}". ¿Querés reemplazarla?`)) return;
+        validadoresData = validadoresData.filter(l => l.periodo !== periodo);
+    }
+
+    // Recolectar filas
+    let items = [];
+    document.querySelectorAll("#valFilasContainer > div").forEach(row => {
+        let slot   = row.querySelector(".val-slot")?.value.trim();
+        let isla   = row.querySelector(".val-isla")?.value.trim();
+        let modelo = row.querySelector(".val-modelo")?.value.trim();
+        let detalle = row.querySelector(".val-detalle")?.value.trim();
+        if (slot) {
+            items.push({ slot, isla: isla||"", modelo: modelo||"SCN66", detalle: detalle||"", tecnico:"", estado:"PENDIENTE", fechaRealizado:"" });
+        }
+    });
+
+    if (!items.length) { toast.warning("Agregá al menos un slot",""); return; }
+
+    // Crear tarea automática
+    let ahora = Date.now();
+    let tarea = {
+        id: ahora,
+        desc: `Revisar Validadores — ${periodo}`,
+        asignado: "Todos",
+        prioridad: "alta",
+        fecha: new Date().toISOString().slice(0,10),
+        notas: `Lista de ${items.length} validadores a revisar para el período ${periodo}.`,
+        estado: "pendiente",
+        done: false,
+        creadoEn: ahora,
+        iniciadoEn: null,
+        finalizadoEn: null,
+        tipo: "validadores"
+    };
+    tareas.push(tarea);
+    localStorage.setItem("tareas", JSON.stringify(tareas));
+
+    let lote = { periodo, createdAt: ahora, tareaId: ahora, items };
+    validadoresData.push(lote);
+    valGuardar();
+
+    document.getElementById("modalCargaValidadores").classList.remove("open");
+    renderValidadores();
+    renderTareas?.();
+    renderDashboard?.();
+
+    // Prellenar filtro al periodo nuevo
+    document.getElementById("filtroValPeriodo").value = periodo;
+    renderValidadores();
+
+    toast.success(`Lista "${periodo}" creada ✅`, `${items.length} validadores + tarea creada`);
+}
+
+// ─── Modal Registrar Revisión ─────────────────────────
+
+function valAbrirRegistrar(loteIdx, itemIdx) {
+    let lote = validadoresData[loteIdx];
+    let item = lote?.items[itemIdx];
+    if (!item) return;
+
+    document.getElementById("valRegPeriodo").value = loteIdx;
+    document.getElementById("valRegIdx").value     = itemIdx;
+    document.getElementById("valRegSlot").textContent   = item.slot;
+    document.getElementById("valRegIsla").textContent   = item.isla;
+    document.getElementById("valRegModelo").textContent = item.modelo;
+    document.getElementById("valRegDetalle").value      = item.detalle || "";
+    document.getElementById("valRegFecha").value        = new Date().toISOString().slice(0,10);
+
+    // Poblar técnicos
+    let sel = document.getElementById("valRegTecnico");
+    let tecnicos = getTecnicos();
+    sel.innerHTML = '<option value="">— Seleccionar técnico —</option>' +
+        tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
+    if (item.tecnico) sel.value = item.tecnico;
+
+    document.getElementById("modalRegistrarValidador").classList.add("open");
+}
+
+function valAbrirEditar(loteIdx, itemIdx) {
+    valAbrirRegistrar(loteIdx, itemIdx); // Mismo modal
+}
+
+function guardarRevisionValidador() {
+    let loteIdx = parseInt(document.getElementById("valRegPeriodo").value);
+    let itemIdx = parseInt(document.getElementById("valRegIdx").value);
+    let lote = validadoresData[loteIdx];
+    let item = lote?.items[itemIdx];
+    if (!item) return;
+
+    let detalle = document.getElementById("valRegDetalle").value.trim();
+    let tecnico = document.getElementById("valRegTecnico").value;
+    let fecha   = document.getElementById("valRegFecha").value;
+
+    if (!detalle) { toast.warning("Ingresá el detalle de la revisión",""); return; }
+    if (!tecnico) { toast.warning("Seleccioná un técnico",""); return; }
+
+    item.detalle       = detalle;
+    item.tecnico       = tecnico;
+    item.fechaRealizado = fecha;
+    item.estado        = "REALIZADO";
+
+    // ¿Se completó toda la lista? → cerrar tarea
+    let pendientes = lote.items.filter(i => i.estado === "PENDIENTE").length;
+    if (pendientes === 0 && lote.tareaId) {
+        let tarea = tareas.find(t => t.id === lote.tareaId);
+        if (tarea && tarea.estado !== "realizado") {
+            tarea.estado = "realizado";
+            tarea.done = true;
+            tarea.finalizadoEn = Date.now();
+            localStorage.setItem("tareas", JSON.stringify(tareas));
+            toast.success("¡Lista completa! Tarea cerrada automáticamente 🎉", "");
+        }
+    }
+
+    valGuardar();
+    document.getElementById("modalRegistrarValidador").classList.remove("open");
+    renderValidadores();
+    renderTareas?.();
+    renderDashboard?.();
+
+    if (pendientes > 0) {
+        toast.success(`Validador ${item.slot} revisado ✅`, `Quedan ${pendientes} pendientes`);
+    }
 }
 </script>
 </body>
