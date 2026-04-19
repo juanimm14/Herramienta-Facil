@@ -2205,20 +2205,14 @@ body {
                         </div>
                     </div>
 
-                    <!-- ═══ OPCIÓN: Crear Correctivo de Slot ═══ -->
-                    <div id="valCorrectivoBox" style="background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.3);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
-                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;">
-                            <input type="checkbox" id="valCrearCorrectivo" onchange="valToggleCorrectivoBox(this.checked)"
-                                style="width:17px;height:17px;accent-color:var(--red);cursor:pointer;flex-shrink:0;">
-                            <span style="font-size:13px;font-weight:700;color:var(--red);">🔴 Crear correctivo de slot automáticamente</span>
-                        </label>
-                        <div id="valCorrectivoDetalle" style="display:none;margin-top:12px;">
-                            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Descripción del problema *</div>
-                            <textarea id="valCorrectivoNota" class="form-input" rows="2"
-                                placeholder="Ej: Validador no lee billetes, requiere calibración"
-                                style="margin:0;resize:vertical;"></textarea>
-                            <div style="font-size:11px;color:var(--muted);margin-top:6px;">Se creará un correctivo <b style="color:var(--red);">En Curso</b> para el slot <span id="valCorrectivoSlotPreview" style="color:var(--accent);font-weight:700;"></span> asignado al técnico seleccionado.</div>
-                        </div>
+                    <!-- ═══ Correctivo de Slot (siempre activo) ═══ -->
+                    <div style="background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.3);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+                        <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:10px;">🔴 Correctivo de slot</div>
+                        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Problema detectado</div>
+                        <textarea id="valCorrectivoNota" class="form-input" rows="2"
+                            placeholder="Ej: Bajo indice de aceptacion"
+                            style="margin:0;resize:vertical;"></textarea>
+                        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Se creará un correctivo <b style="color:var(--accent);">Resuelto</b> para el slot <span id="valCorrectivoSlotPreview" style="color:var(--accent);font-weight:700;"></span>.</div>
                     </div>
 
                     <div class="modal-footer">
@@ -10814,35 +10808,24 @@ function valAbrirRegistrar(loteIdx, itemIdx) {
     document.getElementById("valRegDetalle").value      = item.detalle || "";
     document.getElementById("valRegFecha").value        = new Date().toISOString().slice(0,10);
 
-    // Poblar técnicos — asegurar que siempre haya opciones
+    // Poblar técnicos
     let sel = document.getElementById("valRegTecnico");
     let tecnicos = getTecnicos();
-    if (!tecnicos.length && usuarioActual?.nombre) tecnicos = [usuarioActual.nombre];
     sel.innerHTML = '<option value="">— Seleccionar técnico —</option>' +
         tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
     if (item.tecnico) sel.value = item.tecnico;
-    else if (usuarioActual?.nombre && tecnicos.includes(usuarioActual.nombre)) sel.value = usuarioActual.nombre;
 
     document.getElementById("modalRegistrarValidador").classList.add("open");
 
-    // Resetear checkbox de correctivo
-    let chk = document.getElementById("valCrearCorrectivo");
-    if (chk) { chk.checked = false; valToggleCorrectivoBox(false); }
+    // Pre-rellenar nota del correctivo y slot preview
     let notaCorr = document.getElementById("valCorrectivoNota");
-    if (notaCorr) notaCorr.value = "";
+    if (notaCorr) notaCorr.value = "Bajo indice de aceptacion";
+    let prev = document.getElementById("valCorrectivoSlotPreview");
+    if (prev) prev.textContent = item.slot;
 }
 
 function valAbrirEditar(loteIdx, itemIdx) {
     valAbrirRegistrar(loteIdx, itemIdx); // Mismo modal
-}
-
-function valToggleCorrectivoBox(checked) {
-    let det = document.getElementById("valCorrectivoDetalle");
-    if (det) det.style.display = checked ? "block" : "none";
-    // Update slot preview
-    let slotEl = document.getElementById("valRegSlot");
-    let prev   = document.getElementById("valCorrectivoSlotPreview");
-    if (prev && slotEl) prev.textContent = slotEl.textContent || "";
 }
 
 function guardarRevisionValidador() {
@@ -10883,33 +10866,27 @@ function guardarRevisionValidador() {
     renderTareas?.();
     renderDashboard?.();
 
-    // ── Auto-crear correctivo si el checkbox está activo ──
-    let crearCorr = document.getElementById("valCrearCorrectivo")?.checked;
-    if (crearCorr) {
-        let notaCorr = (document.getElementById("valCorrectivoNota")?.value || "").trim();
-        let corrObj = {
-            tipo: "Correctivo",
-            fecha: fecha,
-            maquina: item.slot,
-            isla: item.isla || "",
-            tecnico: tecnico,
-            nota: notaCorr || `Correctivo generado desde revisión de validador ${item.modelo || ""} — ${detalle}`,
-            resolucion: "",
-            estado: "En Curso",
-            _origenValidador: true
-        };
-        incidencias.push(corrObj);
-        localStorage.setItem("incidencias", JSON.stringify(incidencias));
-        cargarAnios?.();
-        renderCorrectivos?.();
-        renderDashboard?.();
-        toast.info(`Correctivo creado para Slot ${item.slot} 🔴`, "Aparece en Correctivos Slots como 'En Curso'");
-    }
+    // ── Crear correctivo siempre ──
+    let notaCorr = (document.getElementById("valCorrectivoNota")?.value || "").trim();
+    let corrObj = {
+        tipo: "Correctivo",
+        fecha: fecha,
+        maquina: item.slot,
+        isla: item.isla || "",
+        tecnico: tecnico,
+        nota: notaCorr || `Revisión validador ${item.modelo || ""} — ${detalle}`,
+        resolucion: detalle,
+        estado: "Resuelto",
+        _origenValidador: true
+    };
+    incidencias.push(corrObj);
+    localStorage.setItem("incidencias", JSON.stringify(incidencias));
+    cargarAnios?.();
+    renderCorrectivos?.();
+    renderDashboard?.();
 
-    if (pendientes > 0 && !crearCorr) {
+    if (pendientes > 0) {
         toast.success(`Validador ${item.slot} revisado ✅`, `Quedan ${pendientes} pendientes`);
-    } else if (!crearCorr) {
-        // el toast de lista completa ya se mostró arriba
     }
 }
 </script>
