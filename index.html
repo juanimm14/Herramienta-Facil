@@ -1637,7 +1637,7 @@ body {
                 </div>
 
                 <!-- SENSOR POM — PRIMERO -->
-                <div style="margin-bottom:16px;">
+                <div id="dashBoxPom" style="margin-bottom:16px;">
                     <div class="card-box">
                         <div class="card-box-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
                             <span>🧾 Estado Sensor POM — Kioscos EVA</span>
@@ -1661,40 +1661,69 @@ body {
                 <div id="statsRowAdmin" style="display:none;margin-bottom:16px;"></div>
                 <div id="statsRowUser" style="margin-bottom:16px;"></div>
 
-                <div class="grid2">
-                    <div class="card-box">
-                        <div class="card-box-title">
-                            Últimas Incidencias
-                            <span class="badge-count" id="badgeCorrectivos">0</span>
+                <!-- VISTA ADMIN: grid normal con todos los cuadros -->
+                <div id="dashGridAdmin">
+                    <div class="grid2">
+                        <div class="card-box">
+                            <div class="card-box-title">
+                                Últimas Incidencias
+                                <span class="badge-count" id="badgeCorrectivos">0</span>
+                            </div>
+                            <div id="dashCorrectivos">
+                                <div class="empty-state"><div class="empty-icon">🔍</div><p>Sin incidencias</p></div>
+                            </div>
                         </div>
-                        <div id="dashCorrectivos">
-                            <div class="empty-state"><div class="empty-icon">🔍</div><p>Sin incidencias</p></div>
+                        <div class="card-box">
+                            <div class="card-box-title">
+                                Tareas
+                                <span class="badge-count" id="badgeTareas">0</span>
+                            </div>
+                            <div id="dashTareas">
+                                <div class="empty-state"><div class="empty-icon">✅</div><p>Sin tareas</p></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-box">
-                        <div class="card-box-title">
-                            Tareas
-                            <span class="badge-count" id="badgeTareas">0</span>
+
+                    <div class="grid2" style="margin-top:16px;">
+                        <div class="card-box">
+                            <div class="card-box-title">
+                                🔧 Preventivos del Día
+                                <span class="badge-count" id="badgePreventivos">0</span>
+                            </div>
+                            <div id="dashPreventivos">
+                                <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos registrados</p></div>
+                            </div>
                         </div>
-                        <div id="dashTareas">
-                            <div class="empty-state"><div class="empty-icon">✅</div><p>Sin tareas</p></div>
+                        <div class="card-box">
+                            <div class="card-box-title">Actividad Reciente</div>
+                            <div id="actividadReciente"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid2" style="margin-top:16px;">
-                    <div class="card-box">
-                        <div class="card-box-title">
-                            🔧 Preventivos del Día
-                            <span class="badge-count" id="badgePreventivos">0</span>
+                <!-- VISTA TÉCNICO: solo Tareas + Actividad Reciente -->
+                <div id="dashGridTecnico" style="display:none;">
+                    <!-- Mis Tareas — full width, destacadas -->
+                    <div class="card-box" style="margin-bottom:16px;border-color:rgba(0,212,168,.35);background:linear-gradient(135deg,rgba(0,212,168,.05) 0%,var(--bg2) 100%);">
+                        <div class="card-box-title" style="font-size:15px;">
+                            <span>📋 Mis Tareas</span>
+                            <span class="badge-count" id="badgeTareasTec" style="background:var(--accent);color:var(--bg);border-color:var(--accent);">0</span>
                         </div>
-                        <div id="dashPreventivos">
-                            <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos registrados</p></div>
+                        <div id="dashTareasMias" style="margin-bottom:10px;">
+                            <div class="empty-state"><div class="empty-icon">✅</div><p>No tenés tareas asignadas</p></div>
+                        </div>
+                        <!-- Otras tareas (plegadas) -->
+                        <div id="dashTareasOtrasWrap" style="display:none;">
+                            <div style="border-top:1px solid var(--border);margin:8px 0 10px;"></div>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Otras tareas del equipo</div>
+                            <div id="dashTareasOtras"></div>
                         </div>
                     </div>
+
+                    <!-- Actividad Reciente — full width -->
                     <div class="card-box">
                         <div class="card-box-title">Actividad Reciente</div>
-                        <div id="actividadReciente"></div>
+                        <div id="actividadRecienteTec"></div>
                     </div>
                 </div>
 
@@ -4068,7 +4097,32 @@ function renderDashboard(){
         if(statsAdmin) statsAdmin.style.display = "none";
     }
 
-    // Últimas incidencias
+    // ── MODO TÉCNICO vs ADMIN ──
+    let esAdmin = usuarioActual?.rol === "Admin";
+    let miNombreDash = usuarioActual?.nombre;
+
+    // Mostrar/ocultar secciones según rol
+    let dashBoxPom = document.getElementById("dashBoxPom");
+    let dashFdsBox2 = document.getElementById("dashFdsBox");
+    let dashGridAdmin = document.getElementById("dashGridAdmin");
+    let dashGridTec = document.getElementById("dashGridTecnico");
+
+    if(!esAdmin){
+        // Técnico: ocultar POM, FDS, stats
+        if(dashBoxPom) dashBoxPom.style.display = "none";
+        if(dashFdsBox2) dashFdsBox2.style.display = "none";
+        if(document.getElementById("statsRowAdmin")) document.getElementById("statsRowAdmin").style.display = "none";
+        if(document.getElementById("statsRowUser")) document.getElementById("statsRowUser").style.display = "none";
+        if(dashGridAdmin) dashGridAdmin.style.display = "none";
+        if(dashGridTec) dashGridTec.style.display = "block";
+    } else {
+        if(dashBoxPom) dashBoxPom.style.display = "block";
+        if(dashGridAdmin) dashGridAdmin.style.display = "block";
+        if(dashGridTec) dashGridTec.style.display = "none";
+    }
+
+
+    // Últimas incidencias (solo admin)
     let ultimas = [...correctivos].reverse().slice(0, 5);
     document.getElementById("badgeCorrectivos").textContent = correctivos.length;
     if(ultimas.length === 0){
@@ -4108,6 +4162,90 @@ function renderDashboard(){
 
     // Panel Preventivos dashboard
     document.getElementById("badgePreventivos").textContent = preventivos.length;
+
+    // ── TAREAS PARA TÉCNICO (vista técnico): mis tareas grandes + otras del equipo pequeñas ──
+    if(!esAdmin){
+        let tActTec = tareas.filter(t => t.estado !== "realizado");
+        let misTareas = tActTec.filter(t =>
+            t.asignado === miNombreDash || t.asignado === "__todos__" || t.asignado === "__turno_MANANA__"
+        );
+        let otrasTareas = tActTec.filter(t =>
+            t.asignado !== miNombreDash && t.asignado !== "__todos__" && t.asignado !== "__turno_MANANA__"
+        );
+
+        let badgeTecEl = document.getElementById("badgeTareasTec");
+        if(badgeTecEl) badgeTecEl.textContent = misTareas.length;
+
+        function mkTareaItemTec(t, grande){
+            let esMia = t.asignado === miNombreDash;
+            let dotColor = t.estado==="en-curso" ? "blue" : "yellow";
+            let estadoLabel = t.estado==="en-curso" ? "En Curso" : "Pendiente";
+            let prioBorder = t.prioridad === "alta" ? "border-left:3px solid var(--red);" :
+                             t.prioridad === "media" ? "border-left:3px solid var(--yellow);" : "";
+            let miaBadge = esMia
+                ? `<span style="font-size:10px;background:rgba(0,212,168,.18);border:1px solid var(--accent);color:var(--accent);padding:1px 8px;border-radius:5px;font-weight:700;white-space:nowrap;">👤 MÍA</span>`
+                : `<span style="font-size:10px;background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);padding:1px 8px;border-radius:5px;font-weight:700;white-space:nowrap;">👥 ${mostrarAsignado(t.asignado)}</span>`;
+            if(grande){
+                return `<div class="item-row" style="padding:12px 10px;align-items:flex-start;${prioBorder}background:${esMia?'rgba(0,212,168,.04)':'transparent'};border-radius:8px;margin-bottom:6px;">
+                    <div class="item-dot ${dotColor}" style="margin-top:4px;"></div>
+                    <div class="item-main" style="flex:1;">
+                        <div style="font-size:15px;font-weight:${esMia?'700':'500'};color:${esMia?'var(--white)':'var(--muted)'};">${t.desc}</div>
+                        <div class="item-meta" style="margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            ${miaBadge}
+                            <span style="color:var(--muted);font-size:11px;">${t.fecha||""}</span>
+                        </div>
+                        ${t.notas ? `<div style="font-size:12px;color:var(--muted);margin-top:5px;opacity:.8;">${t.notas.slice(0,80)}${t.notas.length>80?"…":""}</div>` : ""}
+                    </div>
+                    <span class="tarea-estado ${t.estado}" style="margin-left:8px;flex-shrink:0;">${estadoLabel}</span>
+                </div>`;
+            } else {
+                return `<div class="item-row" style="padding:8px 6px;opacity:.7;">
+                    <div class="item-dot ${dotColor}"></div>
+                    <div class="item-main">
+                        <div style="font-size:13px;">${t.desc}</div>
+                        <div class="item-meta">${mostrarAsignado(t.asignado)} · ${t.fecha||""}</div>
+                    </div>
+                    <span class="tarea-estado ${t.estado}" style="font-size:10px;">${estadoLabel}</span>
+                </div>`;
+            }
+        }
+
+        let dashMias = document.getElementById("dashTareasMias");
+        if(dashMias){
+            if(misTareas.length === 0){
+                dashMias.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><p>No tenés tareas asignadas</p></div>';
+            } else {
+                dashMias.innerHTML = misTareas.map(t => mkTareaItemTec(t, true)).join("");
+            }
+        }
+
+        let otrasWrap = document.getElementById("dashTareasOtrasWrap");
+        let dashOtras = document.getElementById("dashTareasOtras");
+        if(otrasTareas.length > 0 && dashOtras && otrasWrap){
+            otrasWrap.style.display = "block";
+            dashOtras.innerHTML = otrasTareas.map(t => mkTareaItemTec(t, false)).join("");
+        } else if(otrasWrap){
+            otrasWrap.style.display = "none";
+        }
+
+        // Actividad reciente (técnico)
+        let todosAct = [...incidencias, ...tareas.map(t=>({...t, tipo:"Tarea", fecha:t.fecha||""}))]
+            .filter(x=>x.fecha)
+            .sort((a,b)=>b.fecha.localeCompare(a.fecha))
+            .slice(0,6);
+        let actTecEl = document.getElementById("actividadRecienteTec");
+        if(actTecEl) actTecEl.innerHTML = todosAct.length ? todosAct.map(e => `
+            <div class="item-row">
+                <div class="item-dot ${e.tipo==="Preventivo"?"green":e.tipo==="Tarea"?"blue":"red"}"></div>
+                <div class="item-main">
+                    <div>${e.tipo}: ${e.tipo==="Tarea"?e.desc:(e.maquina||"—")}</div>
+                    <div class="item-meta">${e.tecnico||e.asignado||""} · ${e.fecha}</div>
+                </div>
+            </div>
+        `).join("") : '<div class="empty-state"><p>Sin actividad reciente</p></div>';
+    }
+
+
     if(preventivos.length === 0){
         document.getElementById("dashPreventivos").innerHTML =
             '<div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos registrados</p></div>';
