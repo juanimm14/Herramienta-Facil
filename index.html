@@ -3904,9 +3904,6 @@ function mostrar(sec){
     document.getElementById('nav-' + sec)?.classList.add('active');
     if(sec === 'correctivos') renderCorrectivos();
     if(sec === 'pendientes'){
-        // Auto-filtrar por técnico si no es Admin
-        let sel = document.getElementById("filtroTareasTecnico");
-        if(sel && usuarioActual?.rol !== "Admin") sel.value = usuarioActual.nombre;
         renderTareas();
     }
     if(sec === 'dashboard'){ renderDashboard(); renderDashboardEvaPom(); renderCartelesDashboard(); }
@@ -4108,15 +4105,16 @@ function renderDashboard(){
     let dashGridTec = document.getElementById("dashGridTecnico");
 
     if(!esAdmin){
-        // Técnico: ocultar POM, FDS, stats
-        if(dashBoxPom) dashBoxPom.style.display = "none";
-        if(dashFdsBox2) dashFdsBox2.style.display = "none";
+        // Técnico: mostrar POM y FDS, ocultar solo stats y grids extra
+        if(dashBoxPom) dashBoxPom.style.display = "block";
+        if(dashFdsBox2) dashFdsBox2.style.display = "block";
         if(document.getElementById("statsRowAdmin")) document.getElementById("statsRowAdmin").style.display = "none";
         if(document.getElementById("statsRowUser")) document.getElementById("statsRowUser").style.display = "none";
         if(dashGridAdmin) dashGridAdmin.style.display = "none";
         if(dashGridTec) dashGridTec.style.display = "block";
     } else {
         if(dashBoxPom) dashBoxPom.style.display = "block";
+        if(dashFdsBox2) dashFdsBox2.style.display = "block";
         if(dashGridAdmin) dashGridAdmin.style.display = "block";
         if(dashGridTec) dashGridTec.style.display = "none";
     }
