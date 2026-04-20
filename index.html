@@ -39,11 +39,31 @@ const _auth = firebase.auth();
 //  Los listeners en tiempo real actualizan el cache y
 //  re-renderizan la UI automáticamente en todos los dispositivos.
 // ─────────────────────────────────────────────────────────────
-const EMPRESA_ID = "default"; // Cambiá si manejás múltiples empresas
+// EMPRESA_ID se setea al hacer login (guardado en sessionStorage)
+let EMPRESA_ID = sessionStorage.getItem("empresaId") || "";
 
 const _cache = {};  // cache en memoria: { [clave]: valor }
 
 const _colRef = () => _db.collection("empresas").doc(EMPRESA_ID).collection("datos");
+
+// ── Colección global /config/empresas  (sin autenticación para leer en login) ──
+async function cargarListaEmpresas() {
+    try {
+        const snap = await _db.collection("config").doc("empresas").get();
+        if (snap.exists && snap.data().lista) return snap.data().lista;
+        // Primera vez: seedear Melincué y Santa Fe
+        const defaults = [
+            { id: "melincue", nombre: "Casino Melincué" },
+            { id: "santafe",  nombre: "Casino Santa Fe"  }
+        ];
+        await _db.collection("config").doc("empresas").set({ lista: defaults });
+        return defaults;
+    } catch(e) { console.error("cargarListaEmpresas:", e); return []; }
+}
+
+async function guardarListaEmpresas(lista) {
+    await _db.collection("config").doc("empresas").set({ lista });
+}
 
 // Guardar en Firestore (async, fire-and-forget)
 async function _fbSet(clave, valor) {
@@ -1502,16 +1522,41 @@ body {
     <div class="login-box">
         <div class="login-logo">HERRAMIENTA FÁCIL</div>
         <p class="login-sub">Sistema de Gestión de Incidencias</p>
-        <label>Email</label>
-        <input type="text" id="loginEmail" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')login()">
-        <label>Contraseña</label>
-        <div class="input-pass-wrap">
-            <input type="password" id="loginPassword" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')login()">
-            <button class="eye-btn" type="button" onclick="togglePassVis('loginPassword',this)">👁</button>
+
+        <!-- PASO 1: elegir casino -->
+        <div id="loginStep1">
+            <label style="margin-bottom:10px;display:block;">Seleccioná tu casino</label>
+            <div id="loginCasinoList" style="display:flex;flex-direction:column;gap:9px;margin-bottom:18px;">
+                <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px;">Cargando ubicaciones…</div>
+            </div>
+            <div id="loginErrorCasino" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none;">Seleccioná una ubicación para continuar</div>
+            <button class="btn-login" onclick="loginPaso2()">CONTINUAR →</button>
         </div>
-        <div id="loginError" style="color:var(--red);font-size:12px;margin-top:-12px;margin-bottom:12px;display:none;">Error al ingresar</div>
-        <button class="btn-login" id="btnLogin" onclick="login()">INGRESAR →</button>
-        <p style="margin-top:14px;font-size:12px;color:var(--muted);">¿Olvidaste tu contraseña? Contactá al Admin</p>
+
+        <!-- PASO 2: credenciales -->
+        <div id="loginStep2" style="display:none;">
+            <div id="loginCasinoBadge" onclick="volverPaso1()"
+                style="display:flex;align-items:center;gap:10px;background:rgba(0,212,168,.08);
+                       border:1px solid var(--accent);border-radius:11px;padding:11px 14px;
+                       margin-bottom:18px;cursor:pointer;">
+                <span style="font-size:20px;">🏢</span>
+                <div style="flex:1;">
+                    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Casino seleccionado</div>
+                    <div style="font-size:14px;font-weight:700;color:var(--white);" id="loginCasinoNombre">—</div>
+                </div>
+                <span style="font-size:11px;color:var(--accent);">✏️ Cambiar</span>
+            </div>
+            <label>Email</label>
+            <input type="text" id="loginEmail" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')login()">
+            <label>Contraseña</label>
+            <div class="input-pass-wrap">
+                <input type="password" id="loginPassword" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')login()">
+                <button class="eye-btn" type="button" onclick="togglePassVis('loginPassword',this)">👁</button>
+            </div>
+            <div id="loginError" style="color:var(--red);font-size:12px;margin-top:-12px;margin-bottom:12px;display:none;">Error al ingresar</div>
+            <button class="btn-login" id="btnLogin" onclick="login()">INGRESAR →</button>
+            <p style="margin-top:14px;font-size:12px;color:var(--muted);">¿Olvidaste tu contraseña? Contactá al Admin</p>
+        </div>
     </div>
 </div>
 
@@ -2482,6 +2527,33 @@ body {
                         </thead>
                         <tbody id="tbodyUsuarios"></tbody>
                     </table>
+                </div>
+
+                <!-- Panel de Ubicaciones -->
+                <div class="card-box" style="margin-top:20px;">
+                    <div class="card-box-title" style="margin-bottom:14px;">
+                        🏢 Ubicaciones / Casinos
+                        <button class="btn-primary" onclick="abrirModalNuevaUbicacion()" style="font-size:12px;padding:6px 14px;margin-left:auto;">➕ Nueva Ubicación</button>
+                    </div>
+                    <div id="listaUbicaciones" style="display:flex;flex-direction:column;gap:8px;">
+                        <div style="color:var(--muted);font-size:13px;">Cargando…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL nueva ubicación -->
+            <div id="modalNuevaUbicacion" class="modal">
+                <div class="modal-box" style="max-width:420px;">
+                    <div class="modal-title">🏢 Nueva Ubicación</div>
+                    <label>Nombre visible</label>
+                    <input type="text" id="inputUbicNombre" class="form-input" placeholder="ej: Casino Rosario">
+                    <label style="margin-top:10px;">ID interno (sin espacios, minúsculas)</label>
+                    <input type="text" id="inputUbicId" class="form-input" placeholder="ej: rosario">
+                    <div id="errorNuevaUbic" style="color:var(--red);font-size:12px;margin-top:4px;display:none;"></div>
+                    <div style="display:flex;gap:10px;margin-top:16px;">
+                        <button class="btn-modal-save" onclick="guardarNuevaUbicacion()">Guardar</button>
+                        <button class="btn-modal-cancel" onclick="document.getElementById('modalNuevaUbicacion').classList.remove('open')">Cancelar</button>
+                    </div>
                 </div>
             </div>
 
@@ -3677,6 +3749,60 @@ function mostrarAsignado(val){
 // ──────────────────────────────────────────────
 //  AUTH — Firebase Authentication
 // ──────────────────────────────────────────────
+// ── SELECCIÓN DE CASINO EN LOGIN ─────────────────────────────
+let _loginEmpresaId = "";
+let _loginEmpresaNombre = "";
+
+// Se llama al mostrar el login
+async function loginIniciarCasinos() {
+    let lista = await cargarListaEmpresas();
+    let cont = document.getElementById("loginCasinoList");
+    if (!cont) return;
+    if (!lista.length) {
+        cont.innerHTML = '<div style="color:var(--red);font-size:13px;text-align:center;">Sin ubicaciones configuradas. Contactá al admin.</div>';
+        return;
+    }
+    cont.innerHTML = lista.map(e => `
+        <button id="casinoBtn-${e.id}" onclick="seleccionarCasinoLogin('${e.id}','${e.nombre}')"
+            style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+                   padding:14px 16px;text-align:left;cursor:pointer;transition:all .2s;
+                   display:flex;align-items:center;gap:12px;color:var(--white);
+                   font-size:14px;font-weight:600;width:100%;">
+            <span style="font-size:22px;">🏢</span>
+            <span>${e.nombre}</span>
+        </button>
+    `).join("");
+}
+
+function seleccionarCasinoLogin(id, nombre) {
+    _loginEmpresaId = id;
+    _loginEmpresaNombre = nombre;
+    // Resaltar botón seleccionado
+    document.querySelectorAll("[id^='casinoBtn-']").forEach(b => {
+        b.style.borderColor = "var(--border)";
+        b.style.background = "var(--bg2)";
+    });
+    let sel = document.getElementById("casinoBtn-" + id);
+    if (sel) { sel.style.borderColor = "var(--accent)"; sel.style.background = "rgba(0,212,168,.1)"; }
+    document.getElementById("loginErrorCasino").style.display = "none";
+}
+
+function loginPaso2() {
+    if (!_loginEmpresaId) {
+        document.getElementById("loginErrorCasino").style.display = "block";
+        return;
+    }
+    document.getElementById("loginCasinoNombre").textContent = _loginEmpresaNombre;
+    document.getElementById("loginStep1").style.display = "none";
+    document.getElementById("loginStep2").style.display = "block";
+    setTimeout(() => document.getElementById("loginEmail")?.focus(), 100);
+}
+
+function volverPaso1() {
+    document.getElementById("loginStep1").style.display = "block";
+    document.getElementById("loginStep2").style.display = "none";
+}
+
 async function login(){
     let email = (document.getElementById("loginEmail").value || "").trim();
     let pass  = document.getElementById("loginPassword").value;
@@ -3691,6 +3817,10 @@ async function login(){
     btn.disabled = true;
 
     try {
+        // 0. Guardar empresa seleccionada
+        EMPRESA_ID = _loginEmpresaId;
+        sessionStorage.setItem("empresaId", EMPRESA_ID);
+        sessionStorage.setItem("empresaNombre", _loginEmpresaNombre);
         // 1. Autenticar con Firebase Auth
         await _auth.signInWithEmailAndPassword(email, pass);
         // El listener onAuthStateChanged toma el control desde acá
@@ -3714,6 +3844,8 @@ async function logout(){
     await _auth.signOut();
     usuarioActual = null;
     localStorage.removeItem("usuario");
+    sessionStorage.removeItem("empresaId");
+    sessionStorage.removeItem("empresaNombre");
     location.reload();
 }
 
@@ -3730,6 +3862,19 @@ function iniciarApp(){
     document.getElementById("loginDiv").style.display = "none";
     document.getElementById("app").style.display = "block";
     document.getElementById("infoNombre").textContent = usuarioActual.nombre;
+    // Mostrar casino activo en topbar
+    let topbarFecha = document.getElementById("topbarFecha");
+    let empNombre = sessionStorage.getItem("empresaNombre") || EMPRESA_ID;
+    if(topbarFecha) {
+        // Insertar badge de casino si no existe
+        if(!document.getElementById("topbarCasino")){
+            let badge = document.createElement("span");
+            badge.id = "topbarCasino";
+            badge.style.cssText = "font-size:11px;background:rgba(79,142,255,.15);border:1px solid var(--accent2);color:var(--accent2);padding:2px 10px;border-radius:8px;font-weight:700;white-space:nowrap;";
+            badge.textContent = "🏢 " + empNombre;
+            topbarFecha.parentNode.insertBefore(badge, topbarFecha);
+        }
+    }
     const rolEl = document.getElementById("infoRol");
     rolEl.textContent = usuarioActual.rol;
     if(usuarioActual.rol === "Tecnico") rolEl.classList.add("tecnico");
@@ -3914,7 +4059,7 @@ function mostrar(sec){
     if(sec === 'fuera-servicio') renderFds();
     if(sec === 'carteles') renderCartelesAdmin();
     if(sec === 'plan-preventivo') ppIniciar();
-    if(sec === 'gestionUsuarios'){ if(usuarioActual?.rol!=="Admin"){ mostrar('dashboard'); return; } renderGestionUsuarios(); }
+    if(sec === 'gestionUsuarios'){ if(usuarioActual?.rol!=="Admin"){ mostrar('dashboard'); return; } renderGestionUsuarios(); renderUbicaciones(); }
     // Cerrar sidebar en mobile
     document.querySelector('.sidebar')?.classList.remove('open');
     document.getElementById('sidebarOverlay')?.classList.remove('open');
@@ -7338,6 +7483,17 @@ function crearCartelBarajadora(){
 // ─── Firebase Auth listener — maneja sesión automáticamente ──
 _auth.onAuthStateChanged(async (firebaseUser) => {
     if(firebaseUser){
+        // Recuperar empresa de session (por si recargó la página)
+        let savedEmpresa = sessionStorage.getItem("empresaId");
+        if (!savedEmpresa) {
+            // No hay empresa seleccionada → forzar logout y volver al login
+            await _auth.signOut();
+            document.getElementById("loginDiv").style.display = "flex";
+            document.getElementById("app").style.display = "none";
+            loginIniciarCasinos();
+            return;
+        }
+        EMPRESA_ID = savedEmpresa;
         // Usuario autenticado — cargar datos y arrancar app
         try { await _cargarDatosFirebase(); } catch(e){}
         _activarListenersTiempoReal();
@@ -7359,9 +7515,10 @@ _auth.onAuthStateChanged(async (firebaseUser) => {
 
         iniciarApp();
     } else {
-        // Sin sesión — mostrar login
+        // Sin sesión — mostrar login y cargar lista de casinos
         document.getElementById("loginDiv").style.display = "flex";
         document.getElementById("app").style.display = "none";
+        loginIniciarCasinos();
     }
 });
 
@@ -9849,6 +10006,69 @@ function pchkCerrarControl(){
 // ══════════════════════════════════════════════
 //  GESTIÓN DE USUARIOS — ADMIN
 // ══════════════════════════════════════════════
+
+// ── GESTIÓN DE UBICACIONES ───────────────────────────────────
+async function renderUbicaciones() {
+    let lista = await cargarListaEmpresas();
+    let cont = document.getElementById("listaUbicaciones");
+    if (!cont) return;
+    if (!lista.length) {
+        cont.innerHTML = '<div style="color:var(--muted);font-size:13px;">Sin ubicaciones</div>';
+        return;
+    }
+    cont.innerHTML = lista.map((e, i) => `
+        <div style="display:flex;align-items:center;gap:12px;background:var(--bg2);
+                    border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+            <span style="font-size:18px;">🏢</span>
+            <div style="flex:1;">
+                <div style="font-weight:600;color:var(--white);">${e.nombre}</div>
+                <div style="font-size:11px;color:var(--muted);">ID: ${e.id}</div>
+            </div>
+            ${lista.length > 1 ? `<button onclick="eliminarUbicacion(${i})"
+                style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);
+                       border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;">🗑️</button>` : ""}
+        </div>
+    `).join("");
+}
+
+function abrirModalNuevaUbicacion() {
+    document.getElementById("inputUbicNombre").value = "";
+    document.getElementById("inputUbicId").value = "";
+    document.getElementById("errorNuevaUbic").style.display = "none";
+    document.getElementById("modalNuevaUbicacion").classList.add("open");
+    // Auto-generar ID desde nombre
+    document.getElementById("inputUbicNombre").oninput = function() {
+        let id = this.value.toLowerCase()
+            .normalize("NFD").replace(/[̀-ͯ]/g,"")
+            .replace(/[^a-z0-9]/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"");
+        document.getElementById("inputUbicId").value = id;
+    };
+}
+
+async function guardarNuevaUbicacion() {
+    let nombre = document.getElementById("inputUbicNombre").value.trim();
+    let id = document.getElementById("inputUbicId").value.trim().toLowerCase();
+    let errEl = document.getElementById("errorNuevaUbic");
+    if (!nombre || !id) { errEl.textContent = "Completá ambos campos"; errEl.style.display = "block"; return; }
+    if (!/^[a-z0-9-]+$/.test(id)) { errEl.textContent = "El ID solo puede tener letras minúsculas, números y guiones"; errEl.style.display = "block"; return; }
+    let lista = await cargarListaEmpresas();
+    if (lista.find(e => e.id === id)) { errEl.textContent = "Ya existe una ubicación con ese ID"; errEl.style.display = "block"; return; }
+    lista.push({ id, nombre });
+    await guardarListaEmpresas(lista);
+    document.getElementById("modalNuevaUbicacion").classList.remove("open");
+    toast.success("Ubicación agregada", nombre + " está disponible en el login.");
+    renderUbicaciones();
+}
+
+async function eliminarUbicacion(idx) {
+    let lista = await cargarListaEmpresas();
+    let nombre = lista[idx]?.nombre || "";
+    if (!confirm(`¿Eliminar "${nombre}"? Esto no borra los datos de esa ubicación.`)) return;
+    lista.splice(idx, 1);
+    await guardarListaEmpresas(lista);
+    toast.info("Ubicación eliminada", nombre);
+    renderUbicaciones();
+}
 
 function renderGestionUsuarios(){
     let db = getUsersDB();
