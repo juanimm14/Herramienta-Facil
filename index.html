@@ -6531,7 +6531,7 @@ function abrirDetalleTarea(id){
             <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
                 <span class="tarea-estado ${t.estado}">${estadoLabel}</span>
                 <span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span>
-                <span style="font-size:12px;color:var(--muted);">👤 ${mostrarAsignado(t.asignado)}</span>
+                <span style="font-size:12px;color:var(--muted);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>
                 ${t.fecha ? `<span style="font-size:12px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
             </div>
             ${t.notas ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><b style="color:var(--white);">Notas:</b> ${t.notas}</div>` : ""}
@@ -7095,7 +7095,8 @@ function renderFds(){
     if(!tbody) return;
 
     let hoy = new Date();
-    tbody.innerHTML = datos.map((f, idx) => {
+    tbody.innerHTML = datos.map((f) => {
+        let realIdx = fdsData.indexOf(f);
         // Si tiene fecha retorno, los días se calculan hasta esa fecha; si no, hasta hoy
         let fechaFin = f.fechaRetorno ? new Date(f.fechaRetorno) : hoy;
         let dias = f.fechaSalida ? Math.floor((fechaFin - new Date(f.fechaSalida)) / 86400000) : "—";
@@ -7118,8 +7119,8 @@ function renderFds(){
             <td style="color:${diasColor};font-weight:600;">${dias}d</td>
             <td><span class="pill ${estadoCls}">${f.estado}</span></td>
             <td>
-                <button onclick="editarFds(${idx})" style="background:none;border:none;cursor:pointer;color:var(--accent2);font-size:13px;" title="Editar">✏️</button>
-                ${usuarioActual?.rol === "Admin" ? `<button onclick="eliminarFds(${idx})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;" title="Eliminar">🗑️</button>` : ""}
+                <button onclick="editarFds(${realIdx})" style="background:none;border:none;cursor:pointer;color:var(--accent2);font-size:13px;" title="Editar">✏️</button>
+                ${usuarioActual?.rol === "Admin" ? `<button onclick="eliminarFds(${realIdx})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;" title="Eliminar">🗑️</button>` : ""}
             </td>
         </tr>`;
     }).join("") || '<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted);">Sin registros FDS</td></tr>';
