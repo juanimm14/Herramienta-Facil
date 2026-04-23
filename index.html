@@ -2132,6 +2132,7 @@ body {
                                 <th>Repuesto</th>
                                 <th>Observación</th>
                                 <th>Salió FDS</th>
+                                <th>Retorno</th>
                                 <th>Días FDS</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
@@ -3587,6 +3588,15 @@ body {
                     <option value="Para Habilitar">Para Habilitar</option>
                     <option value="Habilitado">Habilitado</option>
                 </select>
+            </div>
+        </div>
+        <div class="grid2">
+            <div class="form-group">
+                <label class="form-label">📅 Fecha Vuelta a Servicio <span style="color:var(--muted);font-size:11px;">(opcional)</span></label>
+                <input type="date" id="fdsRetorno" class="form-input">
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;">
+                <button type="button" onclick="document.getElementById('fdsRetorno').value=''" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;width:100%;">✕ Limpiar fecha retorno</button>
             </div>
         </div>
         <div class="modal-footer">
@@ -7020,6 +7030,7 @@ function abrirModalFds(){
     document.getElementById("fdsObservacion").value = "";
     document.getElementById("fdsFecha").value = new Date().toISOString().split("T")[0];
     document.getElementById("fdsEstado").value = "FDS";
+    document.getElementById("fdsRetorno").value = "";
     document.getElementById("modalFds").classList.add("open");
 }
 
@@ -7039,6 +7050,7 @@ function guardarFds(){
     let observacion = document.getElementById("fdsObservacion").value.trim();
     let fecha = document.getElementById("fdsFecha").value;
     let estado = document.getElementById("fdsEstado").value;
+    let fechaRetorno = document.getElementById("fdsRetorno").value || "";
 
     if(!nAdmin){ toast.warning("Campo requerido","Ingresá el N° Admin"); return; }
     if(!isla){ toast.warning("Campo requerido","Ingresá la isla"); return; }
@@ -7048,13 +7060,13 @@ function guardarFds(){
         // Editar existente
         fdsData[fdsEditando] = {
             ...fdsData[fdsEditando],
-            nAdmin, isla, fabricante, gabinete, falla, repuesto, observacion, fechaSalida: fecha, estado
+            nAdmin, isla, fabricante, gabinete, falla, repuesto, observacion, fechaSalida: fecha, estado, fechaRetorno
         };
     } else {
         // Nuevo registro
         let obj = {
             id: Date.now(),
-            nAdmin, isla, fabricante, gabinete, falla, repuesto, observacion, fechaSalida: fecha, estado
+            nAdmin, isla, fabricante, gabinete, falla, repuesto, observacion, fechaSalida: fecha, estado, fechaRetorno
         };
         fdsData.unshift(obj);
     }
@@ -7084,8 +7096,14 @@ function renderFds(){
 
     let hoy = new Date();
     tbody.innerHTML = datos.map((f, idx) => {
-        let dias = f.fechaSalida ? Math.floor((hoy - new Date(f.fechaSalida)) / 86400000) : "—";
+        // Si tiene fecha retorno, los días se calculan hasta esa fecha; si no, hasta hoy
+        let fechaFin = f.fechaRetorno ? new Date(f.fechaRetorno) : hoy;
+        let dias = f.fechaSalida ? Math.floor((fechaFin - new Date(f.fechaSalida)) / 86400000) : "—";
         let estadoCls = f.estado === "Habilitado" ? "green" : f.estado === "Para Habilitar" ? "yellow" : "red";
+        let diasColor = f.estado === "Habilitado" ? "var(--accent)" : dias > 7 ? "var(--red)" : "var(--white)";
+        let retornoCell = f.fechaRetorno
+            ? `<span style="color:var(--accent);font-size:12px;">📅 ${f.fechaRetorno}</span>`
+            : `<span style="color:var(--muted);font-size:12px;">—</span>`;
         return `
         <tr>
             <td><b>${f.nAdmin || "—"}</b></td>
@@ -7096,14 +7114,15 @@ function renderFds(){
             <td>${f.repuesto || "—"}</td>
             <td>${f.observacion || "—"}</td>
             <td>${f.fechaSalida || "—"}</td>
-            <td style="color:${f.estado === "Habilitado" ? "var(--accent)" : dias > 7 ? "var(--red)" : "var(--white)"};font-weight:600;">${dias}d</td>
+            <td>${retornoCell}</td>
+            <td style="color:${diasColor};font-weight:600;">${dias}d</td>
             <td><span class="pill ${estadoCls}">${f.estado}</span></td>
             <td>
                 <button onclick="editarFds(${idx})" style="background:none;border:none;cursor:pointer;color:var(--accent2);font-size:13px;" title="Editar">✏️</button>
                 ${usuarioActual?.rol === "Admin" ? `<button onclick="eliminarFds(${idx})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;" title="Eliminar">🗑️</button>` : ""}
             </td>
         </tr>`;
-    }).join("") || '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted);">Sin registros FDS</td></tr>';
+    }).join("") || '<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted);">Sin registros FDS</td></tr>';
 }
 
 function editarFds(idx){
@@ -7120,6 +7139,7 @@ function editarFds(idx){
     document.getElementById("fdsObservacion").value = f.observacion || "";
     document.getElementById("fdsFecha").value = f.fechaSalida || "";
     document.getElementById("fdsEstado").value = f.estado || "FDS";
+    document.getElementById("fdsRetorno").value = f.fechaRetorno || "";
     document.getElementById("modalFds").classList.add("open");
 }
 
