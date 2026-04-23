@@ -4146,6 +4146,7 @@ function mostrar(sec){
     if(sec === 'estados-eva') renderEstadosEva();
     if(sec === 'contadoras') renderContadoras();
     if(sec === 'fuera-servicio') renderFds();
+    if(sec === 'validadores') renderValidadores();
     if(sec === 'carteles') renderCartelesAdmin();
     if(sec === 'plan-preventivo') ppIniciar();
     if(sec === 'gestionUsuarios'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderGestionUsuarios(); if(esSuperAdmin()) renderUbicaciones(); }
@@ -11307,7 +11308,7 @@ function renderValidadores() {
 
     let tbody = document.getElementById("validadoresTbody");
     if (!filas.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted);">No hay validadores para mostrar</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted);">No hay validadores para mostrar</td></tr>`;
         return;
     }
 
