@@ -8208,7 +8208,7 @@ function ppRegistrarEnHistorial(t){
         islas: islasArr,
         islasMaquinas,
         totalMaquinas,
-        tecnico: t.asignado,
+        tecnico: t.realizadoPor || t.asignado,
         nota: t.desc,
         estado: "Realizado",
         validado: false,
