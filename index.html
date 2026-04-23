@@ -11134,21 +11134,19 @@ async function valProcesarExcel(file) {
             let slotsCargados = Object.keys(slots).length;
             let prev = document.getElementById("valExcelPreview");
             prev.style.display = "block";
-            document.getElementById("valExcelPreviewContent").innerHTML = `
-                <div style="color:var(--accent);font-weight:700;font-size:14px;margin-bottom:10px;">✅ Importación exitosa — Año ${anio}</div>
-                <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${slotsCargados} slots cargados &nbsp;|&nbsp; ${mesesCargados.length} meses con datos</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    ${mesesCargados.map(m => {
-                        let pct = promedios[m];
-                        let color = pct >= 88 ? "var(--accent)" : pct >= 84 ? "#f5a623" : "var(--red)";
-                        return \`<span style="background:var(--bg1);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:\${color};">\${m.slice(0,3)} \${pct.toFixed(2)}%</span>\`;
-                    }).join("")}
-                </div>
-            `;
+            let pillsHtml = mesesCargados.map(m => {
+                let pct = promedios[m];
+                let color = pct >= 88 ? "var(--accent)" : pct >= 84 ? "#f5a623" : "var(--red)";
+                return '<span style="background:var(--bg1);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:' + color + ';">' + m.slice(0,3) + ' ' + pct.toFixed(2) + '%</span>';
+            }).join("");
+            document.getElementById("valExcelPreviewContent").innerHTML =
+                '<div style="color:var(--accent);font-weight:700;font-size:14px;margin-bottom:10px;">✅ Importación exitosa — Año ' + anio + '</div>' +
+                '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">' + slotsCargados + ' slots cargados &nbsp;|&nbsp; ' + mesesCargados.length + ' meses con datos</div>' +
+                '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + pillsHtml + '</div>';
             _valAnioActivo = anio;
             renderValidadores();
             valRenderIndicesPanel();
-            toast.success(\`Índices \${anio} importados ✅\`, \`\${slotsCargados} slots, \${mesesCargados.length} meses\`);
+            toast.success("Índices " + anio + " importados ✅", slotsCargados + " slots, " + mesesCargados.length + " meses");
         } catch(err) {
             console.error(err);
             toast.warning("Error al procesar el Excel", err.message || "");
@@ -11218,8 +11216,10 @@ function valRenderIndicesPanel() {
     if (anioSel) {
         anioSel.innerHTML = anios.map(a => {
             let active = parseInt(a) === _valAnioActivo;
-            return \`<button onclick="_valAnioActivo=\${a};valRenderIndicesPanel();renderValidadores();"
-                style="background:\${active?"var(--accent)":"var(--bg3)"};color:\${active?"var(--bg1)":"var(--muted)"};border:1px solid \${active?"var(--accent)":"var(--border)"};border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;">\${a}</button>\`;
+            let bg = active ? "var(--accent)" : "var(--bg3)";
+            let col = active ? "var(--bg1)" : "var(--muted)";
+            let brd = active ? "var(--accent)" : "var(--border)";
+            return '<button onclick="_valAnioActivo=' + a + ';valRenderIndicesPanel();renderValidadores();" style="background:' + bg + ';color:' + col + ';border:1px solid ' + brd + ';border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;">' + a + '</button>';
         }).join("");
     }
 
@@ -11233,10 +11233,7 @@ function valRenderIndicesPanel() {
         if (pct == null) return "";
         let color = valColorIndice(pct);
         let bgAlpha = pct >= 88 ? "rgba(0,212,168,.12)" : pct >= 84 ? "rgba(245,166,35,.12)" : "rgba(255,77,109,.12)";
-        return \`<div style="background:\${bgAlpha};border:1px solid \${color};border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
-            <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">\${m.slice(0,3)}</div>
-            <div style="font-size:18px;font-weight:700;color:\${color};">\${pct.toFixed(1)}%</div>
-        </div>\`;
+        return '<div style="background:' + bgAlpha + ';border:1px solid ' + color + ';border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">' + m.slice(0,3) + '</div><div style="font-size:18px;font-weight:700;color:' + color + ';">' + pct.toFixed(1) + '%</div></div>';
     }).join("");
 }
 
