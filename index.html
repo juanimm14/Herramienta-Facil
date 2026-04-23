@@ -109,7 +109,7 @@ const _FB_KEYS = new Set([
     "ppPreventivos","ppTareas",
     "evaIncidencias","evaDiarios",
     "fdsData","contadorasData","cartelesData","listaContadoras",
-    "validadoresData",
+    "validadoresData","indicesAceptacion",
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
     "equiposCilindros","equiposRA","equiposEVA"
@@ -180,6 +180,7 @@ async function _cargarDatosFirebase() {
         if (_cache["evaIncidencias"]) evaIncidencias = _cache["evaIncidencias"];
         if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
         if (_cache["validadoresData"]) validadoresData = _cache["validadoresData"];
+        if (_cache["indicesAceptacion"]) indicesAceptacion = _cache["indicesAceptacion"];
         if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
         if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
         if (_cache["listaContadoras"]) listaContadoras = _cache["listaContadoras"];
@@ -2151,12 +2152,24 @@ body {
                         <div class="page-subtitle">Revisión mensual de validadores por slot</div>
                     </div>
                     <div class="action-bar">
+                        <button style="background:rgba(79,142,255,.15);border:1px solid var(--accent2);color:var(--accent2);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;" onclick="abrirModalImportarIndices()">📊 Importar Índices Excel</button>
                         <button class="btn-primary" onclick="abrirModalCargaValidadores()">📋 Cargar Lista del Mes</button>
                     </div>
                 </div>
 
+                <!-- Panel promedios mensuales de índices -->
+                <div id="valIndicesPanel" style="display:none;margin-bottom:18px;">
+                    <div class="card-box" style="padding:16px 20px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                            <div style="font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">📊 Índices de Aceptación — Promedios Mensuales</div>
+                            <div id="valIndicesAnioSel" style="display:flex;gap:6px;"></div>
+                        </div>
+                        <div id="valIndicesMeses" style="display:flex;gap:8px;flex-wrap:wrap;overflow-x:auto;padding-bottom:4px;"></div>
+                    </div>
+                </div>
+
                 <!-- Tarea activa banner -->
-                <div id="validadoresTareaBanner" style="display:none;background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:none;align-items:center;gap:12px;">
+                <div id="validadoresTareaBanner" style="display:none;background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:12px;padding:14px 18px;margin-bottom:18px;align-items:center;gap:12px;">
                     <span style="font-size:22px;">📋</span>
                     <div style="flex:1;">
                         <div style="font-size:13px;font-weight:700;color:var(--accent);">TAREA ACTIVA</div>
@@ -2195,7 +2208,9 @@ body {
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Slot</th>
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Isla</th>
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Validador</th>
-                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);min-width:200px;">Detalle revisión</th>
+                                <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Índice Actual</th>
+                                <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Últ. 3 meses</th>
+                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);min-width:180px;">Detalle revisión</th>
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Técnico</th>
                                 <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Estado</th>
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Fecha realizado</th>
@@ -2203,9 +2218,46 @@ body {
                             </tr>
                         </thead>
                         <tbody id="validadoresTbody">
-                            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted);">No hay validadores cargados</td></tr>
+                            <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted);">No hay validadores cargados</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- ═══ MODAL IMPORTAR ÍNDICES EXCEL ═══ -->
+            <div id="modalImportarIndices" class="modal">
+                <div class="modal-box" style="max-width:600px;">
+                    <div class="modal-title">📊 Importar Índices de Aceptación</div>
+                    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Subí el Excel con los índices de aceptación por slot. El archivo debe tener el formato con columnas: <strong>SLOT, Isla, MARCA, Modelo, Validador, ENERO, FEBRERO... DICIEMBRE</strong> (los porcentajes de cada mes).</p>
+
+                    <div style="background:var(--bg3);border:2px dashed var(--border);border-radius:12px;padding:24px;text-align:center;margin-bottom:16px;cursor:pointer;transition:.2s;"
+                         id="valExcelDropZone"
+                         ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+                         ondragleave="this.style.borderColor='var(--border)'"
+                         ondrop="valHandleExcelDrop(event)"
+                         onclick="document.getElementById('valExcelFileInput').click()">
+                        <div style="font-size:36px;margin-bottom:8px;">📂</div>
+                        <div style="font-weight:700;color:var(--white);margin-bottom:4px;">Arrastrá el Excel aquí o hacé click para seleccionar</div>
+                        <div style="font-size:12px;color:var(--muted);">Formatos aceptados: .xlsx, .xls</div>
+                        <input type="file" id="valExcelFileInput" accept=".xlsx,.xls" style="display:none" onchange="valProcesarExcel(this.files[0])">
+                    </div>
+
+                    <div id="valExcelPreview" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
+                        <div id="valExcelPreviewContent"></div>
+                    </div>
+
+                    <div style="background:rgba(79,142,255,.08);border:1px solid rgba(79,142,255,.3);border-radius:8px;padding:12px;margin-bottom:16px;">
+                        <div style="font-size:12px;font-weight:700;color:var(--accent2);margin-bottom:6px;">📋 Formato esperado del Excel</div>
+                        <div style="font-size:11px;color:var(--muted);line-height:1.9;">
+                            • Col. A: <strong style="color:var(--white);">SLOT</strong> &nbsp;•&nbsp; Col. B: <strong style="color:var(--white);">Isla</strong> &nbsp;•&nbsp; Col. C: <strong style="color:var(--white);">MARCA</strong> &nbsp;•&nbsp; Col. D: <strong style="color:var(--white);">Modelo</strong> &nbsp;•&nbsp; Col. E: <strong style="color:var(--white);">Validador</strong><br>
+                            • Col. F–Q: <strong style="color:var(--white);">ENERO, FEBRERO, MARZO... DICIEMBRE</strong> (porcentaje de aceptación, ej: 89.27%)<br>
+                            • Cada fila = un slot. Los promedios generales deben estar en una fila separada con "PROMEDIOS MENSUAL" o similar.
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn-modal-cancel" onclick="document.getElementById('modalImportarIndices').classList.remove('open')">Cerrar</button>
+                    </div>
                 </div>
             </div>
 
@@ -2232,6 +2284,13 @@ body {
                         <button onclick="valAgregarFila()" style="margin-top:10px;background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">➕ Agregar fila</button>
                     </div>
 
+                    <div style="background:rgba(79,142,255,.08);border:1px solid rgba(79,142,255,.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="document.getElementById('modalCargaValidadores').classList.remove('open');abrirModalImportarIndices();">
+                        <span style="font-size:18px;">📊</span>
+                        <div>
+                            <div style="font-size:12px;font-weight:700;color:var(--accent2);">¿Tenés el Excel con los índices?</div>
+                            <div style="font-size:11px;color:var(--muted);">Importá el Excel primero para ver el índice de cada slot al revisar la lista →</div>
+                        </div>
+                    </div>
                     <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">💡 Tip: podés pegar varios slots separados por comas o saltos de línea en el primer campo de cualquier fila</div>
 
                     <div class="modal-footer">
@@ -2262,6 +2321,11 @@ body {
                                 <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Validador</div>
                                 <div id="valRegModelo" style="font-size:14px;font-weight:600;color:var(--white);"></div>
                             </div>
+                        </div>
+                        <!-- Panel de índices del slot -->
+                        <div id="valRegIndicesBox" style="display:none;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+                            <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">📊 Índices de aceptación</div>
+                            <div id="valRegIndicesContent" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
                         </div>
                     </div>
 
@@ -7097,7 +7161,6 @@ function renderFds(){
     let hoy = new Date();
     tbody.innerHTML = datos.map((f) => {
         let realIdx = fdsData.indexOf(f);
-        // Si tiene fecha retorno, los días se calculan hasta esa fecha; si no, hasta hoy
         let fechaFin = f.fechaRetorno ? new Date(f.fechaRetorno) : hoy;
         let dias = f.fechaSalida ? Math.floor((fechaFin - new Date(f.fechaSalida)) / 86400000) : "—";
         let estadoCls = f.estado === "Habilitado" ? "green" : f.estado === "Para Habilitar" ? "yellow" : "red";
@@ -10941,7 +11004,244 @@ function guardarListaKioscosEva(){
 
 <script>
 // ══════════════════════════════════════════════════════
+//  MÓDULO ÍNDICES DE ACEPTACIÓN (Excel Import)
+// ══════════════════════════════════════════════════════
+
+// indicesAceptacion = { anio: { meses: {ENERO:.., FEBRERO:..}, slots: { "1326": {ENERO:.., ..}, ... } } }
+let indicesAceptacion = (_cache["indicesAceptacion"]) ? {..._cache["indicesAceptacion"]} : {};
+
+const VAL_MESES = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+let _valAnioActivo = null;
+
+function valGuardarIndices() {
+    _fbSet("indicesAceptacion", indicesAceptacion);
+    _localStorageOrig.setItem("indicesAceptacion", JSON.stringify(indicesAceptacion));
+}
+
+function abrirModalImportarIndices() {
+    document.getElementById("valExcelPreview").style.display = "none";
+    document.getElementById("valExcelFileInput").value = "";
+    document.getElementById("modalImportarIndices").classList.add("open");
+}
+
+function valHandleExcelDrop(e) {
+    e.preventDefault();
+    document.getElementById("valExcelDropZone").style.borderColor = "var(--border)";
+    let file = e.dataTransfer.files[0];
+    if (file) valProcesarExcel(file);
+}
+
+async function valProcesarExcel(file) {
+    if (!file) return;
+    // Load SheetJS from CDN if not loaded
+    if (typeof XLSX === "undefined") {
+        await new Promise((res, rej) => {
+            let s = document.createElement("script");
+            s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+            s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+        });
+    }
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let wb = XLSX.read(e.target.result, { type: "array" });
+            let ws = wb.Sheets[wb.SheetNames[0]];
+            let data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+            // Detectar año del archivo (buscar en nombre o en celdas)
+            let anio = new Date().getFullYear();
+            // Intentar detectar el año desde el nombre del archivo
+            let matchAnio = file.name.match(/20\d\d/);
+            if (matchAnio) anio = parseInt(matchAnio[0]);
+
+            // Buscar fila de encabezados con SLOT, ENERO, etc.
+            let headerRow = -1;
+            let colSlot = -1, colMeses = {};
+            for (let r = 0; r < Math.min(data.length, 10); r++) {
+                let row = data[r];
+                for (let c = 0; c < row.length; c++) {
+                    let v = String(row[c]).trim().toUpperCase();
+                    if (v === "SLOT") { colSlot = c; headerRow = r; }
+                    VAL_MESES.forEach(m => { if (v === m) colMeses[m] = c; });
+                }
+                if (headerRow >= 0 && Object.keys(colMeses).length > 0) break;
+            }
+
+            if (headerRow < 0 || colSlot < 0) {
+                toast.warning("No se encontró la fila de encabezados (SLOT, ENERO, etc.)","Verificá el formato del Excel");
+                return;
+            }
+
+            // Detectar columna Isla, Validador
+            let colIsla = -1, colValidador = -1, colMarca = -1, colModelo = -1;
+            let hdr = data[headerRow];
+            hdr.forEach((v, c) => {
+                let u = String(v).trim().toUpperCase();
+                if (u === "ISLA" || u === "ISL") colIsla = c;
+                if (u === "VALIDADOR") colValidador = c;
+                if (u === "MARCA") colMarca = c;
+                if (u === "MODELO") colModelo = c;
+            });
+
+            // Extraer promedios generales (fila con "PROMEDIOS MENSUAL" o primera fila de datos sin slot numérico)
+            let promedios = {};
+            for (let r = headerRow + 1; r < data.length; r++) {
+                let row = data[r];
+                let slotVal = String(row[colSlot] || "").trim();
+                // Fila de promedio general: slot vacío o contiene "PROMEDIO"
+                if (!slotVal || slotVal.toUpperCase().includes("PROMEDIO") || slotVal === "") {
+                    // Leer promedios de esta fila
+                    VAL_MESES.forEach(m => {
+                        if (colMeses[m] !== undefined) {
+                            let v = row[colMeses[m]];
+                            let pct = valParsePercent(v);
+                            if (pct !== null) promedios[m] = pct;
+                        }
+                    });
+                    if (Object.keys(promedios).length > 0) break;
+                }
+            }
+
+            // Extraer datos por slot
+            let slots = {};
+            for (let r = headerRow + 1; r < data.length; r++) {
+                let row = data[r];
+                let slotVal = String(row[colSlot] || "").trim();
+                if (!slotVal || isNaN(Number(slotVal))) continue;
+                let slotData = { isla: colIsla>=0 ? String(row[colIsla]||"").trim() : "" };
+                if (colValidador >= 0) slotData.validador = String(row[colValidador]||"").trim();
+                if (colMarca >= 0) slotData.marca = String(row[colMarca]||"").trim();
+                if (colModelo >= 0) slotData.modelo = String(row[colModelo]||"").trim();
+                VAL_MESES.forEach(m => {
+                    if (colMeses[m] !== undefined) {
+                        let pct = valParsePercent(row[colMeses[m]]);
+                        if (pct !== null) slotData[m] = pct;
+                    }
+                });
+                slots[slotVal] = slotData;
+            }
+
+            // Guardar
+            if (!indicesAceptacion[anio]) indicesAceptacion[anio] = {};
+            indicesAceptacion[anio].promedios = promedios;
+            indicesAceptacion[anio].slots = slots;
+            valGuardarIndices();
+
+            // Preview
+            let mesesCargados = Object.keys(promedios).filter(m => promedios[m] != null);
+            let slotsCargados = Object.keys(slots).length;
+            let prev = document.getElementById("valExcelPreview");
+            prev.style.display = "block";
+            document.getElementById("valExcelPreviewContent").innerHTML = `
+                <div style="color:var(--accent);font-weight:700;font-size:14px;margin-bottom:10px;">✅ Importación exitosa — Año ${anio}</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">${slotsCargados} slots cargados &nbsp;|&nbsp; ${mesesCargados.length} meses con datos</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    ${mesesCargados.map(m => {
+                        let pct = promedios[m];
+                        let color = pct >= 88 ? "var(--accent)" : pct >= 84 ? "#f5a623" : "var(--red)";
+                        return \`<span style="background:var(--bg1);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:\${color};">\${m.slice(0,3)} \${pct.toFixed(2)}%</span>\`;
+                    }).join("")}
+                </div>
+            `;
+            _valAnioActivo = anio;
+            renderValidadores();
+            valRenderIndicesPanel();
+            toast.success(\`Índices \${anio} importados ✅\`, \`\${slotsCargados} slots, \${mesesCargados.length} meses\`);
+        } catch(err) {
+            console.error(err);
+            toast.warning("Error al procesar el Excel", err.message || "");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function valParsePercent(v) {
+    if (v === null || v === undefined || v === "") return null;
+    if (typeof v === "number") {
+        // SheetJS puede devolver 0.8927 para 89.27% o 89.27 directamente
+        return v <= 1 ? v * 100 : v;
+    }
+    let s = String(v).replace(",",".").replace("%","").trim();
+    let n = parseFloat(s);
+    if (isNaN(n)) return null;
+    return n <= 1 ? n * 100 : n;
+}
+
+function valGetIndiceSlot(slotNum) {
+    // Retorna { actual, historial: [{mes, pct}] } para el slot dado
+    // Busca en el año activo
+    let anios = Object.keys(indicesAceptacion).sort((a,b) => b-a);
+    if (!anios.length) return null;
+    let anio = _valAnioActivo ? String(_valAnioActivo) : anios[0];
+    let data = indicesAceptacion[anio];
+    if (!data || !data.slots) return null;
+    let slotData = data.slots[String(slotNum)];
+    if (!slotData) return null;
+
+    // Mes actual: el último mes con datos
+    let mesActual = null, mesActualIdx = -1;
+    for (let i = VAL_MESES.length - 1; i >= 0; i--) {
+        if (slotData[VAL_MESES[i]] != null) { mesActual = VAL_MESES[i]; mesActualIdx = i; break; }
+    }
+    let historial = [];
+    for (let i = Math.max(0, mesActualIdx - 2); i <= mesActualIdx; i++) {
+        if (slotData[VAL_MESES[i]] != null) historial.push({ mes: VAL_MESES[i], pct: slotData[VAL_MESES[i]] });
+    }
+    return {
+        actual: mesActual ? slotData[mesActual] : null,
+        mesActual,
+        historial,
+        slotData
+    };
+}
+
+function valColorIndice(pct) {
+    if (pct == null) return "var(--muted)";
+    if (pct >= 88) return "var(--accent)";
+    if (pct >= 84) return "#f5a623";
+    return "var(--red)";
+}
+
+function valRenderIndicesPanel() {
+    let panel = document.getElementById("valIndicesPanel");
+    if (!panel) return;
+    let anios = Object.keys(indicesAceptacion).sort((a,b) => b-a);
+    if (!anios.length) { panel.style.display = "none"; return; }
+    panel.style.display = "block";
+
+    if (!_valAnioActivo) _valAnioActivo = parseInt(anios[0]);
+
+    // Botones de año
+    let anioSel = document.getElementById("valIndicesAnioSel");
+    if (anioSel) {
+        anioSel.innerHTML = anios.map(a => {
+            let active = parseInt(a) === _valAnioActivo;
+            return \`<button onclick="_valAnioActivo=\${a};valRenderIndicesPanel();renderValidadores();"
+                style="background:\${active?"var(--accent)":"var(--bg3)"};color:\${active?"var(--bg1)":"var(--muted)"};border:1px solid \${active?"var(--accent)":"var(--border)"};border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;">\${a}</button>\`;
+        }).join("");
+    }
+
+    // Meses con promedios
+    let data = indicesAceptacion[_valAnioActivo];
+    let mesesDiv = document.getElementById("valIndicesMeses");
+    if (!mesesDiv || !data || !data.promedios) return;
+
+    mesesDiv.innerHTML = VAL_MESES.map(m => {
+        let pct = data.promedios[m];
+        if (pct == null) return "";
+        let color = valColorIndice(pct);
+        let bgAlpha = pct >= 88 ? "rgba(0,212,168,.12)" : pct >= 84 ? "rgba(245,166,35,.12)" : "rgba(255,77,109,.12)";
+        return \`<div style="background:\${bgAlpha};border:1px solid \${color};border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">\${m.slice(0,3)}</div>
+            <div style="font-size:18px;font-weight:700;color:\${color};">\${pct.toFixed(1)}%</div>
+        </div>\`;
+    }).join("");
+}
+
+// ══════════════════════════════════════════════════════
 //  MÓDULO VALIDADORES
+//  (original continúa abajo)
 // ══════════════════════════════════════════════════════
 
 let validadoresData = (_cache["validadoresData"]) ? [..._cache["validadoresData"]] : [];
@@ -10969,6 +11269,7 @@ function valGuardar() {
 function renderValidadores() {
     _poblarFiltrosValidadores();
     _renderBannerTareaValidadores();
+    valRenderIndicesPanel();
 
     let periodoF = document.getElementById("filtroValPeriodo")?.value || "";
     let estadoF  = document.getElementById("filtroValEstado")?.value  || "";
@@ -11020,13 +11321,44 @@ function renderValidadores() {
             ? `<button onclick="valAbrirEditar(${f.loteIdx},${f.itemIdx})" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;">✏️ Editar</button>`
             : `<button onclick="valAbrirRegistrar(${f.loteIdx},${f.itemIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✅ Registrar</button>`;
 
+        // Índice de aceptación para este slot
+        let idxData = valGetIndiceSlot(f.slot);
+        let tdIndiceActual = '<td style="padding:10px 12px;text-align:center;"><span style="opacity:.35;font-size:12px;">—</span></td>';
+        let tdHistorial    = '<td style="padding:10px 12px;text-align:center;"><span style="opacity:.35;font-size:12px;">—</span></td>';
+
+        if (idxData && idxData.actual != null) {
+            let pct  = idxData.actual;
+            let col  = valColorIndice(pct);
+            let bgA  = pct >= 88 ? "rgba(0,212,168,.12)" : pct >= 84 ? "rgba(245,166,35,.12)" : "rgba(255,77,109,.14)";
+            let mesAbr = idxData.mesActual ? idxData.mesActual.slice(0,3) : "";
+            tdIndiceActual = `<td style="padding:8px 12px;text-align:center;">
+                <div style="display:inline-flex;flex-direction:column;align-items:center;background:${bgA};border:1px solid ${col};border-radius:8px;padding:5px 10px;min-width:70px;">
+                    <span style="font-size:16px;font-weight:700;color:${col};">${pct.toFixed(1)}%</span>
+                    <span style="font-size:10px;color:var(--muted);margin-top:1px;">${mesAbr}</span>
+                </div>
+            </td>`;
+
+            if (idxData.historial && idxData.historial.length > 0) {
+                let bars = idxData.historial.map(h => {
+                    let c = valColorIndice(h.pct);
+                    return `<div style="text-align:center;">
+                        <div style="font-size:10px;color:var(--muted);">${h.mes.slice(0,3)}</div>
+                        <div style="font-size:12px;font-weight:700;color:${c};">${h.pct.toFixed(1)}%</div>
+                    </div>`;
+                }).join('<div style="color:var(--border);padding:0 2px;align-self:center;">›</div>');
+                tdHistorial = `<td style="padding:8px 12px;text-align:center;"><div style="display:inline-flex;align-items:center;gap:2px;">${bars}</div></td>`;
+            }
+        }
+
         return `<tr style="border-bottom:1px solid var(--border);background:${rowBg};transition:background .15s;" 
                     onmouseover="this.style.background='var(--bg3)'" 
                     onmouseout="this.style.background='${rowBg}'">
             <td style="padding:10px 12px;font-weight:700;color:var(--accent);font-size:14px;">${f.slot}</td>
             <td style="padding:10px 12px;color:var(--muted);">${f.isla}</td>
             <td style="padding:10px 12px;font-weight:600;color:var(--white);">${f.modelo}</td>
-            <td style="padding:10px 12px;color:var(--muted);font-size:12px;max-width:240px;">${f.detalle || '<span style="opacity:.4;">—</span>'}</td>
+            ${tdIndiceActual}
+            ${tdHistorial}
+            <td style="padding:10px 12px;color:var(--muted);font-size:12px;max-width:200px;">${f.detalle || '<span style="opacity:.4;">—</span>'}</td>
             <td style="padding:10px 12px;color:var(--accent2);font-size:12px;font-weight:600;">${f.tecnico || '<span style="opacity:.4;color:var(--muted);">—</span>'}</td>
             <td style="padding:10px 12px;text-align:center;">${estadoBadge}</td>
             <td style="padding:10px 12px;color:var(--muted);font-size:12px;">${f.fechaRealizado || '<span style="opacity:.4;">—</span>'}</td>
@@ -11230,6 +11562,26 @@ function valAbrirRegistrar(loteIdx, itemIdx) {
     if (notaCorr) notaCorr.value = "Bajo indice de aceptacion";
     let prev = document.getElementById("valCorrectivoSlotPreview");
     if (prev) prev.textContent = item.slot;
+
+    // Mostrar índices del slot en el modal
+    let indBox  = document.getElementById("valRegIndicesBox");
+    let indCont = document.getElementById("valRegIndicesContent");
+    let idxData = valGetIndiceSlot(item.slot);
+    if (indBox && indCont) {
+        if (idxData && idxData.historial && idxData.historial.length > 0) {
+            indBox.style.display = "block";
+            indCont.innerHTML = idxData.historial.map(h => {
+                let col = valColorIndice(h.pct);
+                let bgA = h.pct >= 88 ? "rgba(0,212,168,.12)" : h.pct >= 84 ? "rgba(245,166,35,.12)" : "rgba(255,77,109,.14)";
+                return `<div style="background:${bgA};border:1px solid ${col};border-radius:8px;padding:6px 12px;text-align:center;min-width:80px;">
+                    <div style="font-size:10px;color:var(--muted);">${h.mes.slice(0,3)}</div>
+                    <div style="font-size:18px;font-weight:700;color:${col};">${h.pct.toFixed(1)}%</div>
+                </div>`;
+            }).join('<div style="color:var(--border);padding:0 4px;align-self:center;font-size:18px;">›</div>');
+        } else {
+            indBox.style.display = "none";
+        }
+    }
 }
 
 function valAbrirEditar(loteIdx, itemIdx) {
