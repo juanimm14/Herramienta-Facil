@@ -112,8 +112,7 @@ const _FB_KEYS = new Set([
     "validadoresData","indicesAceptacion",
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
-    "equiposCilindros","equiposRA","equiposEVA",
-    "pptData"
+    "equiposCilindros","equiposRA","equiposEVA"
 ]);
 
 localStorage.setItem = function(clave, valor) {
@@ -188,7 +187,6 @@ async function _cargarDatosFirebase() {
         if (_cache["equiposEVA"])     listaKioscosEva = _cache["equiposEVA"];
         if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
         if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
-        if (_cache["pptData"])        pptData        = _cache["pptData"]        ?? [];
     } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
 
     // Recargar islasActivas desde el cache ya poblado (puede haber quedado [] antes)
@@ -229,14 +227,12 @@ function _activarListenersTiempoReal() {
             if (_cache["equiposEVA"]      !== undefined) listaKioscosEva = _cache["equiposEVA"]      ?? ["EVA1","EVA2","EVA3","EVA4"];
             if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
             if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
-            if (_cache["pptData"]        !== undefined) pptData        = _cache["pptData"]        ?? [];
             // Re-render si la app ya está iniciada
             if (document.getElementById("app")?.style.display !== "none") {
                 renderDashboard?.();
                 renderCorrectivos?.();
                 renderTareas?.();
                 renderValidadores?.();
-                renderPpt?.();
                 poblarSelectsTecnicos?.();
                 cargarAniosPrev?.();
                 renderIncidenciasPreventivos?.();
@@ -1629,7 +1625,7 @@ body {
             <button class="menu-btn" id="nav-validadores" onclick="mostrar('validadores')">
                 <span class="icon">💳</span> Validadores
             </button>
-            <button class="menu-btn" id="nav-control-ppt" onclick="mostrar('control-ppt')">
+            <button class="menu-btn" id="nav-control-ppt" onclick="mostrar('control-ppt')" style="opacity:.55; cursor:not-allowed;" title="En desarrollo">
                 <span class="icon">📊</span> Control PPT
             </button>
 
@@ -2209,6 +2205,7 @@ body {
                     <table id="tablaValidadores" style="width:100%;border-collapse:collapse;font-size:13px;">
                         <thead>
                             <tr style="background:var(--bg3);color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase;">
+                                <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Acción</th>
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Slot</th>
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Isla</th>
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Validador</th>
@@ -2218,7 +2215,6 @@ body {
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Técnico</th>
                                 <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Estado</th>
                                 <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Fecha realizado</th>
-                                <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="validadoresTbody">
@@ -2265,7 +2261,7 @@ body {
                 </div>
             </div>
 
-
+            <!-- ═══ MODAL CARGAR LISTA VALIDADORES ═══ -->
             <div id="modalCargaValidadores" class="modal">
                 <div class="modal-box" style="max-width:680px;">
                     <div class="modal-title">📋 Cargar Lista de Validadores del Mes</div>
@@ -2362,6 +2358,21 @@ body {
                         <button class="btn-modal-save" onclick="guardarRevisionValidador()">✅ Guardar revisión</button>
                         <button class="btn-modal-cancel" onclick="document.getElementById('modalRegistrarValidador').classList.remove('open')">Cancelar</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- ═══ CONTROL PPT (placeholder) ═══ -->
+            <div id="control-ppt" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Control PPT</div>
+                        <div class="page-subtitle">Control de presentaciones y planillas</div>
+                    </div>
+                </div>
+                <div class="empty-state" style="padding:80px 20px;">
+                    <div class="empty-icon" style="font-size:60px;">📊</div>
+                    <p style="font-size:16px;color:var(--muted);">Módulo en desarrollo</p>
+                    <p style="font-size:13px;color:var(--border);margin-top:8px;">Próximamente disponible</p>
                 </div>
             </div>
 
@@ -2643,71 +2654,6 @@ body {
                     <div id="mgiTecnicoContenido"></div>
                 </div>
 
-            </div>
-
-            <!-- ═══ CONTROL PPT ═══ -->
-            <div id="control-ppt" class="section">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📊 Control PPT</div>
-                        <div class="page-subtitle">Relevamiento mensual de periféricos PPT de slots</div>
-                    </div>
-                    <div class="action-bar">
-                        <button class="btn-primary" id="btnNuevoRelevamientoPpt" onclick="pptAbrirModalNuevoRelevamiento()">📋 Nuevo Relevamiento</button>
-                    </div>
-                </div>
-
-                <!-- Banner tarea activa -->
-                <div id="pptTareaBanner" style="display:none;background:rgba(0,212,168,.1);border:1px solid var(--accent);border-radius:12px;padding:14px 18px;margin-bottom:18px;align-items:center;gap:12px;">
-                    <span style="font-size:22px;">📋</span>
-                    <div style="flex:1;">
-                        <div style="font-size:13px;font-weight:700;color:var(--accent);">TAREA ACTIVA</div>
-                        <div id="pptTareaDesc" style="font-size:14px;color:var(--white);margin-top:2px;"></div>
-                    </div>
-                    <div id="pptTareaProgress" style="font-size:13px;color:var(--muted);white-space:nowrap;"></div>
-                </div>
-
-                <!-- Filtro de período -->
-                <div class="card-box" style="margin-bottom:16px;">
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                        <select id="filtroPptPeriodo" onchange="renderPpt()" class="form-input" style="margin:0;min-width:180px;">
-                            <option value="">— Todos los períodos —</option>
-                        </select>
-                        <select id="filtroPptEstado" onchange="renderPpt()" class="form-input" style="margin:0;min-width:150px;">
-                            <option value="">— Todos los estados —</option>
-                            <option value="PENDIENTE">Pendiente</option>
-                            <option value="REALIZADO">Realizado</option>
-                        </select>
-                        <select id="filtroPptTecnico" onchange="renderPpt()" class="form-input" style="margin:0;min-width:150px;">
-                            <option value="">— Todos los técnicos —</option>
-                        </select>
-                        <input type="text" id="filtroPptBuscar" class="form-input" placeholder="Buscar MTM, isla, problema..." oninput="renderPpt()" style="margin:0;flex:1;min-width:180px;">
-                    </div>
-                </div>
-
-                <!-- Tabla -->
-                <div class="card-box" style="overflow-x:auto;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;">
-                        <div class="card-box-title" style="margin-bottom:0;">📋 Lista de Máquinas PPT</div>
-                        <div id="pptResumen" style="display:flex;gap:10px;"></div>
-                    </div>
-                    <table id="tablaPpt" style="width:100%;border-collapse:collapse;font-size:13px;">
-                        <thead>
-                            <tr style="background:var(--bg3);color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase;">
-                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">MTM</th>
-                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Isla</th>
-                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);min-width:200px;">Problema</th>
-                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Técnico(s)</th>
-                                <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Estado</th>
-                                <th style="padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);">Fecha realizado</th>
-                                <th style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pptTbody">
-                            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted);">No hay relevamientos cargados</td></tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
 
         </div><!-- /main -->
@@ -4201,7 +4147,6 @@ function mostrar(sec){
     if(sec === 'contadoras') renderContadoras();
     if(sec === 'fuera-servicio') renderFds();
     if(sec === 'validadores') renderValidadores();
-    if(sec === 'control-ppt') initPpt();
     if(sec === 'carteles') renderCartelesAdmin();
     if(sec === 'plan-preventivo') ppIniciar();
     if(sec === 'gestionUsuarios'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderGestionUsuarios(); if(esSuperAdmin()) renderUbicaciones(); }
@@ -11406,6 +11351,7 @@ function renderValidadores() {
         return `<tr style="border-bottom:1px solid var(--border);background:${rowBg};transition:background .15s;" 
                     onmouseover="this.style.background='var(--bg3)'" 
                     onmouseout="this.style.background='${rowBg}'">
+            <td style="padding:10px 12px;text-align:center;">${btnAccion}</td>
             <td style="padding:10px 12px;font-weight:700;color:var(--accent);font-size:14px;">${f.slot}</td>
             <td style="padding:10px 12px;color:var(--muted);">${f.isla}</td>
             <td style="padding:10px 12px;font-weight:600;color:var(--white);">${f.modelo}</td>
@@ -11415,7 +11361,6 @@ function renderValidadores() {
             <td style="padding:10px 12px;color:var(--accent2);font-size:12px;font-weight:600;">${f.tecnico || '<span style="opacity:.4;color:var(--muted);">—</span>'}</td>
             <td style="padding:10px 12px;text-align:center;">${estadoBadge}</td>
             <td style="padding:10px 12px;color:var(--muted);font-size:12px;">${f.fechaRealizado || '<span style="opacity:.4;">—</span>'}</td>
-            <td style="padding:10px 12px;text-align:center;">${btnAccion}</td>
         </tr>`;
     }).join("");
 }
@@ -11525,413 +11470,6 @@ function valIntentarPegar(input) {
             }
         }
     }
-}
-
-
-// ═══════════════════════════════════════════════════════════════
-//  CONTROL PPT — Relevamiento mensual de periféricos PPT
-// ═══════════════════════════════════════════════════════════════
-
-let pptData = JSON.parse(localStorage.getItem("pptData")) || [];
-
-function pptGuardar() {
-    localStorage.setItem("pptData", JSON.stringify(pptData));
-}
-
-// ─── Mostrar sección ─────────────────────────────────────────
-function initPpt() {
-    // Ocultar botón nuevo relevamiento para técnicos (no admin)
-    let btn = document.getElementById("btnNuevoRelevamientoPpt");
-    if (btn) btn.style.display = esAdminOSuperAdmin() ? "inline-flex" : "none";
-    renderPpt();
-}
-
-// ─── Render principal ─────────────────────────────────────────
-function renderPpt() {
-    // Poblar filtro período
-    let selPeriodo = document.getElementById("filtroPptPeriodo");
-    if (!selPeriodo) return;
-    let periodoActual = selPeriodo.value;
-    selPeriodo.innerHTML = '<option value="">— Todos los períodos —</option>' +
-        pptData.map(l => `<option value="${l.periodo}" ${periodoActual === l.periodo ? 'selected' : ''}>${l.periodo}</option>`).join("");
-
-    // Poblar filtro técnico
-    let selTec = document.getElementById("filtroPptTecnico");
-    if (selTec) {
-        let tecActual = selTec.value;
-        let tecnicos = getTecnicos();
-        selTec.innerHTML = '<option value="">— Todos los técnicos —</option>' +
-            tecnicos.map(t => `<option value="${t}" ${tecActual === t ? 'selected' : ''}>${t}</option>`).join("");
-    }
-
-    let periodoFiltro = selPeriodo.value;
-    let estadoFiltro  = document.getElementById("filtroPptEstado")?.value || "";
-    let tecnicoFiltro = document.getElementById("filtroPptTecnico")?.value || "";
-    let buscar        = (document.getElementById("filtroPptBuscar")?.value || "").toLowerCase();
-
-    // Aplanar items con referencia al lote
-    let rows = [];
-    pptData.forEach((lote, loteIdx) => {
-        if (periodoFiltro && lote.periodo !== periodoFiltro) return;
-        (lote.items || []).forEach((item, itemIdx) => {
-            if (estadoFiltro && item.estado !== estadoFiltro) return;
-            if (tecnicoFiltro) {
-                let tecs = [lote.tecnico1, lote.tecnico2].filter(Boolean);
-                if (!tecs.includes(tecnicoFiltro) && item.tecnicoRealizado !== tecnicoFiltro) return;
-            }
-            if (buscar) {
-                let haystack = `${item.mtm} ${item.isla} ${item.problema} ${lote.periodo}`.toLowerCase();
-                if (!haystack.includes(buscar)) return;
-            }
-            rows.push({ loteIdx, itemIdx, lote, item });
-        });
-    });
-
-    // Resumen
-    let pendientes = rows.filter(r => r.item.estado === "PENDIENTE").length;
-    let realizados = rows.filter(r => r.item.estado === "REALIZADO").length;
-    let resumenEl = document.getElementById("pptResumen");
-    if (resumenEl) {
-        resumenEl.innerHTML = `
-            <span style="font-size:12px;background:rgba(255,201,71,.12);border:1px solid rgba(255,201,71,.3);color:var(--yellow);padding:4px 10px;border-radius:8px;">⏳ ${pendientes} pendientes</span>
-            <span style="font-size:12px;background:rgba(0,212,168,.12);border:1px solid rgba(0,212,168,.3);color:var(--accent);padding:4px 10px;border-radius:8px;">✅ ${realizados} realizados</span>
-        `;
-    }
-
-    // Banner tarea activa
-    let tareasActivas = pptData
-        .filter(l => l.tareaId && l.items.some(i => i.estado === "PENDIENTE"))
-        .map(l => ({
-            lote: l,
-            pend: l.items.filter(i => i.estado === "PENDIENTE").length,
-            total: l.items.length
-        }));
-    let banner = document.getElementById("pptTareaBanner");
-    if (banner) {
-        if (tareasActivas.length > 0) {
-            banner.style.display = "flex";
-            let ta = tareasActivas[0];
-            document.getElementById("pptTareaDesc").textContent = `Revisar PPT — ${ta.lote.periodo}`;
-            document.getElementById("pptTareaProgress").textContent = `${ta.lote.items.length - ta.pend}/${ta.lote.items.length} realizados`;
-        } else {
-            banner.style.display = "none";
-        }
-    }
-
-    // Tabla
-    let tbody = document.getElementById("pptTbody");
-    if (!tbody) return;
-
-    if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted);">
-            ${pptData.length === 0 ? 'No hay relevamientos cargados aún' : 'Sin resultados para los filtros seleccionados'}
-        </td></tr>`;
-        return;
-    }
-
-    let isAdmin = esAdminOSuperAdmin();
-    // Agrupar por lote para mostrar separadores
-    let loteActual = -1;
-    let html = "";
-    rows.forEach(({ loteIdx, itemIdx, lote, item }) => {
-        if (loteIdx !== loteActual) {
-            loteActual = loteIdx;
-            let tecnicos = [lote.tecnico1, lote.tecnico2].filter(Boolean).join(" + ");
-            let pend = lote.items.filter(i => i.estado === "PENDIENTE").length;
-            let tot  = lote.items.length;
-            let pct  = Math.round(((tot - pend) / tot) * 100);
-            let barColor = pct === 100 ? "var(--accent)" : pct > 50 ? "var(--accent2)" : "var(--yellow)";
-            html += `
-            <tr>
-                <td colspan="7" style="background:var(--bg3);padding:10px 14px;border-bottom:1px solid var(--border);">
-                    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                        <div>
-                            <span style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--white);">📋 ${lote.periodo}</span>
-                            <span style="font-size:12px;color:var(--muted);margin-left:10px;">👤 ${tecnicos}</span>
-                            <span style="font-size:12px;color:var(--muted);margin-left:10px;">📅 ${lote.fechaCreacion || ""}</span>
-                        </div>
-                        <div style="flex:1;min-width:120px;">
-                            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px;">
-                                <span>Progreso</span><span style="color:${barColor};font-weight:700;">${tot - pend}/${tot}</span>
-                            </div>
-                            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
-                                <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .4s;"></div>
-                            </div>
-                        </div>
-                        ${isAdmin ? `<button onclick="pptAbrirEliminar(${loteIdx})" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)';">🗑️ Eliminar</button>` : ""}
-                    </div>
-                </td>
-            </tr>`;
-        }
-        let estadoPill = item.estado === "REALIZADO"
-            ? `<span class="pill resuelto">✅ REALIZADO</span>`
-            : `<span class="pill pendiente">⏳ PENDIENTE</span>`;
-        let tecDisplay = item.tecnicoRealizado || [lote.tecnico1, lote.tecnico2].filter(Boolean).join(" / ");
-        html += `<tr>
-            <td style="padding:10px 12px;border-bottom:1px solid var(--border);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--accent2);">${item.mtm}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid var(--border);">${item.isla || "—"}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid var(--border);max-width:260px;word-break:break-word;">${item.problema}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--muted);font-size:12px;">${tecDisplay}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:center;">${estadoPill}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--muted);font-size:12px;">${item.fechaRealizado || "—"}</td>
-            <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:center;">
-                <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
-                    ${item.estado === "PENDIENTE" ? `<button onclick="pptAbrirRealizado(${loteIdx},${itemIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-weight:700;transition:all .15s;" onmouseover="this.style.background='rgba(0,212,168,.25)';" onmouseout="this.style.background='rgba(0,212,168,.12)';">✅ Realizado</button>` : ""}
-                    ${isAdmin ? `<button onclick="pptAbrirEditarItem(${loteIdx},${itemIdx})" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)';">✏️</button>` : ""}
-                </div>
-            </td>
-        </tr>`;
-    });
-    tbody.innerHTML = html;
-}
-
-// ─── Modal Nuevo Relevamiento ─────────────────────────────────
-function pptAbrirModalNuevoRelevamiento() {
-    try {
-        if (esVisita()) return;
-        let modal = document.getElementById("modalNuevoRelevamientoPpt");
-        if (!modal) { alert("Modal PPT no encontrado en el DOM"); return; }
-        let periodoInput = document.getElementById("pptPeriodoInput");
-        if (periodoInput) periodoInput.value = "";
-        let tecnicos = getTecnicos();
-        let sel1 = document.getElementById("pptTecnico1Input");
-        let sel2 = document.getElementById("pptTecnico2Input");
-        if (sel1) sel1.innerHTML = '<option value="">— Seleccionar técnico —</option>' + tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
-        if (sel2) sel2.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
-        let cont = document.getElementById("pptFilasContainer");
-        if (cont) { cont.innerHTML = ""; pptAgregarFila(); }
-        modal.classList.add("open");
-    } catch(e) {
-        console.error("Error abriendo modal PPT:", e);
-        alert("Error: " + e.message);
-    }
-}
-
-function pptAgregarFila(mtmVal) {
-    let cont = document.getElementById("pptFilasContainer");
-    let div = document.createElement("div");
-    div.style.cssText = "display:grid;grid-template-columns:120px 90px 1fr 36px;gap:8px;align-items:center;";
-    div.innerHTML = `
-        <input type="text" class="form-input ppt-mtm" placeholder="MTM" style="margin:0;" value="${mtmVal || ""}" oninput="pptOnMtmInput(this)">
-        <input type="text" class="form-input ppt-isla" placeholder="Isla" style="margin:0;">
-        <input type="text" class="form-input ppt-problema" placeholder="Problema / Falla" style="margin:0;">
-        <button onclick="this.parentElement.remove()" style="background:var(--bg3);border:1px solid var(--border);color:var(--red);border-radius:6px;padding:6px;cursor:pointer;font-size:14px;line-height:1;">✕</button>
-    `;
-    cont.appendChild(div);
-    div.querySelector(".ppt-mtm")?.focus();
-}
-
-function pptOnMtmInput(input) {
-    let val = input.value;
-    if (val.includes(",") || val.includes("\n")) {
-        let slots = val.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-        if (slots.length > 1) {
-            input.value = slots[0];
-            for (let i = 1; i < slots.length; i++) pptAgregarFila(slots[i]);
-        }
-    }
-}
-
-function pptGuardarRelevamiento() {
-    let periodo  = document.getElementById("pptPeriodoInput").value.trim();
-    let tecnico1 = document.getElementById("pptTecnico1Input").value;
-    let tecnico2 = document.getElementById("pptTecnico2Input").value;
-
-    if (!periodo)  { toast.warning("Ingresá el período",""); return; }
-    if (!tecnico1) { toast.warning("Seleccioná al menos un técnico",""); return; }
-
-    if (pptData.find(l => l.periodo === periodo)) {
-        if (!confirm(`Ya existe un relevamiento para "${periodo}". ¿Querés reemplazarlo?`)) return;
-        pptData = pptData.filter(l => l.periodo !== periodo);
-    }
-
-    // Recolectar filas
-    let items = [];
-    document.querySelectorAll("#pptFilasContainer > div").forEach(row => {
-        let mtm      = row.querySelector(".ppt-mtm")?.value.trim();
-        let isla     = row.querySelector(".ppt-isla")?.value.trim();
-        let problema = row.querySelector(".ppt-problema")?.value.trim();
-        if (mtm) {
-            items.push({ mtm, isla: isla||"", problema: problema||"", estado: "PENDIENTE", tecnicoRealizado: "", fechaRealizado: "", observaciones: "" });
-        }
-    });
-    if (!items.length) { toast.warning("Agregá al menos una máquina",""); return; }
-
-    // Crear tarea automática
-    let ahora = Date.now();
-    let tecnicos = [tecnico1, tecnico2].filter(Boolean);
-    let tarea = {
-        id: ahora,
-        desc: `Revisar PPT — ${periodo}`,
-        asignado: tecnicos.length === 1 ? tecnicos[0] : "__todos__",
-        prioridad: "alta",
-        fecha: new Date().toISOString().slice(0,10),
-        notas: `Relevamiento PPT ${periodo}. ${items.length} máquinas a revisar. Técnico(s): ${tecnicos.join(", ")}.`,
-        estado: "pendiente",
-        done: false,
-        creadoEn: ahora,
-        iniciadoEn: null,
-        finalizadoEn: null,
-        tipo: "ppt"
-    };
-    tareas.push(tarea);
-    localStorage.setItem("tareas", JSON.stringify(tareas));
-
-    let lote = { periodo, tecnico1, tecnico2: tecnico2||"", fechaCreacion: new Date().toISOString().slice(0,10), tareaId: ahora, items };
-    pptData.push(lote);
-    pptGuardar();
-
-    document.getElementById("modalNuevoRelevamientoPpt").classList.remove("open");
-
-    // Auto-seleccionar el período nuevo
-    setTimeout(() => {
-        let sel = document.getElementById("filtroPptPeriodo");
-        if (sel) sel.value = periodo;
-        renderPpt();
-    }, 100);
-
-    renderTareas?.();
-    renderDashboard?.();
-    toast.success(`Relevamiento "${periodo}" creado ✅`, `${items.length} máquinas + tarea creada`);
-}
-
-// ─── Modal Marcar Realizado ───────────────────────────────────
-function pptAbrirRealizado(loteIdx, itemIdx) {
-    if (esVisita()) return;
-    let lote = pptData[loteIdx];
-    let item = lote?.items[itemIdx];
-    if (!item) return;
-
-    document.getElementById("pptRegLoteIdx").value = loteIdx;
-    document.getElementById("pptRegItemIdx").value = itemIdx;
-    document.getElementById("pptRegMtm").textContent      = item.mtm;
-    document.getElementById("pptRegIsla").textContent     = item.isla || "—";
-    document.getElementById("pptRegProblema").textContent = item.problema;
-    document.getElementById("pptRegFecha").value          = new Date().toISOString().slice(0,10);
-    document.getElementById("pptRegObservaciones").value  = "";
-
-    let sel = document.getElementById("pptRegTecnico");
-    let tecnicos = getTecnicos();
-    sel.innerHTML = '<option value="">— Seleccionar técnico —</option>' +
-        tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
-    // Pre-seleccionar técnico principal del lote
-    if (lote.tecnico1) sel.value = lote.tecnico1;
-
-    document.getElementById("modalRealizadoPpt").classList.add("open");
-}
-
-function pptGuardarRealizado() {
-    let loteIdx = parseInt(document.getElementById("pptRegLoteIdx").value);
-    let itemIdx = parseInt(document.getElementById("pptRegItemIdx").value);
-    let lote = pptData[loteIdx];
-    let item = lote?.items[itemIdx];
-    if (!item) return;
-
-    let tecnico = document.getElementById("pptRegTecnico").value;
-    let fecha   = document.getElementById("pptRegFecha").value;
-    let obs     = document.getElementById("pptRegObservaciones").value.trim();
-
-    if (!tecnico) { toast.warning("Seleccioná un técnico",""); return; }
-
-    item.estado           = "REALIZADO";
-    item.tecnicoRealizado = tecnico;
-    item.fechaRealizado   = fecha;
-    item.observaciones    = obs;
-
-    // ── Crear correctivo automático ──
-    let corrObj = {
-        tipo: "Correctivo",
-        fecha: fecha,
-        maquina: item.mtm,
-        isla: item.isla || "",
-        tecnico: tecnico,
-        nota: item.problema,
-        resolucion: "revision falla" + (obs ? ` — ${obs}` : ""),
-        estado: "Resuelto",
-        _origenPpt: true
-    };
-    incidencias.push(corrObj);
-    localStorage.setItem("incidencias", JSON.stringify(incidencias));
-    cargarAnios?.();
-    renderCorrectivos?.();
-
-    // ── Verificar si se completó toda la lista → cerrar tarea ──
-    let pendientes = lote.items.filter(i => i.estado === "PENDIENTE").length;
-    if (pendientes === 0 && lote.tareaId) {
-        let tarea = tareas.find(t => t.id === lote.tareaId);
-        if (tarea && tarea.estado !== "realizado") {
-            tarea.estado = "realizado";
-            tarea.done = true;
-            tarea.finalizadoEn = Date.now();
-            localStorage.setItem("tareas", JSON.stringify(tareas));
-            toast.success("¡Lista completa! Tarea cerrada automáticamente 🎉", "");
-        }
-    }
-
-    pptGuardar();
-    document.getElementById("modalRealizadoPpt").classList.remove("open");
-    renderPpt();
-    renderTareas?.();
-    renderDashboard?.();
-
-    if (pendientes > 0) {
-        toast.success(`PPT ${item.mtm} revisado ✅`, `Quedan ${pendientes} pendientes — correctivo creado`);
-    } else {
-        toast.success(`PPT ${item.mtm} revisado ✅`, `¡Relevamiento completo! — correctivo creado`);
-    }
-}
-
-// ─── Modal Editar Item (admin) ────────────────────────────────
-function pptAbrirEditarItem(loteIdx, itemIdx) {
-    if (!esAdminOSuperAdmin()) return;
-    let item = pptData[loteIdx]?.items[itemIdx];
-    if (!item) return;
-    document.getElementById("pptEditLoteIdx").value  = loteIdx;
-    document.getElementById("pptEditItemIdx").value  = itemIdx;
-    document.getElementById("pptEditMtm").value      = item.mtm;
-    document.getElementById("pptEditIsla").value     = item.isla;
-    document.getElementById("pptEditProblema").value = item.problema;
-    document.getElementById("modalEditarItemPpt").classList.add("open");
-}
-
-function pptGuardarEdicionItem() {
-    let loteIdx = parseInt(document.getElementById("pptEditLoteIdx").value);
-    let itemIdx = parseInt(document.getElementById("pptEditItemIdx").value);
-    let item = pptData[loteIdx]?.items[itemIdx];
-    if (!item) return;
-    item.mtm      = document.getElementById("pptEditMtm").value.trim();
-    item.isla     = document.getElementById("pptEditIsla").value.trim();
-    item.problema = document.getElementById("pptEditProblema").value.trim();
-    pptGuardar();
-    document.getElementById("modalEditarItemPpt").classList.remove("open");
-    renderPpt();
-    toast.success("Máquina actualizada ✅","");
-}
-
-// ─── Eliminar Relevamiento ────────────────────────────────────
-function pptAbrirEliminar(loteIdx) {
-    if (!esAdminOSuperAdmin()) return;
-    document.getElementById("pptEliminarIdx").value = loteIdx;
-    document.getElementById("pptEliminarNombre").textContent = pptData[loteIdx]?.periodo || "";
-    document.getElementById("modalEliminarPpt").classList.add("open");
-}
-
-function pptConfirmarEliminar() {
-    let loteIdx = parseInt(document.getElementById("pptEliminarIdx").value);
-    let lote = pptData[loteIdx];
-    if (!lote) return;
-    // Eliminar tarea asociada
-    if (lote.tareaId) {
-        tareas = tareas.filter(t => t.id !== lote.tareaId);
-        localStorage.setItem("tareas", JSON.stringify(tareas));
-    }
-    pptData.splice(loteIdx, 1);
-    pptGuardar();
-    document.getElementById("modalEliminarPpt").classList.remove("open");
-    renderPpt();
-    renderTareas?.();
-    renderDashboard?.();
-    toast.success("Relevamiento eliminado","");
 }
 
 function guardarCargaValidadores() {
@@ -12110,107 +11648,5 @@ function guardarRevisionValidador() {
     }
 }
 </script>
-<!-- ═══ MODALES PPT ═══ -->
-<div id="modalNuevoRelevamientoPpt" class="modal">
-    <div class="modal-box" style="max-width:700px;max-height:92vh;overflow-y:auto;">
-        <div class="modal-title">📋 Nuevo Relevamiento PPT</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Cargá las máquinas con problemas en el PPT. Se creará una tarea asignada al/los técnico(s) seleccionado(s).</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-            <div>
-                <label class="form-label">Período (ej: Abril*26)</label>
-                <input type="text" id="pptPeriodoInput" class="form-input" placeholder="Ej: Abril*26" style="margin:0;">
-            </div>
-            <div>
-                <label class="form-label">Técnico Principal</label>
-                <select id="pptTecnico1Input" class="form-select" style="margin:0;"></select>
-            </div>
-        </div>
-        <div style="margin-bottom:16px;">
-            <label class="form-label">Técnico Secundario <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
-            <select id="pptTecnico2Input" class="form-select" style="margin:0;"></select>
-        </div>
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
-            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Máquinas a revisar</div>
-            <div id="pptFilasContainer" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;"></div>
-            <button onclick="pptAgregarFila()" style="margin-top:10px;background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">➕ Agregar fila</button>
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">💡 Tip: podés pegar varios MTM separados por comas o saltos de línea en el primer campo.</div>
-        <div class="modal-footer">
-            <button class="btn-modal-save" onclick="pptGuardarRelevamiento()">📋 Crear Lista + Tarea</button>
-            <button class="btn-modal-cancel" onclick="document.getElementById('modalNuevoRelevamientoPpt').classList.remove('open')">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<div id="modalRealizadoPpt" class="modal">
-    <div class="modal-box" style="max-width:480px;max-height:92vh;overflow-y:auto;">
-        <div class="modal-title">✅ Marcar como Realizado</div>
-        <input type="hidden" id="pptRegLoteIdx">
-        <input type="hidden" id="pptRegItemIdx">
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;">
-            <div style="display:flex;gap:16px;flex-wrap:wrap;">
-                <div><span style="color:var(--muted);">MTM:</span> <strong id="pptRegMtm" style="color:var(--accent);font-family:'Rajdhani',sans-serif;font-size:16px;">—</strong></div>
-                <div><span style="color:var(--muted);">Isla:</span> <strong id="pptRegIsla">—</strong></div>
-            </div>
-            <div style="margin-top:8px;"><span style="color:var(--muted);">Problema:</span> <span id="pptRegProblema" style="color:var(--white);"></span></div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Técnico que realizó</label>
-            <select id="pptRegTecnico" class="form-select"></select>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Fecha</label>
-            <input type="date" id="pptRegFecha" class="form-input">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Observaciones <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
-            <textarea id="pptRegObservaciones" class="form-textarea" placeholder="Detalle adicional de lo que se hizo..." style="min-height:70px;"></textarea>
-        </div>
-        <div style="background:rgba(0,212,168,.07);border:1px solid rgba(0,212,168,.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);">
-            🔧 Se creará automáticamente un correctivo con estado <strong style="color:var(--accent);">Resuelto</strong> y resolución <strong style="color:var(--white);">"revision falla"</strong>.
-        </div>
-        <div class="modal-footer">
-            <button class="btn-modal-save" onclick="pptGuardarRealizado()">✅ Confirmar Realizado</button>
-            <button class="btn-modal-cancel" onclick="document.getElementById('modalRealizadoPpt').classList.remove('open')">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<div id="modalEliminarPpt" class="modal">
-    <div class="modal-box" style="max-width:400px;">
-        <div class="modal-title" style="color:var(--red);">🗑️ Eliminar Relevamiento</div>
-        <input type="hidden" id="pptEliminarIdx">
-        <p style="font-size:14px;color:var(--muted);margin-bottom:20px;">¿Estás seguro que querés eliminar el relevamiento <strong id="pptEliminarNombre" style="color:var(--white);"></strong>? Esta acción no se puede deshacer.</p>
-        <div class="modal-footer">
-            <button class="btn-modal-save" style="background:var(--red);" onclick="pptConfirmarEliminar()">🗑️ Sí, eliminar</button>
-            <button class="btn-modal-cancel" onclick="document.getElementById('modalEliminarPpt').classList.remove('open')">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<div id="modalEditarItemPpt" class="modal">
-    <div class="modal-box" style="max-width:440px;">
-        <div class="modal-title">✏️ Editar Máquina PPT</div>
-        <input type="hidden" id="pptEditLoteIdx">
-        <input type="hidden" id="pptEditItemIdx">
-        <div class="form-group">
-            <label class="form-label">MTM</label>
-            <input type="text" id="pptEditMtm" class="form-input" placeholder="Número MTM">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Isla</label>
-            <input type="text" id="pptEditIsla" class="form-input" placeholder="Número de isla">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Problema</label>
-            <textarea id="pptEditProblema" class="form-textarea" placeholder="Descripción del problema..." style="min-height:70px;"></textarea>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-modal-save" onclick="pptGuardarEdicionItem()">💾 Guardar</button>
-            <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarItemPpt').classList.remove('open')">Cancelar</button>
-        </div>
-    </div>
-</div>
-
 </body>
 </html>
