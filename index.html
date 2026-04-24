@@ -2763,8 +2763,8 @@ body {
                         <div class="page-title">📊 Control PPT</div>
                         <div class="page-subtitle">Relevamiento mensual de periféricos PPT de slots</div>
                     </div>
-                    <div class="action-bar" id="pptAdminActions" style="display:none;">
-                        <button class="btn-primary" onclick="pptAbrirModalNuevoRelevamiento()">📋 Nuevo Relevamiento</button>
+                    <div class="action-bar">
+                        <button class="btn-primary" id="btnNuevoRelevamientoPpt" onclick="pptAbrirModalNuevoRelevamiento()">📋 Nuevo Relevamiento</button>
                     </div>
                 </div>
 
@@ -11651,11 +11651,9 @@ function pptGuardar() {
 
 // ─── Mostrar sección ─────────────────────────────────────────
 function initPpt() {
-    // Mostrar botón nuevo relevamiento solo a admins
-    let adminActions = document.getElementById("pptAdminActions");
-    if (adminActions) {
-        adminActions.style.display = esAdminOSuperAdmin() ? "flex" : "none";
-    }
+    // Ocultar botón nuevo relevamiento para técnicos (no admin)
+    let btn = document.getElementById("btnNuevoRelevamientoPpt");
+    if (btn) btn.style.display = esAdminOSuperAdmin() ? "inline-flex" : "none";
     renderPpt();
 }
 
