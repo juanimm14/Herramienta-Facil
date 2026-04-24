@@ -11687,22 +11687,24 @@ function renderPpt() {
 
 // ─── Modal Nuevo Relevamiento ─────────────────────────────────
 function pptAbrirModalNuevoRelevamiento() {
-    if (esVisita()) return;
-    document.getElementById("pptPeriodoInput").value = "";
-    document.getElementById("pptRegObservaciones") && (document.getElementById("pptRegObservaciones").value = "");
-
-    let tecnicos = getTecnicos();
-    let sel1 = document.getElementById("pptTecnico1Input");
-    let sel2 = document.getElementById("pptTecnico2Input");
-    sel1.innerHTML = '<option value="">— Seleccionar técnico —</option>' + tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
-    sel2.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
-
-    // Generar una fila inicial
-    let cont = document.getElementById("pptFilasContainer");
-    cont.innerHTML = "";
-    pptAgregarFila();
-
-    document.getElementById("modalNuevoRelevamientoPpt").classList.add("open");
+    try {
+        if (esVisita()) return;
+        let modal = document.getElementById("modalNuevoRelevamientoPpt");
+        if (!modal) { alert("Modal PPT no encontrado en el DOM"); return; }
+        let periodoInput = document.getElementById("pptPeriodoInput");
+        if (periodoInput) periodoInput.value = "";
+        let tecnicos = getTecnicos();
+        let sel1 = document.getElementById("pptTecnico1Input");
+        let sel2 = document.getElementById("pptTecnico2Input");
+        if (sel1) sel1.innerHTML = '<option value="">— Seleccionar técnico —</option>' + tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
+        if (sel2) sel2.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(t => `<option value="${t}">${t}</option>`).join("");
+        let cont = document.getElementById("pptFilasContainer");
+        if (cont) { cont.innerHTML = ""; pptAgregarFila(); }
+        modal.classList.add("open");
+    } catch(e) {
+        console.error("Error abriendo modal PPT:", e);
+        alert("Error: " + e.message);
+    }
 }
 
 function pptAgregarFila(mtmVal) {
@@ -11932,6 +11934,7 @@ function pptConfirmarEliminar() {
     toast.success("Relevamiento eliminado","");
 }
 
+function guardarCargaValidadores() {
     let periodo = document.getElementById("valPeriodoInput").value.trim();
     if (!periodo) { toast.warning("Ingresá el período",""); return; }
 
