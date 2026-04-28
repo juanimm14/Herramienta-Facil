@@ -113,7 +113,7 @@ const _FB_KEYS = new Set([
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
     "equiposCilindros","equiposRA","equiposEVA",
-    "pptData"
+    "pptData","sidebarConfig"
 ]);
 
 localStorage.setItem = function(clave, valor) {
@@ -230,6 +230,13 @@ function _activarListenersTiempoReal() {
             if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
             if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
             if (_cache["pptData"]        !== undefined) pptData        = _cache["pptData"]        ?? [];
+            // Sidebar config — aplicar si cambió desde otro dispositivo
+            if (_cache["sidebarConfig"] !== undefined) {
+                _sidebarConfig = _cache["sidebarConfig"];
+                if (document.getElementById("app")?.style.display !== "none") {
+                    aplicarSidebarConfig?.();
+                }
+            }
             // Re-render si la app ya está iniciada
             if (document.getElementById("app")?.style.display !== "none") {
                 renderDashboard?.();
@@ -503,6 +510,88 @@ body {
 }
 .section { display: none; }
 .section.active { display: block; }
+
+/* ─── SIDEBAR CONFIG PANEL ─── */
+.sidebar-config-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: all .18s;
+    margin-top: auto;
+}
+.sidebar-config-btn:hover { background: var(--bg3); color: var(--white); border-color: var(--accent2); }
+
+.sidebar-config-panel {
+    display: none;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 8px;
+}
+.sidebar-config-panel.open { display: block; }
+.sidebar-config-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.sidebar-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    font-size: 13px;
+    color: var(--white);
+}
+.sidebar-toggle-row:last-child { border-bottom: none; }
+.sidebar-toggle-row span { display: flex; align-items: center; gap: 6px; }
+.sidebar-toggle-label { font-size: 12px; color: var(--muted); }
+
+/* Toggle switch */
+.toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--border);
+    border-radius: 20px;
+    transition: .2s;
+}
+.toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    left: 3px; top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: .2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
 
 /* PAGE HEADER */
 .page-header {
@@ -1655,6 +1744,20 @@ body {
             <button class="menu-btn" id="nav-gestionUsuarios" onclick="mostrar('gestionUsuarios')" style="display:none;">
                 <span class="icon">👥</span> Gestionar Usuarios
             </button>
+
+            <!-- ─── CONFIGURAR SIDEBAR (solo Admin/SuperAdmin) ─── -->
+            <div id="sidebarConfigWrap" style="display:none; margin-top:auto; padding-top:12px;">
+                <div style="border-top:1px solid var(--border);margin-bottom:10px;"></div>
+                <button class="sidebar-config-btn" onclick="toggleSidebarConfigPanel()">
+                    <span class="icon" style="font-size:15px;">⚙️</span>
+                    <span>Personalizar menú</span>
+                </button>
+                <div class="sidebar-config-panel" id="sidebarConfigPanel">
+                    <div class="sidebar-config-title">⚙️ Mostrar / Ocultar</div>
+                    <div id="sidebarToggleRows"></div>
+                    <button onclick="guardarSidebarConfig()" style="margin-top:10px;width:100%;padding:8px;background:var(--accent);color:var(--bg);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💾 Guardar</button>
+                </div>
+            </div>
         </div>
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
@@ -4058,6 +4161,9 @@ function iniciarApp(){
     mostrarBotonCartelesAdmin();
     renderCartelesDashboard();
 
+    // Inicializar configuración de visibilidad del sidebar
+    iniciarSidebarConfig();
+
     // Poblar todos los selects de técnico dinámicamente
     poblarSelectsTecnicos();
 
@@ -4081,6 +4187,117 @@ function toggleSidebar(){
     let ov = document.getElementById('sidebarOverlay');
     sb.classList.toggle('open');
     ov.classList.toggle('open');
+}
+
+// ──────────────────────────────────────────────
+//  CONFIGURACIÓN DE VISIBILIDAD DEL SIDEBAR
+// ──────────────────────────────────────────────
+// Definición de todos los botones configurables del sidebar
+const SIDEBAR_ITEMS_CONFIG = [
+    { id: "nav-pendientes",       label: "⏳ Tareas",                group: "Navegación" },
+    { id: "nav-correctivos",      label: "🔴 Correctivos Slots",     group: "Slots" },
+    { id: "nav-incidencias-prev", label: "📋 Historial Preventivos", group: "Slots" },
+    { id: "nav-preventivos",      label: "🔧 Registrar Preventivo",  group: "Slots" },
+    { id: "nav-fuera-servicio",   label: "🚫 Fuera de Servicio",     group: "Slots" },
+    { id: "nav-validadores",      label: "💳 Validadores",           group: "Slots" },
+    { id: "nav-control-ppt",      label: "📊 Control PPT",           group: "Slots" },
+    { id: "nav-kioscos-eva",      label: "🎫 Kioscos EVA",           group: "Otros Equipos" },
+    { id: "nav-contadoras",       label: "🔢 Contadoras",            group: "Otros Equipos" },
+    { id: "nav-plan-preventivo",  label: "📅 Plan Preventivo",       group: "Gestión" },
+];
+
+let _sidebarConfig = null; // { [navId]: true/false }
+
+function getSidebarConfig() {
+    if (_sidebarConfig) return _sidebarConfig;
+    let raw = localStorage.getItem("sidebarConfig");
+    if (raw) {
+        try { _sidebarConfig = JSON.parse(raw); }
+        catch { _sidebarConfig = {}; }
+    } else {
+        // Por defecto todos visibles
+        _sidebarConfig = {};
+        SIDEBAR_ITEMS_CONFIG.forEach(item => { _sidebarConfig[item.id] = true; });
+    }
+    return _sidebarConfig;
+}
+
+function aplicarSidebarConfig() {
+    let cfg = getSidebarConfig();
+    SIDEBAR_ITEMS_CONFIG.forEach(item => {
+        let btn = document.getElementById(item.id);
+        if (!btn) return;
+        let visible = cfg[item.id] !== false; // default true
+        btn.style.display = visible ? "" : "none";
+    });
+}
+
+function toggleSidebarConfigPanel() {
+    let panel = document.getElementById("sidebarConfigPanel");
+    if (!panel) return;
+    panel.classList.toggle("open");
+    if (panel.classList.contains("open")) {
+        renderSidebarToggles();
+    }
+}
+
+function renderSidebarToggles() {
+    let cfg = getSidebarConfig();
+    let container = document.getElementById("sidebarToggleRows");
+    if (!container) return;
+
+    let lastGroup = null;
+    let html = "";
+    SIDEBAR_ITEMS_CONFIG.forEach(item => {
+        if (item.group !== lastGroup) {
+            if (lastGroup !== null) html += `<div style="height:6px;"></div>`;
+            html += `<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:4px 0 2px;">${item.group}</div>`;
+            lastGroup = item.group;
+        }
+        let checked = cfg[item.id] !== false ? "checked" : "";
+        html += `
+        <div class="sidebar-toggle-row">
+            <span><span style="font-size:14px;">${item.label.split(" ")[0]}</span>
+            <span class="sidebar-toggle-label">${item.label.substring(item.label.indexOf(" ") + 1)}</span></span>
+            <label class="toggle-switch">
+                <input type="checkbox" data-nav="${item.id}" ${checked} onchange="onSidebarToggleChange(this)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function onSidebarToggleChange(input) {
+    let cfg = getSidebarConfig();
+    cfg[input.dataset.nav] = input.checked;
+    aplicarSidebarConfig();
+}
+
+async function guardarSidebarConfig() {
+    let cfg = getSidebarConfig();
+    // Recolectar estado actual de los toggles
+    document.querySelectorAll("#sidebarToggleRows input[type=checkbox]").forEach(inp => {
+        cfg[inp.dataset.nav] = inp.checked;
+    });
+    _sidebarConfig = cfg;
+    localStorage.setItem("sidebarConfig", JSON.stringify(cfg));
+    aplicarSidebarConfig();
+    // Cerrar panel
+    document.getElementById("sidebarConfigPanel").classList.remove("open");
+    toast.success("Configuración guardada", "El menú fue actualizado ✅");
+}
+
+// Inicializar la config cuando el sidebar config wrap se muestra
+function iniciarSidebarConfig() {
+    // Mostrar el botón solo para Admin/SuperAdmin
+    let wrap = document.getElementById("sidebarConfigWrap");
+    if (wrap) wrap.style.display = esAdminOSuperAdmin() ? "block" : "none";
+    // Refrescar config desde cache si ya cargó Firestore
+    if (_cache["sidebarConfig"]) {
+        _sidebarConfig = _cache["sidebarConfig"];
+    }
+    aplicarSidebarConfig();
 }
 
 // ──────────────────────────────────────────────
