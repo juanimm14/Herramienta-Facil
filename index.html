@@ -4517,12 +4517,17 @@ async function importHandleFile(file) {
         let clave = SHEET_MAP[sheetName];
         if (!clave) continue;
         let ws    = wb.Sheets[sheetName];
-        let rows  = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        // Headers en fila 3 (índice 2), datos desde fila 5 (índice 4), fila 4 es instrucción
+        let rows  = XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
+        // Fila de headers = índice 2 (fila 3 del Excel)
+        let rawHeaders = rows[2] || [];
         // Normalizar headers: quitar asteriscos y espacios ("fecha *" → "fecha")
-        rows = rows.map(r => {
-            let n = {};
-            Object.keys(r).forEach(k => { n[k.replace(/\s*\*\s*/g,"").trim()] = r[k]; });
-            return n;
+        let headers = rawHeaders.map(h => String(h || "").replace(/\s*\*\s*/g,"").trim());
+        // Datos reales desde índice 4 (fila 5), saltar fila 4 que es instrucción
+        rows = rows.slice(4).map(row => {
+            let obj = {};
+            headers.forEach((h, i) => { if (h) obj[h] = row[i] !== undefined ? row[i] : ""; });
+            return obj;
         });
         // Saltar filas vacías o que son filas de ejemplo del template
         const EJEMPLO_FECHAS = new Set(["2026-03-15","2026-03-20","2026-03-10","2026-03-22","2026-03-01","2026-04-23","2026-03-18","2026-03-25","2026-03-12","2026-03-30","2026-03-17","2026-03-18","2026-04-20"]);
