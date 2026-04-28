@@ -464,11 +464,22 @@ body {
     background: var(--bg2);
     border-right: 1px solid var(--border);
     flex-shrink: 0;
-    padding: 20px 12px;
+    padding: 20px 12px 0 12px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     overflow-y: auto;
+}
+
+/* Zona sticky al fondo del sidebar para el botón de config */
+.sidebar-bottom-sticky {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg2);
+    padding: 10px 0 14px 0;
+    margin-top: 8px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
 }
 .sidebar-section {
     font-size: 10px;
@@ -538,7 +549,9 @@ body {
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 14px;
-    margin-top: 8px;
+    margin-bottom: 8px;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 .sidebar-config-panel.open { display: block; }
 .sidebar-config-title {
@@ -1746,17 +1759,16 @@ body {
             </button>
 
             <!-- ─── CONFIGURAR SIDEBAR (solo Admin/SuperAdmin) ─── -->
-            <div id="sidebarConfigWrap" style="display:none; margin-top:auto; padding-top:12px;">
-                <div style="border-top:1px solid var(--border);margin-bottom:10px;"></div>
+            <div id="sidebarConfigWrap" style="display:none;" class="sidebar-bottom-sticky">
+                <div class="sidebar-config-panel" id="sidebarConfigPanel">
+                    <div class="sidebar-config-title">⚙️ Mostrar / Ocultar secciones</div>
+                    <div id="sidebarToggleRows"></div>
+                    <button onclick="guardarSidebarConfig()" style="margin-top:10px;width:100%;padding:8px;background:var(--accent);color:var(--bg);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💾 Guardar</button>
+                </div>
                 <button class="sidebar-config-btn" onclick="toggleSidebarConfigPanel()">
                     <span class="icon" style="font-size:15px;">⚙️</span>
                     <span>Personalizar menú</span>
                 </button>
-                <div class="sidebar-config-panel" id="sidebarConfigPanel">
-                    <div class="sidebar-config-title">⚙️ Mostrar / Ocultar</div>
-                    <div id="sidebarToggleRows"></div>
-                    <button onclick="guardarSidebarConfig()" style="margin-top:10px;width:100%;padding:8px;background:var(--accent);color:var(--bg);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">💾 Guardar</button>
-                </div>
             </div>
         </div>
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
@@ -4292,7 +4304,13 @@ async function guardarSidebarConfig() {
 function iniciarSidebarConfig() {
     // Mostrar el botón solo para Admin/SuperAdmin
     let wrap = document.getElementById("sidebarConfigWrap");
-    if (wrap) wrap.style.display = esAdminOSuperAdmin() ? "block" : "none";
+    if (wrap) {
+        if (esAdminOSuperAdmin()) {
+            wrap.style.display = "block";
+        } else {
+            wrap.style.display = "none";
+        }
+    }
     // Refrescar config desde cache si ya cargó Firestore
     if (_cache["sidebarConfig"]) {
         _sidebarConfig = _cache["sidebarConfig"];
