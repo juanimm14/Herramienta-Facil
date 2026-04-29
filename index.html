@@ -4735,10 +4735,34 @@ async function importProcesarHoja(clave, rows, modo) {
         });
         if (modo === "reemplazar") incidencias = incidencias.filter(i => i.tipo !== "Preventivo");
         // Dedup: no agregar si ya existe fecha+tecnico+islas igual
+        // PERO si el registro existente tiene nota vacía y el nuevo trae nota → actualizar
         let keySetP = new Set(incidencias.filter(i=>i.tipo==="Preventivo").map(i=>`${i.fecha}|${i.tecnico}|${(i.islas||[]).join(",")}`));
-        let sinDupP = nuevos.filter(n => !keySetP.has(`${n.fecha}|${n.tecnico}|${(n.islas||[]).join(",")}`));
-        omitidos += (nuevos.length - sinDupP.length);
-        importados -= (nuevos.length - sinDupP.length);
+        // También índice simple fecha+tecnico para actualizar nota en registros sin islas
+        let sinDupP = [];
+        nuevos.forEach(n => {
+            let keyFull = `${n.fecha}|${n.tecnico}|${(n.islas||[]).join(",")}`;
+            if (keySetP.has(keyFull)) {
+                // Ya existe con mismas islas — actualizar nota/subTipo si están vacíos
+                let existing = incidencias.find(i => i.tipo==="Preventivo" && i.fecha===n.fecha && i.tecnico===n.tecnico && (i.islas||[]).join(",") === (n.islas||[]).join(","));
+                if (existing) {
+                    if (n.nota && !existing.nota) existing.nota = n.nota;
+                    if (n.subTipo && !existing.subTipo) existing.subTipo = n.subTipo;
+                }
+                omitidos++;
+                importados--;
+            } else {
+                // Buscar por fecha+tecnico solo (sin importar islas) para actualizar nota
+                let existingSimple = incidencias.find(i => i.tipo==="Preventivo" && i.fecha===n.fecha && i.tecnico===n.tecnico && !i.nota && n.nota);
+                if (existingSimple) {
+                    existingSimple.nota = n.nota;
+                    if (n.subTipo && !existingSimple.subTipo) existingSimple.subTipo = n.subTipo;
+                    omitidos++;
+                    importados--;
+                } else {
+                    sinDupP.push(n);
+                }
+            }
+        });
         incidencias.push(...sinDupP);
         localStorage.setItem("incidencias", JSON.stringify(incidencias));
         _fbSet("incidencias", incidencias);
