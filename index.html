@@ -39,8 +39,8 @@ const _auth = firebase.auth();
 //  Los listeners en tiempo real actualizan el cache y
 //  re-renderizan la UI automáticamente en todos los dispositivos.
 // ─────────────────────────────────────────────────────────────
-// EMPRESA_ID se setea al hacer login (guardado en sessionStorage)
-let EMPRESA_ID = sessionStorage.getItem("empresaId") || "";
+// EMPRESA_ID se setea al hacer login (guardado en localStorage para persistir entre sesiones)
+let EMPRESA_ID = localStorage.getItem("empresaId") || sessionStorage.getItem("empresaId") || "";
 
 const _cache = {};  // cache en memoria: { [clave]: valor }
 
@@ -4152,8 +4152,10 @@ async function login(){
     btn.disabled = true;
 
     try {
-        // 0. Guardar empresa seleccionada
+        // 0. Guardar empresa seleccionada (localStorage para persistir entre sesiones)
         EMPRESA_ID = _loginEmpresaId;
+        localStorage.setItem("empresaId", EMPRESA_ID);
+        localStorage.setItem("empresaNombre", _loginEmpresaNombre);
         sessionStorage.setItem("empresaId", EMPRESA_ID);
         sessionStorage.setItem("empresaNombre", _loginEmpresaNombre);
         // 1. Autenticar con Firebase Auth
@@ -4179,6 +4181,8 @@ async function logout(){
     await _auth.signOut();
     usuarioActual = null;
     localStorage.removeItem("usuario");
+    localStorage.removeItem("empresaId");
+    localStorage.removeItem("empresaNombre");
     sessionStorage.removeItem("empresaId");
     sessionStorage.removeItem("empresaNombre");
     location.reload();
@@ -4730,9 +4734,9 @@ async function importProcesarHoja(clave, rows, modo) {
             importados++;
         });
         if (modo === "reemplazar") incidencias = incidencias.filter(i => i.tipo !== "Preventivo");
-        // Dedup: no agregar si ya existe fecha+tecnico igual
-        let keySetP = new Set(incidencias.filter(i=>i.tipo==="Preventivo").map(i=>`${i.fecha}|${i.tecnico}`));
-        let sinDupP = nuevos.filter(n => !keySetP.has(`${n.fecha}|${n.tecnico}`));
+        // Dedup: no agregar si ya existe fecha+tecnico+islas igual
+        let keySetP = new Set(incidencias.filter(i=>i.tipo==="Preventivo").map(i=>`${i.fecha}|${i.tecnico}|${(i.islas||[]).join(",")}`));
+        let sinDupP = nuevos.filter(n => !keySetP.has(`${n.fecha}|${n.tecnico}|${(n.islas||[]).join(",")}`));
         omitidos += (nuevos.length - sinDupP.length);
         importados -= (nuevos.length - sinDupP.length);
         incidencias.push(...sinDupP);
@@ -8577,8 +8581,8 @@ function crearCartelBarajadora(){
 // ─── Firebase Auth listener — maneja sesión automáticamente ──
 _auth.onAuthStateChanged(async (firebaseUser) => {
     if(firebaseUser){
-        // Recuperar empresa de session (por si recargó la página)
-        let savedEmpresa = sessionStorage.getItem("empresaId");
+        // Recuperar empresa de session o localStorage (por si recargó la página)
+        let savedEmpresa = sessionStorage.getItem("empresaId") || localStorage.getItem("empresaId");
         if (!savedEmpresa) {
             // No hay empresa seleccionada → forzar logout y volver al login
             await _auth.signOut();
@@ -13168,6 +13172,11 @@ function guardarRevisionValidador() {
             <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarSubtipoPreventivo').classList.remove('open');_editSubtipoIdx=null;">Cancelar</button>
         </div>
     </div>
+</div>
+
+<!-- ═══ COPYRIGHT FOOTER ═══ -->
+<div style="text-align:center;padding:18px 0 10px;font-size:11px;color:var(--muted);opacity:.55;user-select:none;pointer-events:none;">
+    © 2026 Juan Mucci — Herramienta Fácil
 </div>
 
 </body>
