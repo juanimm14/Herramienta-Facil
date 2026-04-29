@@ -292,6 +292,7 @@ body {
     background: var(--bg);
     color: var(--white);
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
 }
 
@@ -299,6 +300,7 @@ body {
 #loginDiv {
     display: none;
     height: 100vh;
+    height: 100dvh;
     align-items: center;
     justify-content: center;
     background: var(--bg);
@@ -393,7 +395,7 @@ body {
 
 /* ─── APP LAYOUT ─── */
 #app { display: none; }
-.layout { display: flex; height: 100vh; flex-direction: column; }
+.layout { display: flex; height: 100vh; height: 100dvh; flex-direction: column; }
 
 /* TOPBAR */
 .topbar {
@@ -1055,6 +1057,7 @@ body {
     .tareas-kanban { grid-template-columns: 1fr; }
     .prev-grid { grid-template-columns: 1fr 1fr; }
     .prev-card.highlight { grid-column: span 2; }
+    .main { padding-bottom: env(safe-area-inset-bottom, 16px); }
     .sidebar {
         position: fixed;
         left: 0; top: var(--topbar); bottom: 0;
