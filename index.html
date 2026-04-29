@@ -4743,7 +4743,12 @@ async function importProcesarHoja(clave, rows, modo) {
         let nuevas = [];
         rows.forEach(r => {
             if (!r.desc) { omitidos++; return; }
-            let estado = r.estado || "pendiente";
+            // Normalizar estado: aceptar variantes en mayúsculas/minúsculas y sinónimos
+            let estadoRaw = String(r.estado || "pendiente").toLowerCase().trim();
+            let estado;
+            if(estadoRaw === "realizado" || estadoRaw === "realizada" || estadoRaw === "resuelto" || estadoRaw === "resuelta" || estadoRaw === "completado" || estadoRaw === "completada" || estadoRaw === "done") estado = "realizado";
+            else if(estadoRaw === "en-curso" || estadoRaw === "en curso" || estadoRaw === "en_curso" || estadoRaw === "encurso" || estadoRaw === "iniciado" || estadoRaw === "iniciada") estado = "en-curso";
+            else estado = "pendiente";
             let id = ahora + importados;
             let fechaFin = r.fechaFin ? new Date(_normFecha(r.fechaFin)).getTime() : null;
             nuevas.push({
@@ -5858,7 +5863,7 @@ function renderCorrectivos(){
             if(!haystack.includes(buscar)) return false;
         }
         return true;
-    }).reverse();
+    }).sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
 
     let tbody = document.getElementById("tbodyCorrectivos");
     if(!tbody) return;
@@ -6656,7 +6661,7 @@ function renderIncidenciasPreventivos(){
     if(anioF !== "todos") lista = lista.filter(i => i.fecha && i.fecha.startsWith(anioF));
     if(mesF !== "todos") lista = lista.filter(i => i.fecha && i.fecha.slice(5,7) === mesF);
 
-    lista = [...lista].reverse();
+    lista = [...lista].sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
 
     if(lista.length === 0){
         cont.innerHTML = '<div class="empty-state"><div class="empty-icon">🔧</div><p>No hay preventivos con los filtros aplicados</p></div>';
@@ -6790,6 +6795,9 @@ function renderIncidenciasPreventivos(){
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo)
                     ? `<button onclick="toggleEditarIslasRegistro('${cardId}')" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">⚙️ Editar Islas Cargadas</button>`
                     : ""}
+                ${usuarioActual?.rol==="Admin"
+                    ? `<button onclick="abrirEditarSubtipoPreventivo(${globalIdx})" style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);color:var(--yellow);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">🏷️ Editar Subtipo</button>`
+                    : ""}
                 ${(usuarioActual?.rol==="Admin" && !p.validado)
                     ? `<button onclick="validarPrevIncidencia(${globalIdx})" style="background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">✔ Validar</button>`
                     : ""}
@@ -6815,6 +6823,58 @@ function validarPrevIncidencia(idx){
     cargarAniosPrev();
     renderIncidenciasPreventivos();
     renderDashboard();
+}
+
+// ──────────────────────────────────────────────
+//  EDITAR SUBTIPO DE PREVENTIVO (solo Admin)
+// ──────────────────────────────────────────────
+let _editSubtipoIdx = null;
+
+function abrirEditarSubtipoPreventivo(idx){
+    if(usuarioActual?.rol !== "Admin"){ toast.warning("Sin permiso","Solo el Admin puede editar el subtipo."); return; }
+    _editSubtipoIdx = idx;
+    let p = incidencias[idx];
+    if(!p) return;
+
+    // Poblar select con todos los subtipos conocidos
+    let sel = document.getElementById("editSubtipoSelect");
+    sel.innerHTML = Object.entries(TIPO_LABELS_PREV)
+        .map(([val, lbl]) => `<option value="${val}"${(p.subTipo ?? "") === val ? " selected" : ""}>${lbl}</option>`)
+        .join("");
+
+    // Mostrar info del registro
+    let fechaStr = p.fecha || "—";
+    let tecStr   = p.tecnico || "—";
+    document.getElementById("editSubtipoInfo").innerHTML =
+        `<b style="color:var(--accent2);">${fechaStr}</b> · Técnico: <b style="color:var(--white);">${tecStr}</b><br>
+         <span style="color:var(--muted);font-size:12px;">Subtipo actual: <b style="color:var(--yellow);">${TIPO_LABELS_PREV[p.subTipo ?? ""] || p.subTipo || "Islas Slots"}</b></span>`;
+
+    document.getElementById("modalEditarSubtipoPreventivo").classList.add("open");
+}
+
+function guardarSubtipoPreventivo(){
+    if(_editSubtipoIdx === null) return;
+    let p = incidencias[_editSubtipoIdx];
+    if(!p) return;
+
+    let nuevoSubtipo = document.getElementById("editSubtipoSelect").value;
+    let subtipoAnterior = p.subTipo ?? "";
+
+    p.subTipo = nuevoSubtipo === "" ? undefined : nuevoSubtipo;
+
+    localStorage.setItem("incidencias", JSON.stringify(incidencias));
+
+    let labelAnterior = TIPO_LABELS_PREV[subtipoAnterior] || subtipoAnterior || "Islas Slots";
+    let labelNuevo    = TIPO_LABELS_PREV[nuevoSubtipo]    || nuevoSubtipo    || "Islas Slots";
+    auditRegistrar?.("preventivo","🏷️",`Subtipo editado`,`${labelAnterior} → ${labelNuevo}`);
+
+    document.getElementById("modalEditarSubtipoPreventivo").classList.remove("open");
+    _editSubtipoIdx = null;
+
+    cargarAniosPrev();
+    renderIncidenciasPreventivos();
+    renderDashboard?.();
+    toast.success("Subtipo actualizado", `${labelAnterior} → ${labelNuevo}`);
 }
 
 // ──────────────────────────────────────────────
@@ -13086,6 +13146,25 @@ function guardarRevisionValidador() {
         <div class="modal-footer">
             <button class="btn-modal-save" onclick="pptGuardarEdicionItem()">💾 Guardar</button>
             <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarItemPpt').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL EDITAR SUBTIPO PREVENTIVO ═══ -->
+<div id="modalEditarSubtipoPreventivo" class="modal">
+    <div class="modal-box" style="max-width:460px;">
+        <div class="modal-title">🏷️ Editar Subtipo de Preventivo</div>
+        <div id="editSubtipoInfo" style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--muted);line-height:1.6;"></div>
+        <div class="form-group">
+            <label class="form-label">Nuevo Subtipo</label>
+            <select id="editSubtipoSelect" class="form-select"></select>
+        </div>
+        <div style="background:rgba(255,201,71,.07);border:1px solid rgba(255,201,71,.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted);">
+            ⚠️ Cambiar el subtipo afecta cómo se contabilizan las máquinas y el filtro de tipo en el historial.
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="guardarSubtipoPreventivo()">💾 Guardar Subtipo</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarSubtipoPreventivo').classList.remove('open');_editSubtipoIdx=null;">Cancelar</button>
         </div>
     </div>
 </div>
