@@ -6772,7 +6772,7 @@ function renderIncidenciasPreventivos(){
                     <div style="font-size:14px;font-weight:600;color:var(--white);">
                         <span style="color:var(--accent2);">${tipoLabel}</span>
                         &nbsp;·&nbsp;<span style="color:var(--muted);font-size:13px;">${p.fecha||"—"}</span>
-                        &nbsp;·&nbsp;<span style="color:var(--accent2);font-size:13px;font-weight:600;">👤 ${p.tecnico||"—"}</span>
+                        &nbsp;·&nbsp;<span style="color:var(--accent2);font-size:13px;font-weight:600;">👤 ${p.tecnico||"—"}${p.tecnico2 ? ` <span style="color:var(--muted);font-weight:400;">+ ${p.tecnico2}</span>` : ""}</span>
                     </div>
                     <div style="font-size:12px;color:var(--muted);margin-top:3px;">
                         ${resumenEquipos}
@@ -6826,6 +6826,9 @@ function renderIncidenciasPreventivos(){
                     : ""}
                 ${usuarioActual?.rol==="Admin"
                     ? `<button onclick="event.stopPropagation();abrirEditarSubtipoPreventivo(${globalIdx})" style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);color:var(--yellow);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">🏷️ Editar Subtipo</button>`
+                    : ""}
+                ${(usuarioActual?.rol==="Admin" || esSuperAdmin())
+                    ? `<button onclick="event.stopPropagation();abrirEditarPreventivoCompleto(${globalIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">✏️ Editar</button>`
                     : ""}
                 ${(usuarioActual?.rol==="Admin" && !p.validado)
                     ? `<button onclick="event.stopPropagation();validarPrevIncidencia(${globalIdx})" style="background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">✔ Validar</button>`
@@ -7198,6 +7201,63 @@ function eliminarPreventivo(idx){
     cargarAniosPrev();
     renderIncidenciasPreventivos();
     renderDashboard();
+}
+
+// ──────────────────────────────────────────────
+//  EDITAR PREVENTIVO COMPLETO (Admin / SuperAdmin)
+// ──────────────────────────────────────────────
+let _editPrevIdx = null;
+
+function abrirEditarPreventivoCompleto(idx){
+    _editPrevIdx = idx;
+    let p = incidencias[idx];
+    if(!p) return;
+
+    // Poblar técnicos principal
+    let tecnicos = getTecnicos();
+    let selTec = document.getElementById("epTecnico");
+    selTec.innerHTML = tecnicos.map(t => `<option value="${t}"${p.tecnico===t?" selected":""}>${t}</option>`).join("");
+
+    // Poblar técnico ayudante (primer elemento vacío)
+    let selTec2 = document.getElementById("epTecnico2");
+    selTec2.innerHTML = `<option value="">— Ninguno —</option>` + tecnicos.map(t => `<option value="${t}"${(p.tecnico2||"")=== t?" selected":""}>${t}</option>`).join("");
+
+    document.getElementById("epFecha").value    = p.fecha || "";
+    document.getElementById("epNota").value     = p.nota  || p.notas || p.descripcion || p.detalle || p.observacion || p.observaciones || "";
+
+    document.getElementById("modalEditarPreventivoCompleto").classList.add("open");
+}
+
+function guardarEditarPreventivoCompleto(){
+    if(_editPrevIdx === null) return;
+    let p = incidencias[_editPrevIdx];
+    if(!p) return;
+
+    let fecha   = document.getElementById("epFecha").value;
+    let tecnico = document.getElementById("epTecnico").value;
+    let tec2    = document.getElementById("epTecnico2").value;
+    let nota    = document.getElementById("epNota").value.trim();
+
+    if(!fecha)   { toast.warning("Requerido","Ingresá la fecha"); return; }
+    if(!tecnico) { toast.warning("Requerido","Seleccioná el técnico"); return; }
+
+    p.fecha    = fecha;
+    p.tecnico  = tecnico;
+    p.tecnico2 = tec2 || undefined;
+    p.nota     = nota;
+    // limpiar campos alternativos para unificar en .nota
+    delete p.notas; delete p.descripcion; delete p.detalle; delete p.observacion; delete p.observaciones;
+
+    localStorage.setItem("incidencias", JSON.stringify(incidencias));
+    _fbSet("incidencias", incidencias);
+
+    document.getElementById("modalEditarPreventivoCompleto").classList.remove("open");
+    _editPrevIdx = null;
+
+    cargarAniosPrev?.();
+    renderIncidenciasPreventivos?.();
+    renderDashboard?.();
+    toast.success("Preventivo actualizado ✅","");
 }
 
 // ── Editar islas de un registro preventivo específico (Admin) ──
@@ -13194,6 +13254,33 @@ function guardarRevisionValidador() {
         <div class="modal-footer">
             <button class="btn-modal-save" onclick="guardarSubtipoPreventivo()">💾 Guardar Subtipo</button>
             <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarSubtipoPreventivo').classList.remove('open');_editSubtipoIdx=null;">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL EDITAR PREVENTIVO COMPLETO ═══ -->
+<div id="modalEditarPreventivoCompleto" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">✏️ Editar Preventivo</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="epFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico principal</label>
+            <select id="epTecnico" class="form-select"></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico que ayudó <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
+            <select id="epTecnico2" class="form-select"></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota</label>
+            <textarea id="epNota" class="form-textarea" placeholder="Ej: Limpieza general de 4 islas, sin inconvenientes..." style="min-height:90px;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="guardarEditarPreventivoCompleto()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarPreventivoCompleto').classList.remove('open');_editPrevIdx=null;">Cancelar</button>
         </div>
     </div>
 </div>
