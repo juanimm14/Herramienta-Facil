@@ -6805,7 +6805,7 @@ function renderIncidenciasPreventivos(){
                     }
                     return '';
                 })()}
-                ${(p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones)?`<div style="font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;"><b style="color:var(--white);">📝 Descripción:</b><br><span style="color:var(--muted);line-height:1.6;">${p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones}</span></div>`:(esAdminOSuperAdmin()?`<div onclick="event.stopPropagation();abrirEditarPreventivoCompleto(${globalIdx})" style="font-size:12px;margin-bottom:12px;padding:8px 14px;background:rgba(255,201,71,.06);border:1px dashed rgba(255,201,71,.4);border-radius:8px;color:var(--yellow);cursor:pointer;">✏️ Sin descripción — tocá para agregar</div>`:"")}
+                ${(p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones||(p.tipo==="Preventivo"&&p.estado&&p.estado.length>10?p.estado:""))?`<div style="font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;"><b style="color:var(--white);">📝 Descripción:</b><br><span style="color:var(--muted);line-height:1.6;">${p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones||(p.tipo==="Preventivo"?p.estado:"")}</span></div>`:(esAdminOSuperAdmin()?`<div onclick="event.stopPropagation();abrirEditarPreventivoCompleto(${globalIdx})" style="font-size:12px;margin-bottom:12px;padding:8px 14px;background:rgba(255,201,71,.06);border:1px dashed rgba(255,201,71,.4);border-radius:8px;color:var(--yellow);cursor:pointer;">✏️ Sin descripción — tocá para agregar</div>`:"")}
                 <!-- Panel editar islas cargadas — solo Admin, solo tipo Islas Slots -->
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo) ? `
                 <div id="${cardId}-editpanel" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg2);border:1px solid var(--accent2);border-radius:9px;">
@@ -7223,7 +7223,7 @@ function abrirEditarPreventivoCompleto(idx){
     selTec2.innerHTML = `<option value="">— Ninguno —</option>` + tecnicos.map(t => `<option value="${t}"${(p.tecnico2||"")=== t?" selected":""}>${t}</option>`).join("");
 
     document.getElementById("epFecha").value    = p.fecha || "";
-    document.getElementById("epNota").value     = p.nota  || p.notas || p.descripcion || p.detalle || p.observacion || p.observaciones || "";
+    document.getElementById("epNota").value     = p.nota  || p.notas || p.descripcion || p.detalle || p.observacion || p.observaciones || (p.tipo==="Preventivo" ? p.estado||"" : "") || "";
 
     document.getElementById("modalEditarPreventivoCompleto").classList.add("open");
 }
