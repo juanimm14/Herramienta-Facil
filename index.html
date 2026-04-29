@@ -6772,7 +6772,7 @@ function renderIncidenciasPreventivos(){
                     <div style="font-size:14px;font-weight:600;color:var(--white);">
                         <span style="color:var(--accent2);">${tipoLabel}</span>
                         &nbsp;·&nbsp;<span style="color:var(--muted);font-size:13px;">${p.fecha||"—"}</span>
-                        &nbsp;·&nbsp;<span style="color:var(--accent2);font-size:13px;font-weight:600;">👤 ${p.tecnico||"—"}${p.tecnico2 ? ` <span style="color:var(--muted);font-weight:400;">+ ${p.tecnico2}</span>` : ""}</span>
+                        &nbsp;·&nbsp;<span style="color:var(--accent2);font-size:13px;font-weight:600;">👤 ${p.tecnico||"—"}${p.tecnico2 ? ` <span style="color:var(--accent2);font-weight:600;">+ ${p.tecnico2}</span>` : ""}</span>
                     </div>
                     <div style="font-size:12px;color:var(--muted);margin-top:3px;">
                         ${resumenEquipos}
@@ -6805,7 +6805,7 @@ function renderIncidenciasPreventivos(){
                     }
                     return '';
                 })()}
-                ${(p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones)?`<div style="font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;"><b style="color:var(--white);">📝 Descripción:</b><br><span style="color:var(--muted);line-height:1.6;">${p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones}</span></div>`:""}
+                ${(p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones)?`<div style="font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;"><b style="color:var(--white);">📝 Descripción:</b><br><span style="color:var(--muted);line-height:1.6;">${p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones}</span></div>`:(esAdminOSuperAdmin()?`<div onclick="event.stopPropagation();abrirEditarPreventivoCompleto(${globalIdx})" style="font-size:12px;margin-bottom:12px;padding:8px 14px;background:rgba(255,201,71,.06);border:1px dashed rgba(255,201,71,.4);border-radius:8px;color:var(--yellow);cursor:pointer;">✏️ Sin descripción — tocá para agregar</div>`:"")}
                 <!-- Panel editar islas cargadas — solo Admin, solo tipo Islas Slots -->
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo) ? `
                 <div id="${cardId}-editpanel" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg2);border:1px solid var(--accent2);border-radius:9px;">
