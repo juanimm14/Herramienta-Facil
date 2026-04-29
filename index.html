@@ -5614,8 +5614,8 @@ function renderDashboard(){
         let prevPorTec = {};
         tecnicos.forEach(t => prevPorTec[t] = 0);
         preventivos.forEach(p => {
-            let tec = p.tecnico;
-            if(tec && prevPorTec.hasOwnProperty(tec)) prevPorTec[tec]++;
+            if(p.tecnico && prevPorTec.hasOwnProperty(p.tecnico)) prevPorTec[p.tecnico]++;
+            if(p.tecnico2 && prevPorTec.hasOwnProperty(p.tecnico2)) prevPorTec[p.tecnico2]++;
         });
         let prevData = tecnicos
             .map(t => ({ t, n: prevPorTec[t]||0 }))
@@ -6682,8 +6682,8 @@ function renderIncidenciasPreventivos(){
     if(tipoF !== "todos") lista = lista.filter(i => (i.subTipo || "") === tipoF);
     if(tecnicoF === "__turno_MANANA__"){
         let turnoLista = getTecnicosTurno();
-        lista = lista.filter(i => turnoLista.includes(i.tecnico));
-    } else if(tecnicoF !== "todos") lista = lista.filter(i => i.tecnico === tecnicoF);
+        lista = lista.filter(i => turnoLista.includes(i.tecnico) || turnoLista.includes(i.tecnico2));
+    } else if(tecnicoF !== "todos") lista = lista.filter(i => i.tecnico === tecnicoF || i.tecnico2 === tecnicoF);
     if(validF === "validado") lista = lista.filter(i => i.validado);
     if(validF === "no-validado") lista = lista.filter(i => !i.validado);
     if(anioF !== "todos") lista = lista.filter(i => i.fecha && i.fecha.startsWith(anioF));
@@ -6805,7 +6805,7 @@ function renderIncidenciasPreventivos(){
                     }
                     return '';
                 })()}
-                ${(p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones||(p.tipo==="Preventivo"&&p.estado&&p.estado.length>10?p.estado:""))?`<div style="font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;"><b style="color:var(--white);">📝 Descripción:</b><br><span style="color:var(--muted);line-height:1.6;">${p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones||(p.tipo==="Preventivo"?p.estado:"")}</span></div>`:(esAdminOSuperAdmin()?`<div onclick="event.stopPropagation();abrirEditarPreventivoCompleto(${globalIdx})" style="font-size:12px;margin-bottom:12px;padding:8px 14px;background:rgba(255,201,71,.06);border:1px dashed rgba(255,201,71,.4);border-radius:8px;color:var(--yellow);cursor:pointer;">✏️ Sin descripción — tocá para agregar</div>`:"")}
+                ${(p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones||(p.tipo==="Preventivo"&&p.estado?p.estado:""))?`<div style="font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;"><b style="color:var(--white);">📝 Descripción:</b><br><span style="color:var(--muted);line-height:1.6;">${p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones||(p.tipo==="Preventivo"?p.estado:"")}</span></div>`:(esAdminOSuperAdmin()?`<div onclick="event.stopPropagation();abrirEditarPreventivoCompleto(${globalIdx})" style="font-size:12px;margin-bottom:12px;padding:8px 14px;background:rgba(255,201,71,.06);border:1px dashed rgba(255,201,71,.4);border-radius:8px;color:var(--yellow);cursor:pointer;">✏️ Sin descripción — tocá para agregar</div>`:"")}
                 <!-- Panel editar islas cargadas — solo Admin, solo tipo Islas Slots -->
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo) ? `
                 <div id="${cardId}-editpanel" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg2);border:1px solid var(--accent2);border-radius:9px;">
