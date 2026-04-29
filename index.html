@@ -6777,7 +6777,7 @@ function renderIncidenciasPreventivos(){
                     }
                     return '';
                 })()}
-                ${p.nota?`<div style="font-size:13px;color:var(--muted);margin-bottom:12px;"><b style="color:var(--white);">Nota:</b> ${p.nota}</div>`:""}
+                ${(p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones)?`<div style="font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;"><b style="color:var(--white);">📝 Descripción:</b><br><span style="color:var(--muted);line-height:1.6;">${p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones}</span></div>`:""}
                 <!-- Panel editar islas cargadas — solo Admin, solo tipo Islas Slots -->
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo) ? `
                 <div id="${cardId}-editpanel" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg2);border:1px solid var(--accent2);border-radius:9px;">
