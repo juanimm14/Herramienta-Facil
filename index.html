@@ -6753,7 +6753,7 @@ function renderIncidenciasPreventivos(){
                 <span class="pill ${p.validado?'validado':'no-validado'}">${p.validado?"✔ Validado":"✖ Sin validar"}</span>
                 <span style="color:var(--muted);font-size:16px;margin-left:4px;">▾</span>
             </div>
-            <div id="${cardId}" style="display:none;padding:14px 18px;border-top:1px solid var(--border);background:var(--bg3);">
+            <div id="${cardId}" onclick="event.stopPropagation()" style="display:none;padding:14px 18px;border-top:1px solid var(--border);background:var(--bg3);">
                 <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Máquinas intervenidas</div>
                 <div id="${cardId}-islas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
                     ${islasEfectivas.map(e => {
@@ -6793,16 +6793,16 @@ function renderIncidenciasPreventivos(){
                 ` : ""}
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 ${(usuarioActual?.rol==="Admin" && !p.subTipo)
-                    ? `<button onclick="toggleEditarIslasRegistro('${cardId}')" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">⚙️ Editar Islas Cargadas</button>`
+                    ? `<button onclick="event.stopPropagation();toggleEditarIslasRegistro('${cardId}')" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">⚙️ Editar Islas Cargadas</button>`
                     : ""}
                 ${usuarioActual?.rol==="Admin"
-                    ? `<button onclick="abrirEditarSubtipoPreventivo(${globalIdx})" style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);color:var(--yellow);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">🏷️ Editar Subtipo</button>`
+                    ? `<button onclick="event.stopPropagation();abrirEditarSubtipoPreventivo(${globalIdx})" style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);color:var(--yellow);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">🏷️ Editar Subtipo</button>`
                     : ""}
                 ${(usuarioActual?.rol==="Admin" && !p.validado)
-                    ? `<button onclick="validarPrevIncidencia(${globalIdx})" style="background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">✔ Validar</button>`
+                    ? `<button onclick="event.stopPropagation();validarPrevIncidencia(${globalIdx})" style="background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">✔ Validar</button>`
                     : ""}
                 ${usuarioActual?.rol==="Admin"
-                    ? `<button onclick="eliminarPreventivo(${globalIdx})" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:7px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600;">🗑️ Eliminar</button>`
+                    ? `<button onclick="event.stopPropagation();eliminarPreventivo(${globalIdx})" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:7px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600;">🗑️ Eliminar</button>`
                     : ""}
                 </div>
             </div>
