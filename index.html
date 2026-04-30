@@ -4392,7 +4392,6 @@ function iniciarApp(){
     // Mostrar casino activo en topbar
     let topbarFecha = document.getElementById("topbarFecha");
     let empNombre = sessionStorage.getItem("empresaNombre") || EMPRESA_ID;
-    if (empNombre === "default") empNombre = "Melincué";
     if(topbarFecha) {
         // Insertar badge de casino si no existe
         if(!document.getElementById("topbarCasino")){
@@ -6175,52 +6174,15 @@ function guardarTarea(){
         done: estado === "realizado",
         creadoEn: tareaEditando?.creadoEn || ahora,
         iniciadoEn: tareaEditando?.iniciadoEn || (estado === "en-curso" ? ahora : null),
-        finalizadoEn: tareaEditando?.finalizadoEn || (estado === "realizado" ? ahora : null)
+        finalizadoEn: tareaEditando?.finalizadoEn || (estado === "realizado" ? ahora : null),
+        maquina: (document.getElementById("tareaMaquina")?.value||"").trim() || tareaEditando?.maquina || "",
+        isla:    (document.getElementById("tareaIsla")?.value||"").trim()    || tareaEditando?.isla    || ""
     };
     if(tareaEditando){
         let idx = tareas.findIndex(t => t.id === tareaEditando.id);
         tareas[idx] = obj;
     } else {
         tareas.push(obj);
-        // ── Generar incidencia automática si tipo es correctivo ──
-        if(tipo === "correctivo"){
-            let maquina = (document.getElementById("tareaMaquina").value||"").trim();
-            let isla    = (document.getElementById("tareaIsla").value||"").trim();
-            let tecnico = obj.asignado && !obj.asignado.startsWith("__") ? obj.asignado : (usuarioActual?.nombre||"");
-            let estadoInc = estado === "realizado" ? "Resuelto" : "En Curso";
-            incidencias.push({
-                tipo: "Correctivo",
-                fecha: obj.fecha || new Date().toISOString().split("T")[0],
-                maquina: maquina || desc,
-                isla: isla,
-                tecnico: tecnico,
-                nota: desc + (obj.notas ? " — " + obj.notas : ""),
-                resolucion: "",
-                estado: estadoInc,
-                _fromTareaId: obj.id
-            });
-            localStorage.setItem("incidencias", JSON.stringify(incidencias));
-            toast.success("Incidencia creada","Se generó una incidencia correctiva automáticamente");
-        }
-        // ── Preventivo: genera registro básico en incidencias ──
-        if(tipo === "preventivo"){
-            let tecnico = obj.asignado && !obj.asignado.startsWith("__") ? obj.asignado : (usuarioActual?.nombre||"");
-            incidencias.push({
-                tipo: "Preventivo",
-                subTipo: "plan",
-                fecha: obj.fecha || new Date().toISOString().split("T")[0],
-                islas: [],
-                islasMaquinas: {},
-                totalMaquinas: 0,
-                tecnico: tecnico,
-                nota: desc + (obj.notas ? " — " + obj.notas : ""),
-                estado: "Realizado",
-                validado: false,
-                _fromTareaId: obj.id
-            });
-            localStorage.setItem("incidencias", JSON.stringify(incidencias));
-            toast.success("Preventivo registrado","Se generó un registro preventivo automáticamente");
-        }
     }
     localStorage.setItem("tareas", JSON.stringify(tareas));
     cerrarModalTarea();
@@ -6242,6 +6204,40 @@ function avanzarTarea(id){
         t.finalizadoEn = ahora;
         t.done = true;
         ppRegistrarEnHistorial(t);
+
+        // ── Crear incidencia al cerrar la tarea ──
+        if(t.tipo === "correctivo"){
+            let tecnico = t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||"");
+            incidencias.push({
+                tipo: "Correctivo",
+                fecha: t.fecha || new Date().toISOString().split("T")[0],
+                maquina: t.maquina || t.desc,
+                isla: t.isla || "",
+                tecnico: tecnico,
+                nota: t.desc + (t.notas ? " — " + t.notas : ""),
+                resolucion: "",
+                estado: "Resuelto",
+                _fromTareaId: t.id
+            });
+            toast.success("Incidencia creada", "Se generó una incidencia correctiva al cerrar la tarea");
+        } else if(t.tipo === "preventivo"){
+            let tecnico = t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||"");
+            incidencias.push({
+                tipo: "Preventivo",
+                subTipo: "plan",
+                fecha: t.fecha || new Date().toISOString().split("T")[0],
+                islas: [],
+                islasMaquinas: {},
+                totalMaquinas: 0,
+                tecnico: tecnico,
+                nota: t.desc + (t.notas ? " — " + t.notas : ""),
+                estado: "Realizado",
+                validado: false,
+                _fromTareaId: t.id
+            });
+            toast.success("Preventivo registrado", "Se generó un registro preventivo al cerrar la tarea");
+        }
+
         // Batch write: guardar tareas e incidencias juntos para evitar race condition
         _cache["tareas"] = tareas;
         _cache["incidencias"] = incidencias;
@@ -12100,6 +12096,38 @@ function confirmarQuienRealizoMulti(){
     t.done = true;
 
     ppRegistrarEnHistorial?.(t);
+
+    // ── Crear incidencia al cerrar la tarea ──
+    if(t.tipo === "correctivo"){
+        let tecnico = t.realizadoPor || (t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||""));
+        incidencias.push({
+            tipo: "Correctivo",
+            fecha: t.fecha || new Date().toISOString().split("T")[0],
+            maquina: t.maquina || t.desc,
+            isla: t.isla || "",
+            tecnico: tecnico,
+            nota: t.desc + (t.notas ? " — " + t.notas : ""),
+            resolucion: "",
+            estado: "Resuelto",
+            _fromTareaId: t.id
+        });
+    } else if(t.tipo === "preventivo"){
+        let tecnico = t.realizadoPor || (t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||""));
+        incidencias.push({
+            tipo: "Preventivo",
+            subTipo: "plan",
+            fecha: t.fecha || new Date().toISOString().split("T")[0],
+            islas: [],
+            islasMaquinas: {},
+            totalMaquinas: 0,
+            tecnico: tecnico,
+            nota: t.desc + (t.notas ? " — " + t.notas : ""),
+            estado: "Realizado",
+            validado: false,
+            _fromTareaId: t.id
+        });
+    }
+
     // Batch write: guardar tareas e incidencias juntos para evitar race condition
     _cache["tareas"] = tareas;
     _cache["incidencias"] = incidencias;
@@ -12646,14 +12674,8 @@ function renderValidadores() {
             ? `<span style="background:rgba(0,212,168,.15);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">REALIZADO</span>`
             : `<span style="background:rgba(255,77,109,.12);color:var(--red);border:1px solid var(--red);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">PENDIENTE</span>`;
         let btnAccion = esRealizado
-            ? `<div style="display:flex;gap:6px;align-items:center;">
-                <button onclick="valAbrirEditar(${f.loteIdx},${f.itemIdx})" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;">✏️ Editar</button>
-                <button onclick="valEliminarItem(${f.loteIdx},${f.itemIdx})" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;" title="Borrar validador">🗑️</button>
-               </div>`
-            : `<div style="display:flex;gap:6px;align-items:center;">
-                <button onclick="valAbrirRegistrar(${f.loteIdx},${f.itemIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✅ Registrar</button>
-                <button onclick="valEliminarItem(${f.loteIdx},${f.itemIdx})" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;" title="Borrar validador">🗑️</button>
-               </div>`;
+            ? `<button onclick="valAbrirEditar(${f.loteIdx},${f.itemIdx})" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;">✏️ Editar</button>`
+            : `<button onclick="valAbrirRegistrar(${f.loteIdx},${f.itemIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✅ Registrar</button>`;
 
         // Índice de aceptación para este slot
         let idxData = valGetIndiceSlot(f.slot);
@@ -13388,22 +13410,6 @@ function guardarRevisionValidador() {
     if (pendientes > 0) {
         toast.success(`Validador ${item.slot} revisado ✅`, `Quedan ${pendientes} pendientes`);
     }
-}
-
-function valEliminarItem(loteIdx, itemIdx) {
-    let lote = validadoresData[loteIdx];
-    if (!lote) return;
-    let item = lote.items[itemIdx];
-    if (!item) return;
-    if (!confirm(`¿Eliminar el validador Slot ${item.slot} (${item.isla})?`)) return;
-    lote.items.splice(itemIdx, 1);
-    // Si el lote quedó vacío, eliminarlo también
-    if (lote.items.length === 0) {
-        validadoresData.splice(loteIdx, 1);
-    }
-    valGuardar();
-    renderValidadores();
-    toast.success(`Validador ${item.slot} eliminado`, "");
 }
 </script>
 <!-- ═══ MODALES PPT ═══ -->
