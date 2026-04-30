@@ -225,14 +225,21 @@ function _activarListenersTiempoReal() {
             if (_cache["ppTareas"]       !== undefined) ppTareas       = _cache["ppTareas"]       ?? [];
             if (_cache["evaIncidencias"] !== undefined) evaIncidencias = _cache["evaIncidencias"] ?? [];
             if (_cache["evaDiarios"]     !== undefined) evaDiarios     = _cache["evaDiarios"]     ?? [];
-            if (_cache["validadoresData"] !== undefined) validadoresData = _cache["validadoresData"] ?? [];
+            if (_cache["validadoresData"] !== undefined) {
+                validadoresData = _cache["validadoresData"] ?? [];
+                try { let sel = document.getElementById("filtroValPeriodo"); if(sel && sel.value && !validadoresData.find(l=>l.periodo===sel.value)) sel.value=""; } catch(e){}
+            }
             if (_cache["fdsData"]        !== undefined) fdsData        = _cache["fdsData"]        ?? [];
             if (_cache["contadorasData"] !== undefined) contadorasData = _cache["contadorasData"] ?? [];
             if (_cache["listaContadoras"] !== undefined) listaContadoras = _cache["listaContadoras"] ?? [..._CNT_DEFAULT];
             if (_cache["equiposEVA"]      !== undefined) listaKioscosEva = _cache["equiposEVA"]      ?? ["EVA1","EVA2","EVA3","EVA4"];
             if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
             if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
-            if (_cache["pptData"]        !== undefined) pptData        = _cache["pptData"]        ?? [];
+            if (_cache["pptData"]        !== undefined) {
+                pptData = _cache["pptData"] ?? [];
+                let _m=false; pptData.forEach(l=>{ let r=l.fechaCreacion||l.createdAt||""; if(typeof r==="string"&&r.length>15&&!r.match(/^\d{4}-\d{2}-\d{2}$/)){ try{let d=new Date(r);if(!isNaN(d)){l.fechaCreacion=d.toISOString().slice(0,10);_m=true;}}catch(e){}}});
+                if(_m){ try{_fbSet("pptData",pptData);_localStorageOrig.setItem("pptData",JSON.stringify(pptData));}catch(e){} }
+            }
             if (_cache["eventosConfig"]  !== undefined) eventosConfig  = _cache["eventosConfig"]  ?? [];
             if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
             // Sidebar config — aplicar si cambió desde otro dispositivo
@@ -12607,10 +12614,14 @@ function valLimpiarFiltros() {
 // ─── Render principal ─────────────────────────────────
 
 function renderValidadores() {
-    _poblarFiltrosValidadores();
+    // Siempre sincronizar con el cache de Firebase antes de renderizar
+    if (_cache["validadoresData"] !== undefined) validadoresData = _cache["validadoresData"] ?? [];
+    if (_cache["indicesAceptacion"] !== undefined) indicesAceptacion = _cache["indicesAceptacion"] ?? {};
+    _poblarFiltrosValidadores();   // ← corrige filtros inválidos primero
     _renderBannerTareaValidadores();
     valRenderIndicesPanel();
 
+    // Leer filtros DESPUÉS de poblarlos (por si se corrigió alguno inválido)
     let periodoF = document.getElementById("filtroValPeriodo")?.value || "";
     let estadoF  = document.getElementById("filtroValEstado")?.value  || "";
     let tecnicoF = document.getElementById("filtroValTecnico")?.value || "";
@@ -12719,8 +12730,11 @@ function _poblarFiltrosValidadores() {
     let selPer = document.getElementById("filtroValPeriodo");
     let curPer = selPer?.value || "";
     let periodos = [...new Set(validadoresData.map(l => l.periodo))];
-    // Si el período seleccionado no existe más, resetear
-    if (curPer && !periodos.includes(curPer)) curPer = "";
+    // Si el período seleccionado no existe, resetear el select también
+    if (curPer && !periodos.includes(curPer)) {
+        curPer = "";
+        if (selPer) selPer.value = "";
+    }
     if (selPer) {
         selPer.innerHTML = '<option value="">— Todos los períodos —</option>'
             + periodos.map(p => `<option value="${p}" ${p===curPer?"selected":""}>${p}</option>`).join("");
@@ -12884,6 +12898,8 @@ function initPpt() {
 
 // ─── Render principal ─────────────────────────────────────────
 function renderPpt() {
+    // Siempre sincronizar pptData con el cache de Firebase
+    if (_cache["pptData"] !== undefined) pptData = _cache["pptData"] ?? [];
     // Poblar filtro período
     let selPeriodo = document.getElementById("filtroPptPeriodo");
     if (!selPeriodo) return;
@@ -14025,7 +14041,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <!-- ═══ COPYRIGHT FOOTER ═══ -->
 <div style="text-align:center;padding:18px 0 10px;font-size:11px;color:var(--muted);opacity:.55;user-select:none;pointer-events:none;">
-    © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.1</span>
+    © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.3</span>
 </div>
 
 </body>
