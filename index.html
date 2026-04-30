@@ -7938,6 +7938,8 @@ function abrirDetalleTarea(id){
         } else if(t.estado === "realizado"){
             accionesEl.innerHTML += `<button class="btn-task-action" style="border-color:var(--yellow);color:var(--yellow);" onclick="volverTarea(${t.id});abrirDetalleTarea(${t.id})">↩ Reabrir tarea</button>`;
         }
+        // Botón editar siempre disponible para admin/asignado
+        accionesEl.innerHTML += `<button class="btn-task-action" style="border-color:var(--accent2);color:var(--accent2);" onclick="editarTareaDesdeDetalle(${t.id})">✏️ Editar</button>`;
     }
 
     // — Historial de comentarios —
@@ -7976,6 +7978,39 @@ function cerrarModalTareaDetalle(){
     document.getElementById("modalTareaDetalle").classList.remove("open");
     tareaDetalleId = null;
     evaDetalleId = null;
+}
+
+function editarTareaDesdeDetalle(id){
+    let t = tareas.find(x => x.id === id);
+    if(!t) return;
+
+    // Cerrar modal de detalle y abrir modal de edición
+    cerrarModalTareaDetalle();
+    tareaEditando = t;
+
+    document.getElementById("tituloModalTarea").textContent = "Editar Tarea";
+    document.getElementById("tareaDesc").value      = t.desc       || "";
+    document.getElementById("tareaNotas").value     = t.notas      || "";
+    document.getElementById("tareaFecha").value     = t.fecha      || "";
+    document.getElementById("tareaPrioridad").value = t.prioridad  || "media";
+    document.getElementById("tareaEstado").value    = t.estado     || "pendiente";
+    document.getElementById("tareaTipo").value      = t.tipo       || "";
+    document.getElementById("tareaMaquina").value   = t.maquina    || "";
+    document.getElementById("tareaIsla").value      = t.isla       || "";
+
+    // Poblar select asignado con técnicos actuales
+    let sel = document.getElementById("tareaAsignado");
+    let tecnicos = getTecnicos?.() || [];
+    sel.innerHTML =
+        '<option value="__turno_MANANA__">☀️ Turno mañana</option>' +
+        '<option value="__todos__">👥 Todos</option>' +
+        tecnicos.map(n => `<option value="${n}">${n}</option>`).join("");
+    sel.value = t.asignado || "";
+
+    // Mostrar/ocultar sección correctivo
+    document.getElementById("tareaTipoCorrectivoExtra").style.display = t.tipo === "correctivo" ? "block" : "none";
+
+    document.getElementById("modalTarea").classList.add("open");
 }
 
 function guardarComentarioTarea(){
