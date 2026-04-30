@@ -113,7 +113,8 @@ const _FB_KEYS = new Set([
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
     "equiposCilindros","equiposRA","equiposEVA",
-    "pptData","sidebarConfig"
+    "pptData","sidebarConfig",
+    "eventosConfig","eventosGenerados"
 ]);
 
 localStorage.setItem = function(clave, valor) {
@@ -189,6 +190,8 @@ async function _cargarDatosFirebase() {
         if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
         if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
         if (_cache["pptData"])        pptData        = _cache["pptData"]        ?? [];
+        if (_cache["eventosConfig"])  try { eventosConfig  = _cache["eventosConfig"]  ?? []; } catch(e){}
+        if (_cache["eventosGenerados"]) try { eventosGenerados = _cache["eventosGenerados"] ?? {}; } catch(e){}
     } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
 
     // Recargar islasActivas desde el cache ya poblado (puede haber quedado [] antes)
@@ -230,6 +233,8 @@ function _activarListenersTiempoReal() {
             if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
             if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
             if (_cache["pptData"]        !== undefined) pptData        = _cache["pptData"]        ?? [];
+            if (_cache["eventosConfig"]  !== undefined) eventosConfig  = _cache["eventosConfig"]  ?? [];
+            if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
             // Sidebar config — aplicar si cambió desde otro dispositivo
             if (_cache["sidebarConfig"] !== undefined) {
                 _sidebarConfig = _cache["sidebarConfig"];
@@ -917,7 +922,9 @@ body {
     z-index: 1000;
     background: rgba(0,0,0,.7);
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 32px 16px;
     backdrop-filter: blur(4px);
 }
 .modal.open { display: flex; }
@@ -1035,8 +1042,8 @@ body {
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+::-webkit-scrollbar-thumb { background: #ffffff; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #cccccc; }
 
 /* empty state */
 .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
@@ -1716,6 +1723,9 @@ body {
             <button class="menu-btn" id="nav-pendientes" onclick="mostrar('pendientes')">
                 <span class="icon">⏳</span> Tareas
             </button>
+            <button class="menu-btn" id="nav-cronograma-eventos" onclick="mostrar('cronograma-eventos')">
+                <span class="icon">🎰</span> Cronograma Eventos
+            </button>
 
             <div class="sidebar-section" style="margin-top:4px;">🎰 Slots</div>
             <button class="menu-btn" id="nav-correctivos" onclick="mostrar('correctivos')">
@@ -2215,6 +2225,33 @@ body {
                             <div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros</p></div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ═══ CRONOGRAMA DE EVENTOS ═══ -->
+            <div id="cronograma-eventos" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🎰 Cronograma de Eventos</div>
+                        <div class="page-subtitle">Programá tareas recurrentes por día de semana — se generan automáticamente</div>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn-primary blue" onclick="abrirModalEvento()">➕ Nuevo Evento</button>
+                        <button class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);" onclick="generarTareasEventosHoy(true)">⚡ Generar hoy</button>
+                    </div>
+                </div>
+                <!-- Tabla de cronograma por días -->
+                <div class="card-box" style="padding:20px;margin-bottom:16px;">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">📅 Eventos programados por día</div>
+                    <div id="cronogramaEventosTabla"></div>
+                </div>
+                <!-- Historial de tareas generadas -->
+                <div class="card-box" style="padding:20px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">📋 Tareas generadas por cronograma</div>
+                        <span id="cntTareasEventos" class="badge-count" style="background:rgba(255,201,71,.2);color:var(--yellow);border-color:rgba(255,201,71,.4);">0</span>
+                    </div>
+                    <div id="listaTareasEventos"></div>
                 </div>
             </div>
 
@@ -3441,6 +3478,30 @@ body {
     <div class="modal-box">
         <div class="modal-title">📋 <span id="tituloModalTarea">Nueva Tarea</span></div>
         <div class="form-group">
+            <label class="form-label">Tipo de Tarea</label>
+            <select id="tareaTipo" class="form-select" onchange="tareaTipoChange()">
+                <option value="">— Sin categoría —</option>
+                <option value="correctivo">🔧 Correctivo</option>
+                <option value="preventivo">🛡️ Preventivo</option>
+                <option value="evento">🎰 Evento</option>
+                <option value="sistema">💻 Sistema</option>
+            </select>
+        </div>
+        <!-- Datos extra para Correctivo -->
+        <div id="tareaTipoCorrectivoExtra" style="display:none;background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.25);border-radius:10px;padding:12px;margin-bottom:4px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--red);text-transform:uppercase;margin-bottom:10px;">⚠️ Datos para generar incidencia correctiva</div>
+            <div class="grid2" style="gap:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Máquina</label>
+                    <input type="text" id="tareaMaquina" class="form-input" placeholder="Ej: Slot 145">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Isla</label>
+                    <input type="text" id="tareaIsla" class="form-input" placeholder="Ej: Isla 12">
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
             <label class="form-label">Descripción de la Tarea</label>
             <input type="text" id="tareaDesc" class="form-input" placeholder="¿Qué hay que hacer?">
         </div>
@@ -3719,6 +3780,72 @@ body {
         <div class="modal-footer">
             <button class="btn-modal-save blue" onclick="guardarEvaDiaria()">💾 Guardar Estado</button>
             <button class="btn-modal-cancel" onclick="cerrarModalEvaEstadoDiario()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL CRONOGRAMA EVENTO ═══ -->
+<div id="modalCronogramaEvento" class="modal">
+    <div class="modal-box" style="max-width:480px;width:95%;">
+        <div class="modal-title">🎰 <span id="tituloModalEvento">Nuevo Evento Recurrente</span></div>
+        <div class="form-group">
+            <label class="form-label">Nombre del Evento</label>
+            <input type="text" id="eventoNombre" class="form-input" placeholder="Ej: Armado de Poker, Torneo Slot...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Días de la semana</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;" id="eventoDiasCheck">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;transition:border-color .2s;">
+                    <input type="checkbox" value="1" style="accent-color:var(--accent);"> Lun
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;transition:border-color .2s;">
+                    <input type="checkbox" value="2" style="accent-color:var(--accent);"> Mar
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;transition:border-color .2s;">
+                    <input type="checkbox" value="3" style="accent-color:var(--accent);"> Mié
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;transition:border-color .2s;">
+                    <input type="checkbox" value="4" style="accent-color:var(--accent);"> Jue
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;transition:border-color .2s;">
+                    <input type="checkbox" value="5" style="accent-color:var(--accent);"> Vie
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;transition:border-color .2s;">
+                    <input type="checkbox" value="6" style="accent-color:var(--accent);"> Sáb
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;transition:border-color .2s;">
+                    <input type="checkbox" value="0" style="accent-color:var(--accent);"> Dom
+                </label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Asignar a</label>
+            <select id="eventoAsignado" class="form-select">
+                <option value="__todos__">👥 Todos</option>
+                <option value="__turno_MANANA__">☀️ Turno mañana</option>
+                <option>Juan</option><option>Pedro</option><option>Pablo</option>
+                <option>Mauricio</option><option>Dionisio</option><option>Adrian</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Prioridad</label>
+            <select id="eventoPrioridad" class="form-select">
+                <option value="alta">Alta</option>
+                <option value="media" selected>Media</option>
+                <option value="baja">Baja</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Notas / Descripción adicional</label>
+            <textarea id="eventoNotas" class="form-textarea" placeholder="Instrucciones, detalles del evento..."></textarea>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" id="eventoActivo" checked style="accent-color:var(--accent);width:16px;height:16px;">
+            <label for="eventoActivo" style="font-size:13px;color:var(--white);cursor:pointer;">Evento activo (se generan tareas automáticamente)</label>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarEvento()">💾 Guardar Evento</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalEvento()">Cancelar</button>
         </div>
     </div>
 </div>
@@ -4288,6 +4415,8 @@ function iniciarApp(){
     renderCorrectivos();
     renderTareas();
     mostrarAlertas();
+    // Auto-generar tareas de eventos cronograma al inicio del día
+    setTimeout(() => { try { cronogramaEventosAutoInit?.(); } catch(e){} }, 3000);
 }
 // islasActivas ya inicializado arriba
 
@@ -5115,6 +5244,7 @@ function mostrar(sec){
     if(sec === 'control-ppt') initPpt();
     if(sec === 'carteles') renderCartelesAdmin();
     if(sec === 'plan-preventivo') ppIniciar();
+    if(sec === 'cronograma-eventos') renderCronogramaEventos?.();
     if(sec === 'gestionUsuarios'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderGestionUsuarios(); if(esSuperAdmin()) renderUbicaciones(); }
     // Cerrar sidebar en mobile
     document.querySelector('.sidebar')?.classList.remove('open');
@@ -5959,7 +6089,16 @@ function abrirModalTarea(){
     document.getElementById("tareaFecha").value = "";
     document.getElementById("tareaPrioridad").value = "media";
     document.getElementById("tareaEstado").value = "pendiente";
+    document.getElementById("tareaTipo").value = "";
+    document.getElementById("tareaMaquina").value = "";
+    document.getElementById("tareaIsla").value = "";
+    document.getElementById("tareaTipoCorrectivoExtra").style.display = "none";
     document.getElementById("modalTarea").classList.add("open");
+}
+
+function tareaTipoChange(){
+    let tipo = document.getElementById("tareaTipo").value;
+    document.getElementById("tareaTipoCorrectivoExtra").style.display = tipo === "correctivo" ? "block" : "none";
 }
 
 function cerrarModalTarea(){
@@ -5971,10 +6110,12 @@ function guardarTarea(){
     let desc = document.getElementById("tareaDesc").value.trim();
     if(!desc){ toast.warning("Campo requerido","Ingresá la descripción de la tarea"); return; }
     let estado = document.getElementById("tareaEstado").value;
+    let tipo  = document.getElementById("tareaTipo").value;
     let ahora = Date.now();
     let obj = {
         id: tareaEditando?.id || ahora,
         desc,
+        tipo: tipo || null,
         asignado: document.getElementById("tareaAsignado").value,
         prioridad: document.getElementById("tareaPrioridad").value,
         fecha: document.getElementById("tareaFecha").value,
@@ -5990,11 +6131,51 @@ function guardarTarea(){
         tareas[idx] = obj;
     } else {
         tareas.push(obj);
+        // ── Generar incidencia automática si tipo es correctivo ──
+        if(tipo === "correctivo"){
+            let maquina = (document.getElementById("tareaMaquina").value||"").trim();
+            let isla    = (document.getElementById("tareaIsla").value||"").trim();
+            let tecnico = obj.asignado && !obj.asignado.startsWith("__") ? obj.asignado : (usuarioActual?.nombre||"");
+            let estadoInc = estado === "realizado" ? "Resuelto" : "En Curso";
+            incidencias.push({
+                tipo: "Correctivo",
+                fecha: obj.fecha || new Date().toISOString().split("T")[0],
+                maquina: maquina || desc,
+                isla: isla,
+                tecnico: tecnico,
+                nota: desc + (obj.notas ? " — " + obj.notas : ""),
+                resolucion: "",
+                estado: estadoInc,
+                _fromTareaId: obj.id
+            });
+            localStorage.setItem("incidencias", JSON.stringify(incidencias));
+            toast.success("Incidencia creada","Se generó una incidencia correctiva automáticamente");
+        }
+        // ── Preventivo: genera registro básico en incidencias ──
+        if(tipo === "preventivo"){
+            let tecnico = obj.asignado && !obj.asignado.startsWith("__") ? obj.asignado : (usuarioActual?.nombre||"");
+            incidencias.push({
+                tipo: "Preventivo",
+                subTipo: "plan",
+                fecha: obj.fecha || new Date().toISOString().split("T")[0],
+                islas: [],
+                islasMaquinas: {},
+                totalMaquinas: 0,
+                tecnico: tecnico,
+                nota: desc + (obj.notas ? " — " + obj.notas : ""),
+                estado: "Realizado",
+                validado: false,
+                _fromTareaId: obj.id
+            });
+            localStorage.setItem("incidencias", JSON.stringify(incidencias));
+            toast.success("Preventivo registrado","Se generó un registro preventivo automáticamente");
+        }
     }
     localStorage.setItem("tareas", JSON.stringify(tareas));
     cerrarModalTarea();
     renderTareas();
     renderDashboard();
+    renderIncidenciasPreventivos?.();
 }
 
 function avanzarTarea(id){
@@ -6207,6 +6388,18 @@ function renderTareas(){
         let acciones = "";
         let ppBadge = t._ppMesKey ? `<span style="font-size:10px;background:rgba(79,142,255,.2);border:1px solid var(--accent2);color:var(--accent2);padding:1px 7px;border-radius:5px;font-weight:700;">📅 PREV</span>` : "";
         let miTareaBadge = (esTecnico && t.asignado === miNombre) ? `<span style="font-size:10px;background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);padding:1px 7px;border-radius:5px;font-weight:700;">👤 MÍA</span>` : "";
+        // Badge de tipo
+        const TIPO_BADGE_CFG = {
+            correctivo:  { bg:"rgba(255,77,109,.15)",  border:"rgba(255,77,109,.4)",  color:"var(--red)",     icon:"🔧", label:"Correctivo"  },
+            preventivo:  { bg:"rgba(79,142,255,.15)",  border:"rgba(79,142,255,.4)",  color:"var(--accent2)", icon:"🛡️", label:"Preventivo"  },
+            evento:      { bg:"rgba(255,201,71,.15)",  border:"rgba(255,201,71,.4)",  color:"var(--yellow)",  icon:"🎰", label:"Evento"       },
+            sistema:     { bg:"rgba(180,120,255,.15)", border:"rgba(180,120,255,.4)", color:"#b47aff",        icon:"💻", label:"Sistema"      },
+        };
+        let tipoBadge = "";
+        if(t.tipo && TIPO_BADGE_CFG[t.tipo]){
+            let c = TIPO_BADGE_CFG[t.tipo];
+            tipoBadge = `<span style="font-size:10px;background:${c.bg};border:1px solid ${c.border};color:${c.color};padding:1px 7px;border-radius:5px;font-weight:700;">${c.icon} ${c.label}</span>`;
+        }
 
         // Select inline para reasignar (solo admin en realizadas, todos en pendiente/curso)
         let reasignar = (!esRealizada || !esTecnico) ? `
@@ -6359,6 +6552,7 @@ function renderTareas(){
                     <div class="tarea-text ${t.estado==="realizado"?"done-text":""}" style="flex:1;">${t.desc}</div>
                     <div style="display:flex;gap:6px;align-items:center;">
                         ${miTareaBadge}
+                        ${tipoBadge}
                         ${ppBadge}
                         <span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span>
                     </div>
@@ -13287,6 +13481,256 @@ function guardarRevisionValidador() {
         </div>
     </div>
 </div>
+
+<!-- ═══ CRONOGRAMA DE EVENTOS — JS ═══ -->
+<script>
+// ──────────────────────────────────────────────────
+//  DATA: eventosConfig = array de {id, nombre, dias[], asignado, prioridad, notas, activo}
+//        eventosGenerados = { "YYYY-MM-DD": [eventoId, ...] }  (evita duplicados diarios)
+// ──────────────────────────────────────────────────
+let eventosConfig    = JSON.parse(localStorage.getItem("eventosConfig"))    || [];
+let eventosGenerados = JSON.parse(localStorage.getItem("eventosGenerados")) || {};
+
+let eventoEditandoId = null;
+
+const DIAS_NOMBRES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const DIAS_FULL    = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+// ── Guardar helpers ──────────────────────────────
+function _saveEventosConfig(){
+    localStorage.setItem("eventosConfig",    JSON.stringify(eventosConfig));
+    localStorage.setItem("eventosGenerados", JSON.stringify(eventosGenerados));
+}
+
+// ── Modal abrir/cerrar ───────────────────────────
+function abrirModalEvento(id){
+    eventoEditandoId = id || null;
+    let ev = id ? eventosConfig.find(e => e.id === id) : null;
+    document.getElementById("tituloModalEvento").textContent = ev ? "Editar Evento" : "Nuevo Evento Recurrente";
+    document.getElementById("eventoNombre").value    = ev?.nombre   || "";
+    document.getElementById("eventoAsignado").value  = ev?.asignado || "__todos__";
+    document.getElementById("eventoPrioridad").value = ev?.prioridad|| "media";
+    document.getElementById("eventoNotas").value     = ev?.notas    || "";
+    document.getElementById("eventoActivo").checked  = ev ? ev.activo !== false : true;
+    // Checkboxes de días
+    document.querySelectorAll("#eventoDiasCheck input[type=checkbox]").forEach(cb => {
+        cb.checked = ev?.dias?.includes(parseInt(cb.value)) || false;
+    });
+    document.getElementById("modalCronogramaEvento").classList.add("open");
+}
+
+function cerrarModalEvento(){
+    document.getElementById("modalCronogramaEvento").classList.remove("open");
+    eventoEditandoId = null;
+}
+
+// ── Guardar evento ───────────────────────────────
+function guardarEvento(){
+    let nombre = document.getElementById("eventoNombre").value.trim();
+    if(!nombre){ toast.warning("Campo requerido","Ingresá el nombre del evento"); return; }
+    let dias = [];
+    document.querySelectorAll("#eventoDiasCheck input[type=checkbox]:checked").forEach(cb => dias.push(parseInt(cb.value)));
+    if(dias.length === 0){ toast.warning("Campo requerido","Seleccioná al menos un día"); return; }
+    let obj = {
+        id:        eventoEditandoId || Date.now(),
+        nombre,
+        dias,
+        asignado:  document.getElementById("eventoAsignado").value,
+        prioridad: document.getElementById("eventoPrioridad").value,
+        notas:     document.getElementById("eventoNotas").value,
+        activo:    document.getElementById("eventoActivo").checked
+    };
+    if(eventoEditandoId){
+        let idx = eventosConfig.findIndex(e => e.id === eventoEditandoId);
+        eventosConfig[idx] = obj;
+        toast.success("Evento actualizado", nombre);
+    } else {
+        eventosConfig.push(obj);
+        toast.success("Evento creado", nombre);
+    }
+    _saveEventosConfig();
+    cerrarModalEvento();
+    renderCronogramaEventos();
+}
+
+// ── Eliminar evento ──────────────────────────────
+function eliminarEvento(id){
+    if(!confirm("¿Eliminar este evento del cronograma?")) return;
+    eventosConfig = eventosConfig.filter(e => e.id !== id);
+    _saveEventosConfig();
+    renderCronogramaEventos();
+    toast.success("Evento eliminado","");
+}
+
+// ── Toggle activo ────────────────────────────────
+function toggleEventoActivo(id){
+    let ev = eventosConfig.find(e => e.id === id);
+    if(!ev) return;
+    ev.activo = !ev.activo;
+    _saveEventosConfig();
+    renderCronogramaEventos();
+}
+
+// ── Generar tareas automáticas ───────────────────
+// Llama al inicio del día (o manualmente con forzar=true).
+// Para cada evento activo cuyos días[] incluyan el día actual,
+// genera una tarea si no existe ya una generada hoy para ese evento.
+function generarTareasEventosHoy(forzar){
+    let hoy = new Date();
+    let diaSemana = hoy.getDay(); // 0=dom … 6=sab
+    let fechaStr  = hoy.toISOString().split("T")[0];
+
+    if(!eventosGenerados[fechaStr]) eventosGenerados[fechaStr] = [];
+
+    let generadas = 0;
+    eventosConfig.forEach(ev => {
+        if(!ev.activo) return;
+        if(!ev.dias.includes(diaSemana)) return;
+        // Evitar duplicado
+        if(eventosGenerados[fechaStr].includes(ev.id) && !forzar) return;
+        // Si se fuerza, tampoco duplicar en la misma sesión
+        if(eventosGenerados[fechaStr].includes(ev.id)) return;
+
+        let nuevaTarea = {
+            id:          Date.now() + Math.random(),
+            desc:        ev.nombre,
+            tipo:        "evento",
+            asignado:    ev.asignado,
+            prioridad:   ev.prioridad,
+            fecha:       fechaStr,
+            notas:       ev.notas || "",
+            estado:      "pendiente",
+            done:        false,
+            creadoEn:    Date.now(),
+            iniciadoEn:  null,
+            finalizadoEn:null,
+            _eventoId:   ev.id   // referencia al cronograma
+        };
+        tareas.push(nuevaTarea);
+        eventosGenerados[fechaStr].push(ev.id);
+        generadas++;
+    });
+
+    if(generadas > 0){
+        localStorage.setItem("tareas", JSON.stringify(tareas));
+        _saveEventosConfig();
+        renderTareas?.();
+        renderDashboard?.();
+        renderCronogramaEventos();
+        toast.success(`${generadas} tarea${generadas>1?"s":""} generada${generadas>1?"s":""}`,`Cronograma del ${DIAS_FULL[diaSemana]} ${fechaStr}`);
+    } else if(forzar){
+        toast.info("Sin eventos","No hay eventos activos para hoy o ya fueron generados");
+    }
+}
+
+// ── Render tabla de cronograma ───────────────────
+function renderCronogramaEventos(){
+    let cont = document.getElementById("cronogramaEventosTabla");
+    if(!cont) return;
+
+    if(eventosConfig.length === 0){
+        cont.innerHTML = `<div class="empty-state" style="padding:24px;"><div class="empty-icon" style="font-size:32px;">📅</div><p>No hay eventos programados todavía</p></div>`;
+    } else {
+        // Tabla días × eventos
+        let grid = `<div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="text-align:left;padding:8px 12px;color:var(--muted);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;min-width:160px;">Evento</th>
+                    ${DIAS_NOMBRES.map(d=>`<th style="text-align:center;padding:8px 6px;color:var(--muted);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;min-width:48px;">${d}</th>`).join("")}
+                    <th style="text-align:center;padding:8px 6px;color:var(--muted);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Estado</th>
+                    <th style="min-width:90px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                ${eventosConfig.map(ev => {
+                    let prioBg = ev.prioridad==="alta"?"rgba(255,77,109,.15)":ev.prioridad==="media"?"rgba(255,201,71,.15)":"rgba(0,212,168,.15)";
+                    let prioCol= ev.prioridad==="alta"?"var(--red)":ev.prioridad==="media"?"var(--yellow)":"var(--accent)";
+                    return `<tr style="border-bottom:1px solid rgba(255,255,255,.04);${!ev.activo?'opacity:0.45':''}">
+                        <td style="padding:10px 12px;">
+                            <div style="font-weight:600;color:var(--white);">${ev.nombre}</div>
+                            <div style="font-size:11px;color:var(--muted);margin-top:2px;">👤 ${mostrarAsignado?.(ev.asignado)||ev.asignado} &nbsp;·&nbsp; <span style="color:${prioCol};font-weight:700;">${ev.prioridad}</span></div>
+                        </td>
+                        ${[0,1,2,3,4,5,6].map(d => {
+                            let activo = ev.dias.includes(d);
+                            return `<td style="text-align:center;padding:10px 6px;">
+                                ${activo ? `<span style="display:inline-block;width:22px;height:22px;background:rgba(0,212,168,.25);border:1.5px solid var(--accent);border-radius:50%;line-height:20px;font-size:12px;">✓</span>` : `<span style="display:inline-block;width:22px;height:22px;border:1px solid rgba(255,255,255,.08);border-radius:50%;"></span>`}
+                            </td>`;
+                        }).join("")}
+                        <td style="text-align:center;padding:10px 6px;">
+                            <button onclick="toggleEventoActivo(${ev.id})" style="background:${ev.activo?'rgba(0,212,168,.15)':'rgba(255,255,255,.06)'};border:1px solid ${ev.activo?'var(--accent)':'var(--border)'};color:${ev.activo?'var(--accent)':'var(--muted)'};border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;">
+                                ${ev.activo ? '🟢 Activo' : '⚪ Inactivo'}
+                            </button>
+                        </td>
+                        <td style="text-align:right;padding:10px 12px;">
+                            <button onclick="abrirModalEvento(${ev.id})" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;" title="Editar">✏️</button>
+                            <button onclick="eliminarEvento(${ev.id})" style="background:none;border:1px solid rgba(255,77,109,.3);color:var(--red);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;" title="Eliminar">🗑️</button>
+                        </td>
+                    </tr>`;
+                }).join("")}
+            </tbody>
+        </table></div>`;
+        cont.innerHTML = grid;
+    }
+
+    // Render lista de tareas generadas por cronograma
+    let listaCont = document.getElementById("listaTareasEventos");
+    if(!listaCont) return;
+    let tareasEvento = tareas.filter(t => t._eventoId || t.tipo === "evento").sort((a,b) => b.creadoEn - a.creadoEn);
+    document.getElementById("cntTareasEventos").textContent = tareasEvento.filter(t=>t.estado!=="realizado").length;
+    if(tareasEvento.length === 0){
+        listaCont.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="empty-icon" style="font-size:28px;">📋</div><p>No hay tareas de evento generadas aún</p></div>`;
+    } else {
+        listaCont.innerHTML = tareasEvento.slice(0,30).map(t => {
+            let estadoBg = t.estado==="realizado"?"rgba(0,212,168,.1)":t.estado==="en-curso"?"rgba(79,142,255,.1)":"rgba(255,201,71,.1)";
+            let estadoCol= t.estado==="realizado"?"var(--accent)":t.estado==="en-curso"?"var(--accent2)":"var(--yellow)";
+            let estadoLabel= t.estado==="realizado"?"Realizado":t.estado==="en-curso"?"En Curso":"Pendiente";
+            return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-weight:600;color:var(--white);font-size:14px;">${t.desc}</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+                        📅 ${t.fecha||"—"} &nbsp;·&nbsp; 👤 ${mostrarAsignado?.(t.asignado)||t.asignado}
+                    </div>
+                </div>
+                <span style="font-size:11px;font-weight:700;background:${estadoBg};color:${estadoCol};border:1px solid ${estadoCol};padding:2px 10px;border-radius:6px;">${estadoLabel}</span>
+            </div>`;
+        }).join("");
+    }
+}
+
+// ── Auto-generación al iniciar la app ────────────
+// Se ejecuta una vez cuando la carga de Firebase termina,
+// y solo genera si hoy no se generaron ya.
+function cronogramaEventosAutoInit(){
+    let hoy = new Date().toISOString().split("T")[0];
+    let yaGenerado = eventosGenerados[hoy] !== undefined;
+    if(!yaGenerado){
+        generarTareasEventosHoy(false);
+    }
+}
+
+// ── Hookearse a la carga de Firebase ────────────
+const _origFbCargaCompleta = window._fbCargaCompleta;
+// Se llama desde el listener de Firestore cuando ya cargó todo
+// Buscamos el punto donde se setea _fbCargaCompleta = true
+const _origSetFbCarga = Object.getOwnPropertyDescriptor(window, "_fbCargaCompleta");
+// Alternativa: esperar a que la sección sea visible
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        if(window._fbCargaCompleta){
+            cronogramaEventosAutoInit();
+        } else {
+            // Esperar hasta que cargue Firebase
+            let checkInterval = setInterval(() => {
+                if(window._fbCargaCompleta){
+                    clearInterval(checkInterval);
+                    cronogramaEventosAutoInit();
+                }
+            }, 1000);
+        }
+    }, 2000);
+});
+</script>
 
 <!-- ═══ COPYRIGHT FOOTER ═══ -->
 <div style="text-align:center;padding:18px 0 10px;font-size:11px;color:var(--muted);opacity:.55;user-select:none;pointer-events:none;">
