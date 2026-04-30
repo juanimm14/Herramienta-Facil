@@ -2364,6 +2364,7 @@ body {
                             <option value="">— Todos los técnicos —</option>
                         </select>
                         <input type="text" id="filtroValBuscar" class="form-input" placeholder="Buscar slot, isla, validador..." oninput="renderValidadores()" style="margin:0;flex:1;min-width:180px;">
+                        <button onclick="valLimpiarFiltros()" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;white-space:nowrap;" title="Limpiar todos los filtros">✕ Limpiar</button>
                     </div>
                 </div>
 
@@ -12591,6 +12592,18 @@ function valGuardar() {
     _localStorageOrig.setItem("validadoresData", JSON.stringify(validadoresData));
 }
 
+function valLimpiarFiltros() {
+    let p = document.getElementById("filtroValPeriodo");
+    let e = document.getElementById("filtroValEstado");
+    let t = document.getElementById("filtroValTecnico");
+    let b = document.getElementById("filtroValBuscar");
+    if(p) p.value = "";
+    if(e) e.value = "";
+    if(t) t.value = "";
+    if(b) b.value = "";
+    renderValidadores();
+}
+
 // ─── Render principal ─────────────────────────────────
 
 function renderValidadores() {
@@ -12793,20 +12806,23 @@ function valEliminarFila(id) {
 // Eliminar un validador individual de la lista (Admin)
 function valEliminarItem(loteIdx, itemIdx) {
     if(esVisita()) return;
+    // Re-buscar por índice directo (los índices vienen del render, son confiables)
     let lote = validadoresData[loteIdx];
-    if(!lote) return;
+    if(!lote) { toast.warning("Error","No se encontró el lote"); return; }
     let item = lote.items[itemIdx];
-    if(!confirm(`¿Eliminar el validador ${item?.slot || ""}? Esta acción no se puede deshacer.`)) return;
+    if(!item) { toast.warning("Error","No se encontró el validador"); return; }
+    // Doble confirmación con nombre del slot
+    if(!confirm(`⚠️ ¿Eliminar el validador Slot ${item.slot} (Isla ${item.isla || "—"}) del período ${lote.periodo}?\n\nEsta acción NO se puede deshacer.`)) return;
     lote.items.splice(itemIdx, 1);
-    // Si el lote queda vacío, preguntar si eliminarlo también
+    // Si el lote queda vacío, eliminarlo también automáticamente
     if(lote.items.length === 0){
-        if(confirm("El período quedó sin validadores. ¿Eliminar el período completo?")) {
-            validadoresData.splice(loteIdx, 1);
-        }
+        validadoresData.splice(loteIdx, 1);
+        toast.success("Validador eliminado","El período quedó vacío y fue eliminado también");
+    } else {
+        toast.success(`Slot ${item.slot} eliminado del período ${lote.periodo}`,"");
     }
     valGuardar();
     renderValidadores();
-    toast.success("Validador eliminado","");
 }
 
 function valIntentarPegar(input) {
@@ -12944,7 +12960,7 @@ function renderPpt() {
                         <div>
                             <span style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--white);">📋 ${lote.periodo}</span>
                             <span style="font-size:12px;color:var(--muted);margin-left:10px;">👤 ${tecnicos}</span>
-                            <span style="font-size:12px;color:var(--muted);margin-left:10px;">📅 ${(() => { try { let d = lote.fechaCreacion ? new Date(lote.fechaCreacion + "T00:00:00") : (lote.createdAt ? new Date(lote.createdAt) : null); return d ? d.toLocaleDateString("es-AR",{month:"long",year:"numeric"}).replace(/^\w/,c=>c.toUpperCase()) : ""; } catch(e){ return lote.fechaCreacion || ""; } })()}</span>
+                            <span style="font-size:12px;color:var(--muted);margin-left:10px;">📅 ${(() => { try { let raw = lote.fechaCreacion || lote.createdAt || ""; let d = null; if(typeof raw === "number") d = new Date(raw); else if(raw) d = new Date(raw); return (d && !isNaN(d)) ? d.toLocaleDateString("es-AR",{month:"long",year:"numeric"}).replace(/^\w/,c=>c.toUpperCase()) : ""; } catch(e){ return ""; } })()}</span>
                         </div>
                         <div style="flex:1;min-width:120px;">
                             <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px;">
