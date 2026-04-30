@@ -4392,6 +4392,7 @@ function iniciarApp(){
     // Mostrar casino activo en topbar
     let topbarFecha = document.getElementById("topbarFecha");
     let empNombre = sessionStorage.getItem("empresaNombre") || EMPRESA_ID;
+    if (empNombre === "default") empNombre = "Melincué";
     if(topbarFecha) {
         // Insertar badge de casino si no existe
         if(!document.getElementById("topbarCasino")){
@@ -12645,8 +12646,14 @@ function renderValidadores() {
             ? `<span style="background:rgba(0,212,168,.15);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">REALIZADO</span>`
             : `<span style="background:rgba(255,77,109,.12);color:var(--red);border:1px solid var(--red);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">PENDIENTE</span>`;
         let btnAccion = esRealizado
-            ? `<button onclick="valAbrirEditar(${f.loteIdx},${f.itemIdx})" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;">✏️ Editar</button>`
-            : `<button onclick="valAbrirRegistrar(${f.loteIdx},${f.itemIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✅ Registrar</button>`;
+            ? `<div style="display:flex;gap:6px;align-items:center;">
+                <button onclick="valAbrirEditar(${f.loteIdx},${f.itemIdx})" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;">✏️ Editar</button>
+                <button onclick="valEliminarItem(${f.loteIdx},${f.itemIdx})" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;" title="Borrar validador">🗑️</button>
+               </div>`
+            : `<div style="display:flex;gap:6px;align-items:center;">
+                <button onclick="valAbrirRegistrar(${f.loteIdx},${f.itemIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✅ Registrar</button>
+                <button onclick="valEliminarItem(${f.loteIdx},${f.itemIdx})" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;" title="Borrar validador">🗑️</button>
+               </div>`;
 
         // Índice de aceptación para este slot
         let idxData = valGetIndiceSlot(f.slot);
@@ -13381,6 +13388,22 @@ function guardarRevisionValidador() {
     if (pendientes > 0) {
         toast.success(`Validador ${item.slot} revisado ✅`, `Quedan ${pendientes} pendientes`);
     }
+}
+
+function valEliminarItem(loteIdx, itemIdx) {
+    let lote = validadoresData[loteIdx];
+    if (!lote) return;
+    let item = lote.items[itemIdx];
+    if (!item) return;
+    if (!confirm(`¿Eliminar el validador Slot ${item.slot} (${item.isla})?`)) return;
+    lote.items.splice(itemIdx, 1);
+    // Si el lote quedó vacío, eliminarlo también
+    if (lote.items.length === 0) {
+        validadoresData.splice(loteIdx, 1);
+    }
+    valGuardar();
+    renderValidadores();
+    toast.success(`Validador ${item.slot} eliminado`, "");
 }
 </script>
 <!-- ═══ MODALES PPT ═══ -->
