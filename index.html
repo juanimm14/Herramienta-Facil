@@ -4392,6 +4392,7 @@ function iniciarApp(){
     // Mostrar casino activo en topbar
     let topbarFecha = document.getElementById("topbarFecha");
     let empNombre = sessionStorage.getItem("empresaNombre") || EMPRESA_ID;
+    if (empNombre === "default") empNombre = "Melincué";
     if(topbarFecha) {
         // Insertar badge de casino si no existe
         if(!document.getElementById("topbarCasino")){
