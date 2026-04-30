@@ -114,7 +114,7 @@ const _FB_KEYS = new Set([
     "equiposAVP","equiposChipper","equiposPC",
     "equiposCilindros","equiposRA","equiposEVA",
     "pptData","sidebarConfig",
-    "eventosConfig","eventosGenerados","eventosUnicos"
+    "eventosConfig","eventosGenerados"
 ]);
 
 localStorage.setItem = function(clave, valor) {
@@ -225,21 +225,14 @@ function _activarListenersTiempoReal() {
             if (_cache["ppTareas"]       !== undefined) ppTareas       = _cache["ppTareas"]       ?? [];
             if (_cache["evaIncidencias"] !== undefined) evaIncidencias = _cache["evaIncidencias"] ?? [];
             if (_cache["evaDiarios"]     !== undefined) evaDiarios     = _cache["evaDiarios"]     ?? [];
-            if (_cache["validadoresData"] !== undefined) {
-                validadoresData = _cache["validadoresData"] ?? [];
-                try { let sel = document.getElementById("filtroValPeriodo"); if(sel && sel.value && !validadoresData.find(l=>l.periodo===sel.value)) sel.value=""; } catch(e){}
-            }
+            if (_cache["validadoresData"] !== undefined) validadoresData = _cache["validadoresData"] ?? [];
             if (_cache["fdsData"]        !== undefined) fdsData        = _cache["fdsData"]        ?? [];
             if (_cache["contadorasData"] !== undefined) contadorasData = _cache["contadorasData"] ?? [];
             if (_cache["listaContadoras"] !== undefined) listaContadoras = _cache["listaContadoras"] ?? [..._CNT_DEFAULT];
             if (_cache["equiposEVA"]      !== undefined) listaKioscosEva = _cache["equiposEVA"]      ?? ["EVA1","EVA2","EVA3","EVA4"];
             if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
             if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
-            if (_cache["pptData"]        !== undefined) {
-                pptData = _cache["pptData"] ?? [];
-                let _m=false; pptData.forEach(l=>{ let r=l.fechaCreacion||l.createdAt||""; if(typeof r==="string"&&r.length>15&&!r.match(/^\d{4}-\d{2}-\d{2}$/)){ try{let d=new Date(r);if(!isNaN(d)){l.fechaCreacion=d.toISOString().slice(0,10);_m=true;}}catch(e){}}});
-                if(_m){ try{_fbSet("pptData",pptData);_localStorageOrig.setItem("pptData",JSON.stringify(pptData));}catch(e){} }
-            }
+            if (_cache["pptData"]        !== undefined) pptData        = _cache["pptData"]        ?? [];
             if (_cache["eventosConfig"]  !== undefined) eventosConfig  = _cache["eventosConfig"]  ?? [];
             if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
             // Sidebar config — aplicar si cambió desde otro dispositivo
@@ -2240,26 +2233,17 @@ body {
                 <div class="page-header">
                     <div>
                         <div class="page-title">🎰 Cronograma de Eventos</div>
-                        <div class="page-subtitle">Programá tareas recurrentes por día de semana, o eventos únicos en el mes — se generan automáticamente</div>
+                        <div class="page-subtitle">Programá tareas recurrentes por día de semana — se generan automáticamente</div>
                     </div>
                     <div class="action-bar">
                         <button class="btn-primary blue" onclick="abrirModalEvento()">➕ Nuevo Evento</button>
-                        <button class="btn-primary" style="background:rgba(159,122,234,.18);border:1px solid rgba(159,122,234,.5);color:#c4a8ff;" onclick="abrirModalEventoUnico()">📅 Evento Único</button>
                         <button class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);" onclick="generarTareasEventosHoy(true)">⚡ Generar hoy</button>
                     </div>
                 </div>
-                <!-- Tabla de cronograma por días (recurrentes) -->
+                <!-- Tabla de cronograma por días -->
                 <div class="card-box" style="padding:20px;margin-bottom:16px;">
-                    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">📅 Eventos programados por día (recurrentes)</div>
+                    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">📅 Eventos programados por día</div>
                     <div id="cronogramaEventosTabla"></div>
-                </div>
-                <!-- Tabla de eventos únicos en el mes -->
-                <div class="card-box" style="padding:20px;margin-bottom:16px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                        <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">🗓️ Eventos únicos del mes</div>
-                        <span id="cntEventosUnicos" style="background:rgba(159,122,234,.2);color:#c4a8ff;border:1px solid rgba(159,122,234,.4);border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700;">0</span>
-                    </div>
-                    <div id="cronogramaEventosUnicosTabla"></div>
                 </div>
                 <!-- Historial de tareas generadas -->
                 <div class="card-box" style="padding:20px;">
@@ -2371,7 +2355,6 @@ body {
                             <option value="">— Todos los técnicos —</option>
                         </select>
                         <input type="text" id="filtroValBuscar" class="form-input" placeholder="Buscar slot, isla, validador..." oninput="renderValidadores()" style="margin:0;flex:1;min-width:180px;">
-                        <button onclick="valLimpiarFiltros()" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;white-space:nowrap;" title="Limpiar todos los filtros">✕ Limpiar</button>
                     </div>
                 </div>
 
@@ -3863,47 +3846,6 @@ body {
         <div class="modal-footer">
             <button class="btn-modal-save blue" onclick="guardarEvento()">💾 Guardar Evento</button>
             <button class="btn-modal-cancel" onclick="cerrarModalEvento()">Cancelar</button>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ MODAL EVENTO ÚNICO ═══ -->
-<div id="modalEventoUnico" class="modal">
-    <div class="modal-box" style="max-width:480px;width:95%;">
-        <div class="modal-title">🗓️ <span id="tituloModalEventoUnico">Nuevo Evento Único</span></div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Este evento genera <strong style="color:var(--white);">una sola tarea</strong> en la fecha elegida — a partir de las 00:00hs del día indicado ya aparece en el listado.</p>
-        <div class="form-group">
-            <label class="form-label">Nombre del Evento</label>
-            <input type="text" id="eventoUnicoNombre" class="form-input" placeholder="Ej: Revisión especial diciembre, Torneo aniversario...">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Fecha del evento</label>
-            <input type="date" id="eventoUnicoFecha" class="form-input">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Asignar a</label>
-            <select id="eventoUnicoAsignado" class="form-select">
-                <option value="__todos__">👥 Todos</option>
-                <option value="__turno_MANANA__">☀️ Turno mañana</option>
-                <option>Juan</option><option>Pedro</option><option>Pablo</option>
-                <option>Mauricio</option><option>Dionisio</option><option>Adrian</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Prioridad</label>
-            <select id="eventoUnicoPrioridad" class="form-select">
-                <option value="alta">Alta</option>
-                <option value="media" selected>Media</option>
-                <option value="baja">Baja</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Notas / Descripción adicional</label>
-            <textarea id="eventoUnicoNotas" class="form-textarea" placeholder="Instrucciones, detalles del evento..."></textarea>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-modal-save" style="background:linear-gradient(135deg,#9f7aea,#7c3aed);" onclick="guardarEventoUnico()">💾 Guardar Evento Único</button>
-            <button class="btn-modal-cancel" onclick="cerrarModalEventoUnico()">Cancelar</button>
         </div>
     </div>
 </div>
@@ -7767,7 +7709,7 @@ function renderEstadosEva(){
         contH.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros</p></div>';
         return;
     }
-    contH.innerHTML = [...evaDiarios].sort((a,b) => String(b.fecha||"").localeCompare(String(a.fecha||"")) || (b.id||0) - (a.id||0)).map((d, idx) => {
+    contH.innerHTML = evaDiarios.map((d, idx) => {
         // Obtener todas las claves de kioscos presentes en este registro
         let keys = Object.keys(d.kioscos || {});
         // Resumen: badges de color en el header
@@ -12599,29 +12541,13 @@ function valGuardar() {
     _localStorageOrig.setItem("validadoresData", JSON.stringify(validadoresData));
 }
 
-function valLimpiarFiltros() {
-    let p = document.getElementById("filtroValPeriodo");
-    let e = document.getElementById("filtroValEstado");
-    let t = document.getElementById("filtroValTecnico");
-    let b = document.getElementById("filtroValBuscar");
-    if(p) p.value = "";
-    if(e) e.value = "";
-    if(t) t.value = "";
-    if(b) b.value = "";
-    renderValidadores();
-}
-
 // ─── Render principal ─────────────────────────────────
 
 function renderValidadores() {
-    // Siempre sincronizar con el cache de Firebase antes de renderizar
-    if (_cache["validadoresData"] !== undefined) validadoresData = _cache["validadoresData"] ?? [];
-    if (_cache["indicesAceptacion"] !== undefined) indicesAceptacion = _cache["indicesAceptacion"] ?? {};
-    _poblarFiltrosValidadores();   // ← corrige filtros inválidos primero
+    _poblarFiltrosValidadores();
     _renderBannerTareaValidadores();
     valRenderIndicesPanel();
 
-    // Leer filtros DESPUÉS de poblarlos (por si se corrigió alguno inválido)
     let periodoF = document.getElementById("filtroValPeriodo")?.value || "";
     let estadoF  = document.getElementById("filtroValEstado")?.value  || "";
     let tecnicoF = document.getElementById("filtroValTecnico")?.value || "";
@@ -12658,11 +12584,7 @@ function renderValidadores() {
 
     let tbody = document.getElementById("validadoresTbody");
     if (!filas.length) {
-        let hayFiltros = periodoF || estadoF || tecnicoF || buscarF;
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;">
-            <div style="color:var(--muted);margin-bottom:12px;">${hayFiltros ? "⚠️ Ningún validador coincide con los filtros activos" : "No hay validadores cargados"}</div>
-            ${hayFiltros ? `<button onclick="valLimpiarFiltros()" style="background:var(--accent);border:none;color:#0f1117;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;">✕ Limpiar filtros y ver todos</button>` : ""}
-        </td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted);">No hay validadores para mostrar</td></tr>`;
         return;
     }
 
@@ -12675,9 +12597,6 @@ function renderValidadores() {
         let btnAccion = esRealizado
             ? `<button onclick="valAbrirEditar(${f.loteIdx},${f.itemIdx})" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;">✏️ Editar</button>`
             : `<button onclick="valAbrirRegistrar(${f.loteIdx},${f.itemIdx})" style="background:rgba(0,212,168,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✅ Registrar</button>`;
-        let btnBorrar = isAdmin
-            ? `<button onclick="valEliminarItem(${f.loteIdx},${f.itemIdx})" style="background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.4);color:var(--red);border-radius:6px;padding:5px 8px;font-size:12px;cursor:pointer;margin-left:4px;" title="Eliminar validador">🗑️</button>`
-            : "";
 
         // Índice de aceptación para este slot
         let idxData = valGetIndiceSlot(f.slot);
@@ -12711,7 +12630,7 @@ function renderValidadores() {
         return `<tr style="border-bottom:1px solid var(--border);background:${rowBg};transition:background .15s;" 
                     onmouseover="this.style.background='var(--bg3)'" 
                     onmouseout="this.style.background='${rowBg}'">
-            <td style="padding:10px 12px;text-align:center;">${btnAccion}${btnBorrar}</td>
+            <td style="padding:10px 12px;text-align:center;">${btnAccion}</td>
             <td style="padding:10px 12px;font-weight:700;color:var(--accent);font-size:14px;">${f.slot}</td>
             <td style="padding:10px 12px;color:var(--muted);">${f.isla}</td>
             <td style="padding:10px 12px;font-weight:600;color:var(--white);">${f.modelo}</td>
@@ -12730,11 +12649,6 @@ function _poblarFiltrosValidadores() {
     let selPer = document.getElementById("filtroValPeriodo");
     let curPer = selPer?.value || "";
     let periodos = [...new Set(validadoresData.map(l => l.periodo))];
-    // Si el período seleccionado no existe, resetear el select también
-    if (curPer && !periodos.includes(curPer)) {
-        curPer = "";
-        if (selPer) selPer.value = "";
-    }
     if (selPer) {
         selPer.innerHTML = '<option value="">— Todos los períodos —</option>'
             + periodos.map(p => `<option value="${p}" ${p===curPer?"selected":""}>${p}</option>`).join("");
@@ -12823,28 +12737,6 @@ function valEliminarFila(id) {
     _valFilas = _valFilas.filter(x => x !== id);
 }
 
-// Eliminar un validador individual de la lista (Admin)
-function valEliminarItem(loteIdx, itemIdx) {
-    if(esVisita()) return;
-    // Re-buscar por índice directo (los índices vienen del render, son confiables)
-    let lote = validadoresData[loteIdx];
-    if(!lote) { toast.warning("Error","No se encontró el lote"); return; }
-    let item = lote.items[itemIdx];
-    if(!item) { toast.warning("Error","No se encontró el validador"); return; }
-    // Doble confirmación con nombre del slot
-    if(!confirm(`⚠️ ¿Eliminar el validador Slot ${item.slot} (Isla ${item.isla || "—"}) del período ${lote.periodo}?\n\nEsta acción NO se puede deshacer.`)) return;
-    lote.items.splice(itemIdx, 1);
-    // Si el lote queda vacío, eliminarlo también automáticamente
-    if(lote.items.length === 0){
-        validadoresData.splice(loteIdx, 1);
-        toast.success("Validador eliminado","El período quedó vacío y fue eliminado también");
-    } else {
-        toast.success(`Slot ${item.slot} eliminado del período ${lote.periodo}`,"");
-    }
-    valGuardar();
-    renderValidadores();
-}
-
 function valIntentarPegar(input) {
     // Detectar si pegaron múltiples valores (comas o saltos)
     let val = input.value;
@@ -12872,24 +12764,6 @@ function pptGuardar() {
 
 // ─── Mostrar sección ─────────────────────────────────────────
 function initPpt() {
-    // ── Migración: limpiar fechaCreacion que quedó como string largo de Date.toString() ──
-    let pptMigrado = false;
-    pptData.forEach(lote => {
-        let raw = lote.fechaCreacion || lote.createdAt || "";
-        if (typeof raw === "string" && raw.length > 15) {
-            // Es un string largo tipo "Wed Apr 01 2026 00:00:48 GMT-0300..."
-            // Lo convertimos a YYYY-MM-DD limpio
-            try {
-                let d = new Date(raw);
-                if (!isNaN(d)) {
-                    lote.fechaCreacion = d.toISOString().slice(0, 10);
-                    pptMigrado = true;
-                }
-            } catch(e) {}
-        }
-    });
-    if (pptMigrado) pptGuardar();
-
     // Ocultar botón nuevo relevamiento para técnicos (no admin)
     let btn = document.getElementById("btnNuevoRelevamientoPpt");
     if (btn) btn.style.display = esAdminOSuperAdmin() ? "inline-flex" : "none";
@@ -12898,8 +12772,6 @@ function initPpt() {
 
 // ─── Render principal ─────────────────────────────────────────
 function renderPpt() {
-    // Siempre sincronizar pptData con el cache de Firebase
-    if (_cache["pptData"] !== undefined) pptData = _cache["pptData"] ?? [];
     // Poblar filtro período
     let selPeriodo = document.getElementById("filtroPptPeriodo");
     if (!selPeriodo) return;
@@ -13000,7 +12872,7 @@ function renderPpt() {
                         <div>
                             <span style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--white);">📋 ${lote.periodo}</span>
                             <span style="font-size:12px;color:var(--muted);margin-left:10px;">👤 ${tecnicos}</span>
-                            <span style="font-size:12px;color:var(--muted);margin-left:10px;">📅 ${(() => { try { let raw = lote.fechaCreacion || lote.createdAt || ""; let d = null; if(typeof raw === "number") d = new Date(raw); else if(raw) d = new Date(raw); return (d && !isNaN(d)) ? d.toLocaleDateString("es-AR",{month:"long",year:"numeric"}).replace(/^\w/,c=>c.toUpperCase()) : ""; } catch(e){ return ""; } })()}</span>
+                            <span style="font-size:12px;color:var(--muted);margin-left:10px;">📅 ${lote.fechaCreacion || ""}</span>
                         </div>
                         <div style="flex:1;min-width:120px;">
                             <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px;">
@@ -13804,8 +13676,7 @@ function renderCronogramaEventos(){
     // Render lista de tareas generadas por cronograma
     let listaCont = document.getElementById("listaTareasEventos");
     if(!listaCont) return;
-    // Incluir también tareas de eventos únicos
-    let tareasEvento = tareas.filter(t => t._eventoId || t._eventoUnicoId || t.tipo === "evento").sort((a,b) => b.creadoEn - a.creadoEn);
+    let tareasEvento = tareas.filter(t => t._eventoId || t.tipo === "evento").sort((a,b) => b.creadoEn - a.creadoEn);
     document.getElementById("cntTareasEventos").textContent = tareasEvento.filter(t=>t.estado!=="realizado").length;
     if(tareasEvento.length === 0){
         listaCont.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="empty-icon" style="font-size:28px;">📋</div><p>No hay tareas de evento generadas aún</p></div>`;
@@ -13838,210 +13709,32 @@ function cronogramaEventosAutoInit(){
     }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  EVENTOS ÚNICOS — eventos que ocurren una sola vez en el mes
-//  Se almacenan en eventosUnicos = [{id, nombre, fecha, asignado,
-//    prioridad, notas, generado, activo}]
-//  La tarea se genera automáticamente al arrancar si la fecha
-//  es hoy (o anterior y no fue generada aún).
-// ══════════════════════════════════════════════════════════════
-
-let eventosUnicos = JSON.parse(localStorage.getItem("eventosUnicos")) || [];
-let eventoUnicoEditandoId = null;
-
-function _saveEventosUnicos(){
-    localStorage.setItem("eventosUnicos", JSON.stringify(eventosUnicos));
-}
-
-// ── Modal abrir/cerrar ────────────────────────────────────────
-function abrirModalEventoUnico(id){
-    eventoUnicoEditandoId = id || null;
-    let ev = id ? eventosUnicos.find(e => e.id === id) : null;
-    document.getElementById("tituloModalEventoUnico").textContent = ev ? "Editar Evento Único" : "Nuevo Evento Único";
-    document.getElementById("eventoUnicoNombre").value    = ev?.nombre   || "";
-    document.getElementById("eventoUnicoFecha").value     = ev?.fecha    || new Date().toISOString().split("T")[0];
-    document.getElementById("eventoUnicoAsignado").value  = ev?.asignado || "__todos__";
-    document.getElementById("eventoUnicoPrioridad").value = ev?.prioridad|| "media";
-    document.getElementById("eventoUnicoNotas").value     = ev?.notas    || "";
-    document.getElementById("modalEventoUnico").classList.add("open");
-}
-
-function cerrarModalEventoUnico(){
-    document.getElementById("modalEventoUnico").classList.remove("open");
-    eventoUnicoEditandoId = null;
-}
-
-// ── Guardar evento único ──────────────────────────────────────
-function guardarEventoUnico(){
-    let nombre = document.getElementById("eventoUnicoNombre").value.trim();
-    let fecha  = document.getElementById("eventoUnicoFecha").value;
-    if(!nombre){ toast.warning("Campo requerido","Ingresá el nombre del evento"); return; }
-    if(!fecha) { toast.warning("Campo requerido","Seleccioná la fecha del evento"); return; }
-
-    let obj = {
-        id:        eventoUnicoEditandoId || Date.now(),
-        nombre,
-        fecha,
-        asignado:  document.getElementById("eventoUnicoAsignado").value,
-        prioridad: document.getElementById("eventoUnicoPrioridad").value,
-        notas:     document.getElementById("eventoUnicoNotas").value,
-        generado:  false,   // se marca true cuando la tarea fue creada
-        activo:    true
-    };
-
-    // Si editamos, resetear generado para que pueda regenerarse si cambió la fecha
-    if(eventoUnicoEditandoId){
-        let old = eventosUnicos.find(e => e.id === eventoUnicoEditandoId);
-        // Mantener generado solo si la fecha no cambió
-        if(old && old.fecha === obj.fecha) obj.generado = old.generado;
-        let idx = eventosUnicos.findIndex(e => e.id === eventoUnicoEditandoId);
-        eventosUnicos[idx] = obj;
-        toast.success("Evento único actualizado", `${nombre} · ${fecha}`);
-    } else {
-        eventosUnicos.push(obj);
-        toast.success("Evento único creado", `${nombre} · ${fecha}`);
-    }
-    _saveEventosUnicos();
-    cerrarModalEventoUnico();
-    renderEventosUnicos();
-    // Intentar generar la tarea si la fecha ya llegó
-    generarTareasEventosUnicosHoy(false);
-}
-
-// ── Eliminar evento único ──────────────────────────────────────
-function eliminarEventoUnico(id){
-    if(!confirm("¿Eliminar este evento único?")) return;
-    eventosUnicos = eventosUnicos.filter(e => e.id !== id);
-    _saveEventosUnicos();
-    renderEventosUnicos();
-    toast.success("Evento eliminado","");
-}
-
-// ── Render tabla de eventos únicos ────────────────────────────
-function renderEventosUnicos(){
-    let cont = document.getElementById("cronogramaEventosUnicosTabla");
-    if(!cont) return;
-
-    // Ordenar por fecha
-    let sorted = [...eventosUnicos].sort((a,b) => a.fecha.localeCompare(b.fecha));
-    document.getElementById("cntEventosUnicos").textContent = sorted.filter(e => !e.generado && e.activo).length;
-
-    if(sorted.length === 0){
-        cont.innerHTML = `<div class="empty-state" style="padding:24px;"><div class="empty-icon" style="font-size:32px;">🗓️</div><p>No hay eventos únicos programados todavía</p></div>`;
-        return;
-    }
-
-    let hoy = new Date().toISOString().split("T")[0];
-    cont.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr style="border-bottom:1px solid var(--border);">
-            <th style="text-align:left;padding:8px 12px;color:var(--muted);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Evento</th>
-            <th style="text-align:center;padding:8px 12px;color:var(--muted);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Fecha</th>
-            <th style="text-align:center;padding:8px 12px;color:var(--muted);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Estado</th>
-            <th style="min-width:90px;"></th>
-        </tr></thead>
-        <tbody>
-        ${sorted.map(ev => {
-            let esHoy   = ev.fecha === hoy;
-            let esPasado= ev.fecha < hoy;
-            let esFuturo= ev.fecha > hoy;
-            let prioCol = ev.prioridad==="alta"?"var(--red)":ev.prioridad==="media"?"var(--yellow)":"var(--accent)";
-            let estadoHtml = ev.generado
-                ? `<span style="background:rgba(0,212,168,.15);color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">✅ Generada</span>`
-                : esPasado
-                    ? `<span style="background:rgba(255,77,109,.12);color:var(--red);border:1px solid rgba(255,77,109,.4);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">⚠️ Sin generar</span>`
-                    : esHoy
-                        ? `<span style="background:rgba(255,201,71,.15);color:var(--yellow);border:1px solid rgba(255,201,71,.4);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">⏳ Hoy</span>`
-                        : `<span style="background:rgba(159,122,234,.12);color:#c4a8ff;border:1px solid rgba(159,122,234,.35);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;">📆 Programado</span>`;
-            return `<tr style="border-bottom:1px solid rgba(255,255,255,.04);">
-                <td style="padding:10px 12px;">
-                    <div style="font-weight:600;color:var(--white);">${ev.nombre}</div>
-                    <div style="font-size:11px;color:var(--muted);margin-top:2px;">👤 ${mostrarAsignado?.(ev.asignado)||ev.asignado} &nbsp;·&nbsp; <span style="color:${prioCol};font-weight:700;">${ev.prioridad}</span>${ev.notas?` &nbsp;·&nbsp; 📝 ${ev.notas.substring(0,40)}${ev.notas.length>40?"…":""}`:""}
-                    </div>
-                </td>
-                <td style="text-align:center;padding:10px 12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${esHoy?'var(--yellow)':esPasado?'var(--muted)':'var(--white)'};">${ev.fecha}</td>
-                <td style="text-align:center;padding:10px 6px;">${estadoHtml}</td>
-                <td style="text-align:right;padding:10px 12px;">
-                    <button onclick="abrirModalEventoUnico(${ev.id})" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;" title="Editar">✏️</button>
-                    <button onclick="eliminarEventoUnico(${ev.id})" style="background:none;border:1px solid rgba(255,77,109,.3);color:var(--red);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;" title="Eliminar">🗑️</button>
-                </td>
-            </tr>`;
-        }).join("")}
-        </tbody>
-    </table></div>`;
-}
-
-// ── Generar tareas para eventos únicos cuya fecha ya llegó ───
-function generarTareasEventosUnicosHoy(forzar){
-    let hoy = new Date().toISOString().split("T")[0];
-    let generadas = 0;
-
-    eventosUnicos.forEach(ev => {
-        if(!ev.activo) return;
-        if(ev.generado && !forzar) return;  // ya generada
-        if(ev.fecha > hoy) return;           // fecha futura, no generar todavía
-
-        // Si se fuerza, no regenerar si ya existe tarea con mismo _eventoUnicoId
-        if(forzar && ev.generado) return;
-
-        let nuevaTarea = {
-            id:           Date.now() + Math.random(),
-            desc:         ev.nombre,
-            tipo:         "evento",
-            asignado:     ev.asignado,
-            prioridad:    ev.prioridad,
-            fecha:        ev.fecha,
-            notas:        ev.notas || "",
-            estado:       "pendiente",
-            done:         false,
-            creadoEn:     Date.now(),
-            iniciadoEn:   null,
-            finalizadoEn: null,
-            _eventoUnicoId: ev.id
-        };
-        tareas.push(nuevaTarea);
-        ev.generado = true;
-        generadas++;
-    });
-
-    if(generadas > 0){
-        localStorage.setItem("tareas", JSON.stringify(tareas));
-        _saveEventosUnicos();
-        renderTareas?.();
-        renderDashboard?.();
-        renderEventosUnicos();
-        renderCronogramaEventos();
-        toast.success(`${generadas} tarea${generadas>1?"s":""} de evento único generada${generadas>1?"s":""}`, "");
-    }
-}
-
-// Agregar "eventosUnicos" a las claves de Firebase si no está ya
-if(!_FB_KEYS.has("eventosUnicos")) _FB_KEYS.add("eventosUnicos");
-
-// ── Hook al init de la app para también generar eventos únicos ─
+// ── Hookearse a la carga de Firebase ────────────
+const _origFbCargaCompleta = window._fbCargaCompleta;
+// Se llama desde el listener de Firestore cuando ya cargó todo
+// Buscamos el punto donde se setea _fbCargaCompleta = true
+const _origSetFbCarga = Object.getOwnPropertyDescriptor(window, "_fbCargaCompleta");
+// Alternativa: esperar a que la sección sea visible
 document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         if(window._fbCargaCompleta){
-            // Re-leer eventosUnicos desde el cache actualizado
-            eventosUnicos = JSON.parse(localStorage.getItem("eventosUnicos")) || [];
-            generarTareasEventosUnicosHoy(false);
-            renderEventosUnicos();
+            cronogramaEventosAutoInit();
         } else {
-            let checkUnico = setInterval(() => {
+            // Esperar hasta que cargue Firebase
+            let checkInterval = setInterval(() => {
                 if(window._fbCargaCompleta){
-                    clearInterval(checkUnico);
-                    eventosUnicos = JSON.parse(localStorage.getItem("eventosUnicos")) || [];
-                    generarTareasEventosUnicosHoy(false);
-                    renderEventosUnicos();
+                    clearInterval(checkInterval);
+                    cronogramaEventosAutoInit();
                 }
             }, 1000);
         }
-    }, 2500);
+    }, 2000);
 });
 </script>
 
 <!-- ═══ COPYRIGHT FOOTER ═══ -->
 <div style="text-align:center;padding:18px 0 10px;font-size:11px;color:var(--muted);opacity:.55;user-select:none;pointer-events:none;">
-    © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.3</span>
+    © 2026 Juan Mucci — Herramienta Fácil
 </div>
 
 </body>
