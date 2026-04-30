@@ -12647,7 +12647,11 @@ function renderValidadores() {
 
     let tbody = document.getElementById("validadoresTbody");
     if (!filas.length) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--muted);">No hay validadores para mostrar</td></tr>`;
+        let hayFiltros = periodoF || estadoF || tecnicoF || buscarF;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;">
+            <div style="color:var(--muted);margin-bottom:12px;">${hayFiltros ? "⚠️ Ningún validador coincide con los filtros activos" : "No hay validadores cargados"}</div>
+            ${hayFiltros ? `<button onclick="valLimpiarFiltros()" style="background:var(--accent);border:none;color:#0f1117;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;">✕ Limpiar filtros y ver todos</button>` : ""}
+        </td></tr>`;
         return;
     }
 
@@ -12715,6 +12719,8 @@ function _poblarFiltrosValidadores() {
     let selPer = document.getElementById("filtroValPeriodo");
     let curPer = selPer?.value || "";
     let periodos = [...new Set(validadoresData.map(l => l.periodo))];
+    // Si el período seleccionado no existe más, resetear
+    if (curPer && !periodos.includes(curPer)) curPer = "";
     if (selPer) {
         selPer.innerHTML = '<option value="">— Todos los períodos —</option>'
             + periodos.map(p => `<option value="${p}" ${p===curPer?"selected":""}>${p}</option>`).join("");
@@ -12852,6 +12858,24 @@ function pptGuardar() {
 
 // ─── Mostrar sección ─────────────────────────────────────────
 function initPpt() {
+    // ── Migración: limpiar fechaCreacion que quedó como string largo de Date.toString() ──
+    let pptMigrado = false;
+    pptData.forEach(lote => {
+        let raw = lote.fechaCreacion || lote.createdAt || "";
+        if (typeof raw === "string" && raw.length > 15) {
+            // Es un string largo tipo "Wed Apr 01 2026 00:00:48 GMT-0300..."
+            // Lo convertimos a YYYY-MM-DD limpio
+            try {
+                let d = new Date(raw);
+                if (!isNaN(d)) {
+                    lote.fechaCreacion = d.toISOString().slice(0, 10);
+                    pptMigrado = true;
+                }
+            } catch(e) {}
+        }
+    });
+    if (pptMigrado) pptGuardar();
+
     // Ocultar botón nuevo relevamiento para técnicos (no admin)
     let btn = document.getElementById("btnNuevoRelevamientoPpt");
     if (btn) btn.style.display = esAdminOSuperAdmin() ? "inline-flex" : "none";
