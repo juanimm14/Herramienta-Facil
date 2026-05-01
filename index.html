@@ -6629,6 +6629,8 @@ function renderTareas(){
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
                     ${reasignar}
+                    ${t.maquina ? `<span style="font-size:11px;color:var(--red);font-weight:700;">🔧 Máq: ${t.maquina}</span>` : ""}
+                    ${t.isla ? `<span style="font-size:11px;color:var(--muted);">📍 Isla: ${t.isla}</span>` : ""}
                     ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
                     ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
                 </div>
@@ -12038,6 +12040,8 @@ function _renderTareasConTurno(){
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
                     ${reasignar}
+                    ${t.maquina ? `<span style="font-size:11px;color:var(--red);font-weight:700;">🔧 Máq: ${t.maquina}</span>` : ""}
+                    ${t.isla ? `<span style="font-size:11px;color:var(--muted);">📍 Isla: ${t.isla}</span>` : ""}
                     ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
                     ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
                 </div>
