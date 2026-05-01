@@ -6206,37 +6206,59 @@ function avanzarTarea(id){
         t.done = true;
         ppRegistrarEnHistorial(t);
 
-        // ── Crear incidencia al cerrar la tarea ──
+        // ── Crear/actualizar incidencia al cerrar la tarea ──
         if(t.tipo === "correctivo"){
             let tecnico = t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||"");
-            incidencias.push({
-                tipo: "Correctivo",
-                fecha: t.fecha || new Date().toISOString().split("T")[0],
-                maquina: t.maquina || t.desc,
-                isla: t.isla || "",
-                tecnico: tecnico,
-                nota: t.desc + (t.notas ? " — " + t.notas : ""),
-                resolucion: "",
-                estado: "Resuelto",
-                _fromTareaId: t.id
-            });
-            toast.success("Incidencia creada", "Se generó una incidencia correctiva al cerrar la tarea");
+            let idxExist = incidencias.findIndex(i =>
+                i._fromTareaId === t.id ||
+                (i.tipo === "Correctivo" && i.estado !== "Resuelto" && String(i.maquina) === String(t.maquina||t.desc) && String(i.isla||"") === String(t.isla||""))
+            );
+            if(idxExist >= 0){
+                incidencias[idxExist].estado = "Resuelto";
+                incidencias[idxExist].tecnico = tecnico;
+                incidencias[idxExist]._fromTareaId = t.id;
+                toast.success("Incidencia resuelta ✅", "Se actualizó la incidencia correctiva existente");
+            } else {
+                incidencias.push({
+                    tipo: "Correctivo",
+                    fecha: t.fecha || new Date().toISOString().split("T")[0],
+                    maquina: t.maquina || t.desc,
+                    isla: t.isla || "",
+                    tecnico: tecnico,
+                    nota: t.desc + (t.notas ? " — " + t.notas : ""),
+                    resolucion: "",
+                    estado: "Resuelto",
+                    _fromTareaId: t.id
+                });
+                toast.success("Incidencia creada ✅", "Se generó una incidencia correctiva resuelta");
+            }
         } else if(t.tipo === "preventivo"){
             let tecnico = t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||"");
-            incidencias.push({
-                tipo: "Preventivo",
-                subTipo: "plan",
-                fecha: t.fecha || new Date().toISOString().split("T")[0],
-                islas: [],
-                islasMaquinas: {},
-                totalMaquinas: 0,
-                tecnico: tecnico,
-                nota: t.desc + (t.notas ? " — " + t.notas : ""),
-                estado: "Realizado",
-                validado: false,
-                _fromTareaId: t.id
-            });
-            toast.success("Preventivo registrado", "Se generó un registro preventivo al cerrar la tarea");
+            let idxExist = incidencias.findIndex(i =>
+                i._fromTareaId === t.id ||
+                (i.tipo === "Preventivo" && i.estado !== "Realizado" && i.nota && i.nota.includes(t.desc.substring(0,30)))
+            );
+            if(idxExist >= 0){
+                incidencias[idxExist].estado = "Realizado";
+                incidencias[idxExist].tecnico = tecnico;
+                incidencias[idxExist]._fromTareaId = t.id;
+                toast.success("Preventivo resuelto ✅", "Se actualizó el registro preventivo existente");
+            } else {
+                incidencias.push({
+                    tipo: "Preventivo",
+                    subTipo: "plan",
+                    fecha: t.fecha || new Date().toISOString().split("T")[0],
+                    islas: [],
+                    islasMaquinas: {},
+                    totalMaquinas: 0,
+                    tecnico: tecnico,
+                    nota: t.desc + (t.notas ? " — " + t.notas : ""),
+                    estado: "Realizado",
+                    validado: false,
+                    _fromTareaId: t.id
+                });
+                toast.success("Preventivo registrado ✅", "Se generó un registro preventivo realizado");
+            }
         }
 
         // Batch write: guardar tareas e incidencias juntos para evitar race condition
@@ -12133,35 +12155,55 @@ function confirmarQuienRealizoMulti(){
 
     ppRegistrarEnHistorial?.(t);
 
-    // ── Crear incidencia al cerrar la tarea ──
+    // ── Crear/actualizar incidencia al cerrar la tarea ──
     if(t.tipo === "correctivo"){
         let tecnico = t.realizadoPor || (t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||""));
-        incidencias.push({
-            tipo: "Correctivo",
-            fecha: t.fecha || new Date().toISOString().split("T")[0],
-            maquina: t.maquina || t.desc,
-            isla: t.isla || "",
-            tecnico: tecnico,
-            nota: t.desc + (t.notas ? " — " + t.notas : ""),
-            resolucion: "",
-            estado: "Resuelto",
-            _fromTareaId: t.id
-        });
+        let idxExist = incidencias.findIndex(i =>
+            i._fromTareaId === t.id ||
+            (i.tipo === "Correctivo" && i.estado !== "Resuelto" && String(i.maquina) === String(t.maquina||t.desc) && String(i.isla||"") === String(t.isla||""))
+        );
+        if(idxExist >= 0){
+            incidencias[idxExist].estado = "Resuelto";
+            incidencias[idxExist].tecnico = tecnico;
+            incidencias[idxExist]._fromTareaId = t.id;
+        } else {
+            incidencias.push({
+                tipo: "Correctivo",
+                fecha: t.fecha || new Date().toISOString().split("T")[0],
+                maquina: t.maquina || t.desc,
+                isla: t.isla || "",
+                tecnico: tecnico,
+                nota: t.desc + (t.notas ? " — " + t.notas : ""),
+                resolucion: "",
+                estado: "Resuelto",
+                _fromTareaId: t.id
+            });
+        }
     } else if(t.tipo === "preventivo"){
         let tecnico = t.realizadoPor || (t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||""));
-        incidencias.push({
-            tipo: "Preventivo",
-            subTipo: "plan",
-            fecha: t.fecha || new Date().toISOString().split("T")[0],
-            islas: [],
-            islasMaquinas: {},
-            totalMaquinas: 0,
-            tecnico: tecnico,
-            nota: t.desc + (t.notas ? " — " + t.notas : ""),
-            estado: "Realizado",
-            validado: false,
-            _fromTareaId: t.id
-        });
+        let idxExist = incidencias.findIndex(i =>
+            i._fromTareaId === t.id ||
+            (i.tipo === "Preventivo" && i.estado !== "Realizado" && i.nota && i.nota.includes(t.desc.substring(0,30)))
+        );
+        if(idxExist >= 0){
+            incidencias[idxExist].estado = "Realizado";
+            incidencias[idxExist].tecnico = tecnico;
+            incidencias[idxExist]._fromTareaId = t.id;
+        } else {
+            incidencias.push({
+                tipo: "Preventivo",
+                subTipo: "plan",
+                fecha: t.fecha || new Date().toISOString().split("T")[0],
+                islas: [],
+                islasMaquinas: {},
+                totalMaquinas: 0,
+                tecnico: tecnico,
+                nota: t.desc + (t.notas ? " — " + t.notas : ""),
+                estado: "Realizado",
+                validado: false,
+                _fromTareaId: t.id
+            });
+        }
     }
 
     // Batch write: guardar tareas e incidencias juntos para evitar race condition
@@ -13989,7 +14031,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <!-- ═══ COPYRIGHT FOOTER ═══ -->
 <div style="text-align:center;padding:18px 0 10px;font-size:11px;color:var(--muted);opacity:.55;user-select:none;pointer-events:none;">
-    © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.1</span>
+    © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.3</span>
 </div>
 
 </body>
