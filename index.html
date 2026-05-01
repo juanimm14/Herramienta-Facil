@@ -11915,7 +11915,8 @@ function _renderTareasConTurno(){
     }
 
     let pendientes = sortMisTareasArriba(tareas.filter(t => t.estado === "pendiente" && cumpleFiltro(t)));
-    let enCurso    = sortMisTareasArriba(tareas.filter(t => t.estado === "en-curso"  && cumpleFiltro(t)));
+    // Las EN CURSO siempre se muestran sin importar el filtro activo
+    let enCurso    = sortMisTareasArriba(tareas.filter(t => t.estado === "en-curso"));
 
     let esTecnico = usuarioActual?.rol !== "Admin";
     let miNombre  = usuarioActual?.nombre;
