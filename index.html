@@ -547,6 +547,19 @@ body {
     overflow-y: auto;
     padding: 24px;
     background: var(--bg);
+    display: flex;
+    flex-direction: column;
+}
+#copyright-footer {
+    margin-top: auto;
+    padding: 14px 0 10px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    opacity: .5;
+    user-select: none;
+    pointer-events: none;
+    border-top: 1px solid rgba(255,255,255,.04);
 }
 .section { display: none; }
 .section.active { display: block; }
@@ -2914,6 +2927,10 @@ body {
                     </table>
                 </div>
             </div>
+
+        <div id="copyright-footer">
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.4</span>
+        </div>
 
         </div><!-- /main -->
     </div><!-- /body-row -->
@@ -7786,7 +7803,7 @@ function guardarEvaDiaria(){
 }
 
 function renderKioscosEva(){
-    let todos = [...evaIncidencias].sort((a,b) => b.id - a.id);
+    let todos = [...evaIncidencias].sort((a,b) => String(b.fecha||"").localeCompare(String(a.fecha||"")) || (b.id||0)-(a.id||0));
 
     let cont  = document.getElementById("listaEvaTodas");
     let badge = document.getElementById("badgeEvaTodas");
@@ -7876,8 +7893,8 @@ function renderDashboardEvaPom(){
         if(badge) badge.textContent = "sin datos";
         return;
     }
-    // mostrar los últimos 3 registros
-    let recientes = evaDiarios.slice(0, 3);
+    // mostrar los últimos 3 registros ordenados por fecha más reciente primero
+    let recientes = [...evaDiarios].sort((a,b) => String(b.fecha||"").localeCompare(String(a.fecha||"")) || (b.id||0)-(a.id||0)).slice(0, 3);
     let badge = document.getElementById("badgeEvaPom");
     if(badge) badge.textContent = recientes[0]?.fecha || "—";
     el.innerHTML = `<table class="data-table" style="font-size:12px;">
@@ -14203,9 +14220,6 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 <!-- ═══ COPYRIGHT FOOTER ═══ -->
-<div style="text-align:center;padding:18px 0 10px;font-size:11px;color:var(--muted);opacity:.55;user-select:none;pointer-events:none;">
-    © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.4</span>
-</div>
 
 </body>
 </html>
