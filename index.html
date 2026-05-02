@@ -1811,6 +1811,9 @@ body {
             <button class="menu-btn" id="nav-importar" onclick="abrirImportador()" style="display:none;">
                 <span class="icon">📥</span> Importar Datos
             </button>
+            <button class="menu-btn" id="nav-exportar-excel" onclick="abrirModalExport()" style="display:none;">
+                <span class="icon">📊</span> Exportar Excel
+            </button>
 
             <!-- ─── CONFIGURAR SIDEBAR (solo Admin/SuperAdmin) ─── -->
             <div id="sidebarConfigWrap" style="display:none;" class="sidebar-bottom-sticky">
@@ -2932,7 +2935,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.5</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.6</span>
         </div>
 
         </div><!-- /main -->
@@ -4486,6 +4489,8 @@ function iniciarApp(){
     if(navGU) navGU.style.display = esAdminOSuperAdmin() ? "flex" : "none";
     let navImp = document.getElementById("nav-importar");
     if(navImp) navImp.style.display = esAdminOSuperAdmin() ? "flex" : "none";
+    let navExp = document.getElementById("nav-exportar-excel");
+    if(navExp) navExp.style.display = esAdminOSuperAdmin() ? "flex" : "none";
 
     // Badge especial para SuperAdmin en topbar
     if(esSuperAdmin()){
@@ -14241,7 +14246,485 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
-<!-- ═══ COPYRIGHT FOOTER ═══ -->
+<!-- ═══ MODAL EXPORTAR EXCEL ═══ -->
+<div id="modalExportExcel" class="modal">
+    <div class="modal-box" style="max-width:520px;">
+        <div class="modal-header">
+            <div class="modal-title">📊 Exportar a Excel</div>
+            <button class="modal-close" onclick="cerrarModalExport()">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;">
+
+            <!-- Rango de fechas -->
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+                <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">📅 Rango de fechas</div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:140px;">
+                        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Desde</label>
+                        <input type="date" id="exportFechaDesde" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--white);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;box-sizing:border-box;">
+                    </div>
+                    <div style="flex:1;min-width:140px;">
+                        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Hasta</label>
+                        <input type="date" id="exportFechaHasta" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--white);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;box-sizing:border-box;">
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                    <button onclick="_exportSetRango('mes')"  style="flex:1;min-width:80px;background:var(--bg2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;">Este mes</button>
+                    <button onclick="_exportSetRango('trim')" style="flex:1;min-width:80px;background:var(--bg2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;">Trimestre</button>
+                    <button onclick="_exportSetRango('anio')" style="flex:1;min-width:80px;background:var(--bg2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;">Este año</button>
+                    <button onclick="_exportSetRango('todo')" style="flex:1;min-width:80px;background:var(--bg2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;">Todo</button>
+                </div>
+            </div>
+
+            <!-- Secciones -->
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);">📋 Secciones a incluir</div>
+                    <button onclick="_exportToggleAll()" style="background:none;border:none;color:var(--accent2);font-size:11px;font-weight:700;cursor:pointer;padding:0;">Sel. todas</button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_correctivos" checked style="accent-color:var(--accent);width:15px;height:15px;"> Correctivos Slots
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_tareas" checked style="accent-color:var(--accent);width:15px;height:15px;"> Tareas
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_fds" checked style="accent-color:var(--accent);width:15px;height:15px;"> Fuera de Servicio
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_contadoras" checked style="accent-color:var(--accent);width:15px;height:15px;"> Contadoras
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_eva" checked style="accent-color:var(--accent);width:15px;height:15px;"> Kioscos EVA
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_validadores" checked style="accent-color:var(--accent);width:15px;height:15px;"> Validadores
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_eventos" checked style="accent-color:var(--accent);width:15px;height:15px;"> Eventos
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_graficos" checked style="accent-color:var(--accent);width:15px;height:15px;"> Hoja de Gráficos
+                    </label>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div id="exportStatus" style="display:none;border-radius:8px;padding:12px 14px;font-size:13px;text-align:center;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="cerrarModalExport()">Cancelar</button>
+            <button class="btn-primary blue" id="btnGenerarExcel" onclick="generarExcelCompleto()">📥 Generar Excel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Canvas oculto para gráficos -->
+<canvas id="exportChartCanvas" width="600" height="300" style="display:none;position:absolute;left:-9999px;top:-9999px;"></canvas>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  EXPORTAR EXCEL — Herramienta Fácil
+// ══════════════════════════════════════════════════════
+
+function abrirModalExport(){
+    _exportSetRango('mes');
+    let s = document.getElementById("exportStatus");
+    s.style.display = "none"; s.textContent = "";
+    document.getElementById("modalExportExcel").classList.add("open");
+}
+function cerrarModalExport(){
+    document.getElementById("modalExportExcel").classList.remove("open");
+}
+
+function _exportSetRango(tipo){
+    let hoy = new Date();
+    let desde, hasta = hoy.toISOString().split("T")[0];
+    if(tipo === 'mes'){
+        desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split("T")[0];
+    } else if(tipo === 'trim'){
+        let m = Math.floor(hoy.getMonth() / 3) * 3;
+        desde = new Date(hoy.getFullYear(), m, 1).toISOString().split("T")[0];
+    } else if(tipo === 'anio'){
+        desde = new Date(hoy.getFullYear(), 0, 1).toISOString().split("T")[0];
+    } else {
+        desde = "2020-01-01";
+    }
+    document.getElementById("exportFechaDesde").value = desde;
+    document.getElementById("exportFechaHasta").value = hasta;
+}
+
+function _exportToggleAll(){
+    let chks = [...document.querySelectorAll("[id^='expChk_']")];
+    let all = chks.every(c => c.checked);
+    chks.forEach(c => c.checked = !all);
+}
+
+function _exportFiltrar(arr, campo){
+    let desde = document.getElementById("exportFechaDesde").value;
+    let hasta  = document.getElementById("exportFechaHasta").value;
+    if(!desde && !hasta) return arr;
+    return arr.filter(r => {
+        let f = r[campo] || r.fecha || r.fechaSalida || "";
+        if(typeof f === "number") f = new Date(f).toISOString().split("T")[0];
+        if(!f) return true;
+        f = String(f).substring(0, 10);
+        if(desde && f < desde) return false;
+        if(hasta && f > hasta) return false;
+        return true;
+    });
+}
+
+function _hdrStyle(){
+    return {
+        font: { bold:true, color:{rgb:"FFFFFF"}, name:"Arial", sz:10 },
+        fill: { fgColor:{rgb:"1A2744"} },
+        alignment: { horizontal:"center", vertical:"center" },
+        border: { top:{style:"thin",color:{rgb:"2A3348"}}, bottom:{style:"thin",color:{rgb:"2A3348"}},
+                  left:{style:"thin",color:{rgb:"2A3348"}}, right:{style:"thin",color:{rgb:"2A3348"}} }
+    };
+}
+function _rowStyle(ri, center){
+    return {
+        font: { name:"Arial", sz:9, color:{rgb:"E8EDF5"} },
+        fill: { fgColor:{rgb: ri%2===0 ? "161B27" : "1E2535"} },
+        alignment: { vertical:"center", horizontal: center ? "center" : "left" },
+        border: { top:{style:"thin",color:{rgb:"2A3348"}}, bottom:{style:"thin",color:{rgb:"2A3348"}},
+                  left:{style:"thin",color:{rgb:"2A3348"}}, right:{style:"thin",color:{rgb:"2A3348"}} }
+    };
+}
+
+function _construirHoja(cabs, filas){
+    let ws = {};
+    let cols = cabs.length;
+    cabs.forEach((h, c) => {
+        ws[XLSX.utils.encode_cell({r:0,c})] = { v:h, t:"s", s:_hdrStyle() };
+    });
+    if(filas.length === 0){
+        ws[XLSX.utils.encode_cell({r:1,c:0})] = { v:"Sin datos en el rango seleccionado", t:"s", s:_rowStyle(0,false) };
+        ws["!ref"] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:1,c:cols-1}});
+        return ws;
+    }
+    filas.forEach((fila, ri) => {
+        fila.forEach((val, c) => {
+            let addr = XLSX.utils.encode_cell({r:ri+1, c});
+            let t = typeof val === "number" ? "n" : "s";
+            ws[addr] = { v: val ?? "—", t, s: _rowStyle(ri, c===0||c>=cols-2) };
+        });
+    });
+    ws["!ref"] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:filas.length,c:cols-1}});
+    return ws;
+}
+
+function _autoWidth(ws, cabs, filas){
+    let w = cabs.map(h => h.length);
+    filas.forEach(f => f.forEach((v,i) => { let l=String(v??"").length; if(l>w[i]) w[i]=l; }));
+    ws["!cols"] = w.map(n => ({wch: Math.min(n+2, 45)}));
+}
+
+async function _chartBarImg(labels, values, titulo, color){
+    let canvas = document.getElementById("exportChartCanvas");
+    canvas.width=620; canvas.height=320;
+    let ctx = canvas.getContext("2d");
+    ctx.clearRect(0,0,620,320);
+    ctx.fillStyle="#161B27"; ctx.fillRect(0,0,620,320);
+
+    // Título
+    ctx.fillStyle="#E8EDF5"; ctx.font="bold 13px Arial"; ctx.textAlign="center";
+    ctx.fillText(titulo, 310, 22);
+
+    if(!values||values.length===0){ return canvas.toDataURL("image/png"); }
+
+    let maxVal = Math.max(...values,1);
+    let n = values.length;
+    let chartX=50, chartW=540, chartH=220, chartY=38;
+    let barW = Math.min(60, Math.floor(chartW/n)-8);
+    let spacing = chartW/n;
+
+    values.forEach((v,i)=>{
+        let x = chartX + i*spacing + spacing/2 - barW/2;
+        let bh = Math.round((v/maxVal)*chartH);
+        let y = chartY + chartH - bh;
+
+        // Barra con gradiente
+        let grad = ctx.createLinearGradient(x, y, x, y+bh);
+        grad.addColorStop(0, color+"CC");
+        grad.addColorStop(1, color+"44");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, bh, 3);
+        ctx.fill();
+
+        // Valor
+        ctx.fillStyle="#FFFFFF"; ctx.font="bold 10px Arial"; ctx.textAlign="center";
+        if(v>0) ctx.fillText(v, x+barW/2, y-5);
+
+        // Label
+        ctx.fillStyle="#8899AA"; ctx.font="9px Arial";
+        let lbl = String(labels[i]||"").substring(0,10);
+        ctx.fillText(lbl, x+barW/2, chartY+chartH+16);
+    });
+
+    // Eje base
+    ctx.strokeStyle="#2A3348"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(chartX,chartY+chartH); ctx.lineTo(chartX+chartW,chartY+chartH); ctx.stroke();
+
+    return canvas.toDataURL("image/png");
+}
+
+function _dataURLtoBytes(dataURL){
+    let b64=dataURL.split(",")[1], bin=atob(b64), arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    return arr;
+}
+
+async function generarExcelCompleto(){
+    let btn = document.getElementById("btnGenerarExcel");
+    let statusEl = document.getElementById("exportStatus");
+    btn.disabled=true; btn.textContent="⏳ Generando...";
+    statusEl.style.cssText = "display:block;background:rgba(79,142,255,.08);border:1px solid rgba(79,142,255,.3);color:var(--accent2);border-radius:8px;padding:12px 14px;font-size:13px;text-align:center;";
+
+    const setStatus = (txt) => statusEl.textContent = txt;
+
+    try {
+        // Cargar SheetJS si no está
+        if(typeof XLSX === "undefined"){
+            setStatus("Cargando librería...");
+            await new Promise((res,rej)=>{
+                let s=document.createElement("script");
+                s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+                s.onload=res; s.onerror=rej; document.head.appendChild(s);
+            });
+        }
+
+        let wb = XLSX.utils.book_new();
+        let desde = document.getElementById("exportFechaDesde").value;
+        let hasta  = document.getElementById("exportFechaHasta").value;
+        let rangoLabel = (desde||hasta) ? `${desde||"inicio"} → ${hasta||"hoy"}` : "Todo el período";
+
+        // ── Filtrar datos ─────────────────────────────────────
+        let corrFilt = _exportFiltrar(typeof incidencias!=="undefined"?incidencias:[], "fecha").filter(i=>i.tipo==="Correctivo");
+        let prevFilt = _exportFiltrar(typeof incidencias!=="undefined"?incidencias:[], "fecha").filter(i=>i.tipo==="Preventivo");
+        let tarFilt  = _exportFiltrar(typeof tareas!=="undefined"?tareas:[], "fecha");
+        let fdsFilt  = _exportFiltrar(typeof fdsData!=="undefined"?fdsData:[], "fechaSalida");
+        let cntFilt  = _exportFiltrar(typeof contadorasData!=="undefined"?contadorasData:[], "fecha");
+        let evaFilt  = _exportFiltrar(typeof evaIncidencias!=="undefined"?evaIncidencias:[], "fecha");
+        let valFilt  = _exportFiltrar(typeof validadoresData!=="undefined"?validadoresData:[], "fecha");
+        let evUnicFilt = _exportFiltrar(typeof eventosUnicos!=="undefined"?eventosUnicos:[], "fecha");
+
+        // ── HOJA RESUMEN ──────────────────────────────────────
+        setStatus("Generando resumen...");
+        let casino = sessionStorage.getItem("empresaNombre") || (typeof EMPRESA_ID!=="undefined"?EMPRESA_ID:"Casino");
+        let wsRes = {};
+        let resData = [
+            ["Herramienta Fácil — Reporte exportado", "", "", ""],
+            [`Casino: ${casino}`, "", "", ""],
+            [`Período: ${rangoLabel}`, "", "", ""],
+            [`Generado: ${new Date().toLocaleString("es-AR")}`, "", "", ""],
+            ["", "", "", ""],
+            ["Sección", "Total", "Pendientes / En Curso", "Resueltos / Realizados"],
+            ["Correctivos Slots", corrFilt.length,
+                corrFilt.filter(i=>i.estado!=="Resuelto").length,
+                corrFilt.filter(i=>i.estado==="Resuelto").length],
+            ["Preventivos", prevFilt.length, "—", prevFilt.length],
+            ["Tareas", tarFilt.length,
+                tarFilt.filter(t=>t.estado==="pendiente").length,
+                tarFilt.filter(t=>t.estado==="realizado").length],
+            ["Fuera de Servicio", fdsFilt.length,
+                fdsFilt.filter(f=>f.estado!=="Habilitado").length,
+                fdsFilt.filter(f=>f.estado==="Habilitado").length],
+            ["Contadoras", cntFilt.length, "—", cntFilt.length],
+            ["Kioscos EVA", evaFilt.length, "—", evaFilt.length],
+            ["Validadores", valFilt.length, "—", valFilt.length],
+            ["Eventos Únicos", evUnicFilt.length, "—", evUnicFilt.length],
+        ];
+        resData.forEach((row, ri) => {
+            row.forEach((val, ci) => {
+                let addr = XLSX.utils.encode_cell({r:ri, c:ci});
+                let s;
+                if(ri===0) s={font:{bold:true,sz:14,color:{rgb:"00D4A8"},name:"Arial"},fill:{fgColor:{rgb:"161B27"}}};
+                else if(ri<5) s={font:{sz:10,color:{rgb:"8899AA"},name:"Arial"},fill:{fgColor:{rgb:"161B27"}}};
+                else if(ri===5) s=_hdrStyle();
+                else s=_rowStyle(ri-6, ci>0);
+                wsRes[addr]={v:val??"—",t:typeof val==="number"?"n":"s",s};
+            });
+        });
+        wsRes["!ref"]=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:resData.length,c:3}});
+        wsRes["!cols"]=[{wch:26},{wch:12},{wch:24},{wch:24}];
+        XLSX.utils.book_append_sheet(wb, wsRes, "📋 Resumen");
+
+        // ── CORRECTIVOS ───────────────────────────────────────
+        if(document.getElementById("expChk_correctivos")?.checked){
+            setStatus("Correctivos...");
+            let cabs=["Fecha","Máquina","Isla","Técnico","Nota","Resolución","Estado","Rating"];
+            let filas=corrFilt.map(i=>[
+                i.fecha||"—", i.maquina||"—", i.isla||"—", i.tecnico||"—",
+                i.nota||"—", i.resolucion||"—", i.estado||"—", i.rating?`${i.rating}★`:"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🔴 Correctivos");
+        }
+
+        // ── TAREAS ────────────────────────────────────────────
+        if(document.getElementById("expChk_tareas")?.checked){
+            setStatus("Tareas...");
+            let cabs=["Fecha","Descripción","Tipo","Asignado","Prioridad","Estado"];
+            let filas=tarFilt.map(t=>[
+                t.fecha||"—", t.desc||"—", t.tipo||"general",
+                t.asignado==="__todos__"?"Todos":(t.asignado||"—"),
+                t.prioridad||"—", t.estado||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"✅ Tareas");
+        }
+
+        // ── FUERA DE SERVICIO ─────────────────────────────────
+        if(document.getElementById("expChk_fds")?.checked){
+            setStatus("Fuera de Servicio...");
+            let cabs=["N° Admin","Isla","Fabricante","Gabinete","Falla","Repuesto","Observación","Fecha Salida","Fecha Retorno","Estado"];
+            let filas=fdsFilt.map(f=>[
+                f.nAdmin||"—",f.isla||"—",f.fabricante||"—",f.gabinete||"—",
+                f.falla||"—",f.repuesto||"—",f.observacion||"—",
+                f.fechaSalida||"—",f.fechaRetorno||"—",f.estado||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🚫 Fuera de Servicio");
+        }
+
+        // ── CONTADORAS ────────────────────────────────────────
+        if(document.getElementById("expChk_contadoras")?.checked){
+            setStatus("Contadoras...");
+            let cabs=["Fecha","Tipo","Equipo","Técnico Casino","Técnico PQ","Estado","Nota"];
+            let filas=cntFilt.map(c=>[
+                c.fecha||"—",c.tipo||"—",c.equipo||"—",
+                c.tecnicoCasino||"—",c.tecnicoPQ||"—",c.estado||"—",c.nota||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🔢 Contadoras");
+        }
+
+        // ── EVA ───────────────────────────────────────────────
+        if(document.getElementById("expChk_eva")?.checked){
+            setStatus("Kioscos EVA...");
+            let cabs=["Fecha","Kiosco","Tipo","Técnico","Descripción","Estado"];
+            let filas=evaFilt.map(e=>[
+                e.fecha||"—",e.kiosco||e.equipo||"—",e.tipo||"—",
+                e.tecnico||"—",e.descripcion||e.desc||e.nota||"—",e.estado||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🎫 Kioscos EVA");
+        }
+
+        // ── VALIDADORES ───────────────────────────────────────
+        if(document.getElementById("expChk_validadores")?.checked){
+            setStatus("Validadores...");
+            let cabs=["Fecha","Equipo","Tipo","Técnico","Descripción","Estado"];
+            let filas=valFilt.map(v=>[
+                v.fecha||"—",v.equipo||v.validador||"—",v.tipo||"—",
+                v.tecnico||"—",v.descripcion||v.desc||v.nota||"—",v.estado||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"💳 Validadores");
+        }
+
+        // ── EVENTOS ───────────────────────────────────────────
+        if(document.getElementById("expChk_eventos")?.checked){
+            setStatus("Eventos...");
+            let cabsR=["ID","Nombre","Días","Asignado","Prioridad","Activo"];
+            let DIAS=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+            let filasR=(typeof eventosConfig!=="undefined"?eventosConfig:[]).map(e=>[
+                e.id, e.nombre||"—",
+                (e.dias||[]).map(d=>DIAS[d]||d).join(", "),
+                e.asignado==="__todos__"?"Todos":(e.asignado||"—"),
+                e.prioridad||"—", e.activo!==false?"Sí":"No"
+            ]);
+            let wsR=_construirHoja(cabsR,filasR); _autoWidth(wsR,cabsR,filasR);
+            XLSX.utils.book_append_sheet(wb,wsR,"🎰 Eventos Recurrentes");
+
+            let cabsU=["Nombre","Fecha","Asignado","Prioridad","Generado"];
+            let filasU=evUnicFilt.map(e=>[
+                e.nombre||"—",e.fecha||"—",
+                e.asignado==="__todos__"?"Todos":(e.asignado||"—"),
+                e.prioridad||"—",e.generado?"Sí":"No"
+            ]);
+            let wsU=_construirHoja(cabsU,filasU); _autoWidth(wsU,cabsU,filasU);
+            XLSX.utils.book_append_sheet(wb,wsU,"📅 Eventos Únicos");
+        }
+
+        // ── GRÁFICOS ──────────────────────────────────────────
+        if(document.getElementById("expChk_graficos")?.checked){
+            setStatus("Generando gráficos...");
+
+            // G1: Correctivos por técnico
+            let g1labels=[],g1vals=[];
+            let corrPorTec={};
+            corrFilt.forEach(i=>{ let t=i.tecnico||"S/A"; corrPorTec[t]=(corrPorTec[t]||0)+1; });
+            Object.entries(corrPorTec).sort((a,b)=>b[1]-a[1]).slice(0,8).forEach(([k,v])=>{g1labels.push(k);g1vals.push(v);});
+
+            // G2: Tareas por estado
+            let g2 = {Pendiente:0,"En Curso":0,Realizado:0};
+            tarFilt.forEach(t=>{ if(t.estado==="realizado")g2.Realizado++; else if(t.estado==="en-curso")g2["En Curso"]++; else g2.Pendiente++; });
+
+            // G3: Correctivos por mes
+            let g3m={};
+            corrFilt.forEach(i=>{ let m=(i.fecha||"").substring(0,7); if(m)g3m[m]=(g3m[m]||0)+1; });
+            let g3keys=Object.keys(g3m).sort();
+
+            // G4: FDS por estado
+            let g4={};
+            fdsFilt.forEach(f=>{ let e=f.estado||"—"; g4[e]=(g4[e]||0)+1; });
+
+            let [img1,img2,img3,img4] = await Promise.all([
+                _chartBarImg(g1labels, g1vals, "Correctivos por técnico", "#FF4D6D"),
+                _chartBarImg(Object.keys(g2), Object.values(g2), "Tareas por estado", "#4F8EFF"),
+                _chartBarImg(g3keys, g3keys.map(k=>g3m[k]), "Correctivos por mes", "#FFC947"),
+                _chartBarImg(Object.keys(g4), Object.values(g4), "Fuera de Servicio por estado", "#00D4A8"),
+            ]);
+
+            // Hoja gráficos con imágenes embebidas
+            let wsG = XLSX.utils.aoa_to_sheet([
+                ["📊 Gráficos del período"],
+                [rangoLabel],
+                [""],["","Correctivos por técnico","","","","","Tareas por estado"],
+                ...Array(18).fill([]),
+                [""],["","Correctivos por mes","","","","","FDS por estado"],
+            ]);
+            wsG["A1"].s = {font:{bold:true,sz:14,color:{rgb:"00D4A8"},name:"Arial"},fill:{fgColor:{rgb:"161B27"}}};
+            wsG["A2"] = {v:rangoLabel,t:"s",s:{font:{sz:10,color:{rgb:"8899AA"},name:"Arial"},fill:{fgColor:{rgb:"161B27"}}}};
+            wsG["!cols"]=Array(12).fill({wch:12});
+            wsG["!rows"]=Array(50).fill({hpt:18});
+
+            // Insertar imágenes via !drawings (SheetJS xlsx-style)
+            wsG["!drawings"] = [
+                {name:"g1",data:_dataURLtoBytes(img1),opts:{anchor:{from:{col:1,row:3},to:{col:6,row:20}}}},
+                {name:"g2",data:_dataURLtoBytes(img2),opts:{anchor:{from:{col:7,row:3},to:{col:12,row:20}}}},
+                {name:"g3",data:_dataURLtoBytes(img3),opts:{anchor:{from:{col:1,row:22},to:{col:6,row:39}}}},
+                {name:"g4",data:_dataURLtoBytes(img4),opts:{anchor:{from:{col:7,row:22},to:{col:12,row:39}}}},
+            ];
+            XLSX.utils.book_append_sheet(wb, wsG, "📊 Gráficos");
+        }
+
+        // ── DESCARGAR ─────────────────────────────────────────
+        setStatus("Descargando...");
+        let casinoSlug=(sessionStorage.getItem("empresaNombre")||"casino").replace(/\s+/g,"_");
+        let fname=`HF_${casinoSlug}_${desde||"todo"}_${hasta||"hoy"}.xlsx`;
+        XLSX.writeFile(wb, fname);
+
+        statusEl.style.cssText="display:block;background:rgba(0,212,168,.08);border:1px solid rgba(0,212,168,.3);color:var(--accent);border-radius:8px;padding:12px 14px;font-size:13px;text-align:center;";
+        setStatus(`✅ Descargado: ${fname}`);
+        toast.success("Excel exportado ✅", fname);
+
+    } catch(e){
+        console.error("Export error:", e);
+        statusEl.style.cssText="display:block;background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.3);color:var(--red);border-radius:8px;padding:12px 14px;font-size:13px;text-align:center;";
+        statusEl.textContent="❌ Error al generar el archivo. Revisá la consola.";
+        toast.error("Error exportando", e.message||"");
+    } finally {
+        btn.disabled=false; btn.textContent="📥 Generar Excel";
+    }
+}
+</script>
 
 </body>
 </html>
