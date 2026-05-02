@@ -2935,7 +2935,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.6</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.7</span>
         </div>
 
         </div><!-- /main -->
@@ -14652,18 +14652,26 @@ async function generarExcelCompleto(){
             XLSX.utils.book_append_sheet(wb,wsU,"📅 Eventos Únicos");
         }
 
-        // ── GRÁFICOS ──────────────────────────────────────────
+        // ── GRÁFICOS con ExcelJS (addImage nativo) ────────────
         if(document.getElementById("expChk_graficos")?.checked){
+            setStatus("Cargando ExcelJS...");
+            if(typeof ExcelJS === "undefined"){
+                await new Promise((res,rej)=>{
+                    let s=document.createElement("script");
+                    s.src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js";
+                    s.onload=res; s.onerror=rej; document.head.appendChild(s);
+                });
+            }
+
             setStatus("Generando gráficos...");
 
             // G1: Correctivos por técnico
-            let g1labels=[],g1vals=[];
             let corrPorTec={};
-            corrFilt.forEach(i=>{ let t=i.tecnico||"S/A"; corrPorTec[t]=(corrPorTec[t]||0)+1; });
-            Object.entries(corrPorTec).sort((a,b)=>b[1]-a[1]).slice(0,8).forEach(([k,v])=>{g1labels.push(k);g1vals.push(v);});
+            corrFilt.forEach(i=>{ let t=i.tecnico||"Sin asignar"; corrPorTec[t]=(corrPorTec[t]||0)+1; });
+            let g1e=Object.entries(corrPorTec).sort((a,b)=>b[1]-a[1]).slice(0,8);
 
             // G2: Tareas por estado
-            let g2 = {Pendiente:0,"En Curso":0,Realizado:0};
+            let g2={Pendiente:0,"En Curso":0,Realizado:0};
             tarFilt.forEach(t=>{ if(t.estado==="realizado")g2.Realizado++; else if(t.estado==="en-curso")g2["En Curso"]++; else g2.Pendiente++; });
 
             // G3: Correctivos por mes
@@ -14676,36 +14684,89 @@ async function generarExcelCompleto(){
             fdsFilt.forEach(f=>{ let e=f.estado||"—"; g4[e]=(g4[e]||0)+1; });
 
             let [img1,img2,img3,img4] = await Promise.all([
-                _chartBarImg(g1labels, g1vals, "Correctivos por técnico", "#FF4D6D"),
+                _chartBarImg(g1e.map(x=>x[0]), g1e.map(x=>x[1]), "Correctivos por técnico", "#FF4D6D"),
                 _chartBarImg(Object.keys(g2), Object.values(g2), "Tareas por estado", "#4F8EFF"),
                 _chartBarImg(g3keys, g3keys.map(k=>g3m[k]), "Correctivos por mes", "#FFC947"),
-                _chartBarImg(Object.keys(g4), Object.values(g4), "Fuera de Servicio por estado", "#00D4A8"),
+                _chartBarImg(Object.keys(g4), Object.values(g4), "FDS por estado", "#00D4A8"),
             ]);
 
-            // Hoja gráficos con imágenes embebidas
-            let wsG = XLSX.utils.aoa_to_sheet([
-                ["📊 Gráficos del período"],
-                [rangoLabel],
-                [""],["","Correctivos por técnico","","","","","Tareas por estado"],
-                ...Array(18).fill([]),
-                [""],["","Correctivos por mes","","","","","FDS por estado"],
-            ]);
-            wsG["A1"].s = {font:{bold:true,sz:14,color:{rgb:"00D4A8"},name:"Arial"},fill:{fgColor:{rgb:"161B27"}}};
-            wsG["A2"] = {v:rangoLabel,t:"s",s:{font:{sz:10,color:{rgb:"8899AA"},name:"Arial"},fill:{fgColor:{rgb:"161B27"}}}};
-            wsG["!cols"]=Array(12).fill({wch:12});
-            wsG["!rows"]=Array(50).fill({hpt:18});
+            setStatus("Construyendo archivo final...");
 
-            // Insertar imágenes via !drawings (SheetJS xlsx-style)
-            wsG["!drawings"] = [
-                {name:"g1",data:_dataURLtoBytes(img1),opts:{anchor:{from:{col:1,row:3},to:{col:6,row:20}}}},
-                {name:"g2",data:_dataURLtoBytes(img2),opts:{anchor:{from:{col:7,row:3},to:{col:12,row:20}}}},
-                {name:"g3",data:_dataURLtoBytes(img3),opts:{anchor:{from:{col:1,row:22},to:{col:6,row:39}}}},
-                {name:"g4",data:_dataURLtoBytes(img4),opts:{anchor:{from:{col:7,row:22},to:{col:12,row:39}}}},
-            ];
-            XLSX.utils.book_append_sheet(wb, wsG, "📊 Gráficos");
+            // Crear workbook ExcelJS y migrar hojas de SheetJS
+            let wbEx = new ExcelJS.Workbook();
+            wbEx.creator = "Herramienta Fácil";
+            wbEx.created = new Date();
+
+            wb.SheetNames.forEach(sheetName => {
+                let ws = wb.Sheets[sheetName];
+                if(!ws) return;
+                let wsEx = wbEx.addWorksheet(sheetName);
+                let range = XLSX.utils.decode_range(ws["!ref"]||"A1:A1");
+                if(ws["!cols"]) ws["!cols"].forEach((c,i)=>{ if(c&&c.wch) wsEx.getColumn(i+1).width=c.wch; });
+                for(let r=range.s.r; r<=range.e.r; r++){
+                    for(let c=range.s.c; c<=range.e.c; c++){
+                        let addr=XLSX.utils.encode_cell({r,c});
+                        let cell=ws[addr]; if(!cell) continue;
+                        let exCell=wsEx.getCell(r+1, c+1);
+                        exCell.value = cell.v ?? null;
+                        if(cell.s){
+                            if(cell.s.font) exCell.font={
+                                bold:cell.s.font.bold||false, size:cell.s.font.sz||10,
+                                color:cell.s.font.color?.rgb?{argb:"FF"+cell.s.font.color.rgb}:undefined,
+                                name:cell.s.font.name||"Arial"
+                            };
+                            if(cell.s.fill?.fgColor?.rgb) exCell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF"+cell.s.fill.fgColor.rgb}};
+                            if(cell.s.alignment) exCell.alignment={horizontal:cell.s.alignment.horizontal||"left",vertical:"middle"};
+                        }
+                    }
+                }
+            });
+
+            // Hoja de gráficos con imágenes reales
+            let wsGraf = wbEx.addWorksheet("📊 Gráficos");
+            wsGraf.getColumn(1).width = 1;
+            for(let i=2;i<=28;i++) wsGraf.getColumn(i).width = 11;
+            for(let i=1;i<=80;i++) wsGraf.getRow(i).height = 15;
+
+            wsGraf.getCell("B1").value = "📊 Gráficos del período — " + rangoLabel;
+            wsGraf.getCell("B1").font = {bold:true, size:13, color:{argb:"FF00D4A8"}, name:"Arial"};
+            wsGraf.getCell("B1").fill = {type:"pattern",pattern:"solid",fgColor:{argb:"FF161B27"}};
+
+            const toB64 = (du) => du.split(",")[1];
+
+            // Gráfico 1: Correctivos por técnico — col B (1) fila 3
+            let id1 = wbEx.addImage({ base64: toB64(img1), extension:"png" });
+            wsGraf.addImage(id1, { tl:{col:1,row:2}, br:{col:13,row:19} });
+
+            // Gráfico 2: Tareas por estado — col N (13) fila 3
+            let id2 = wbEx.addImage({ base64: toB64(img2), extension:"png" });
+            wsGraf.addImage(id2, { tl:{col:14,row:2}, br:{col:26,row:19} });
+
+            // Gráfico 3: Correctivos por mes — col B fila 22
+            let id3 = wbEx.addImage({ base64: toB64(img3), extension:"png" });
+            wsGraf.addImage(id3, { tl:{col:1,row:21}, br:{col:13,row:38} });
+
+            // Gráfico 4: FDS por estado — col N fila 22
+            let id4 = wbEx.addImage({ base64: toB64(img4), extension:"png" });
+            wsGraf.addImage(id4, { tl:{col:14,row:21}, br:{col:26,row:38} });
+
+            // Descargar con ExcelJS
+            setStatus("Descargando...");
+            let casinoSlug=(sessionStorage.getItem("empresaNombre")||"casino").replace(/\s+/g,"_");
+            let fname=`HF_${casinoSlug}_${desde||"todo"}_${hasta||"hoy"}.xlsx`;
+            let buffer = await wbEx.xlsx.writeBuffer();
+            let blob = new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+            let dlUrl = URL.createObjectURL(blob);
+            let a = document.createElement("a"); a.href=dlUrl; a.download=fname; a.click();
+            setTimeout(()=>URL.revokeObjectURL(dlUrl), 5000);
+
+            statusEl.style.cssText="display:block;background:rgba(0,212,168,.08);border:1px solid rgba(0,212,168,.3);color:var(--accent);border-radius:8px;padding:12px 14px;font-size:13px;text-align:center;";
+            setStatus(`✅ Descargado: ${fname}`);
+            toast.success("Excel exportado ✅", fname);
+            return; // no llegar al XLSX.writeFile de abajo
         }
 
-        // ── DESCARGAR ─────────────────────────────────────────
+        // ── DESCARGAR sin gráficos (SheetJS) ─────────────────
         setStatus("Descargando...");
         let casinoSlug=(sessionStorage.getItem("empresaNombre")||"casino").replace(/\s+/g,"_");
         let fname=`HF_${casinoSlug}_${desde||"todo"}_${hasta||"hoy"}.xlsx`;
