@@ -115,6 +115,7 @@ const _FB_KEYS = new Set([
     "equiposCilindros","equiposRA","equiposEVA",
     "pptData","sidebarConfig",
     "eventosConfig","eventosGenerados",
+    "eventosUnicos",
     "tareasOrden"
 ]);
 
@@ -193,6 +194,7 @@ async function _cargarDatosFirebase() {
         if (_cache["pptData"])        pptData        = _cache["pptData"]        ?? [];
         if (_cache["eventosConfig"])  try { eventosConfig  = _cache["eventosConfig"]  ?? []; } catch(e){}
         if (_cache["eventosGenerados"]) try { eventosGenerados = _cache["eventosGenerados"] ?? {}; } catch(e){}
+        if (_cache["eventosUnicos"])  try { eventosUnicos  = _cache["eventosUnicos"]  ?? []; } catch(e){}
     } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
 
     // Recargar islasActivas desde el cache ya poblado (puede haber quedado [] antes)
@@ -236,6 +238,7 @@ function _activarListenersTiempoReal() {
             if (_cache["pptData"]        !== undefined) pptData        = _cache["pptData"]        ?? [];
             if (_cache["eventosConfig"]  !== undefined) eventosConfig  = _cache["eventosConfig"]  ?? [];
             if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
+            if (_cache["eventosUnicos"]  !== undefined) eventosUnicos  = _cache["eventosUnicos"]  ?? [];
             // Sidebar config — aplicar si cambió desde otro dispositivo
             if (_cache["sidebarConfig"] !== undefined) {
                 _sidebarConfig = _cache["sidebarConfig"];
@@ -2243,7 +2246,7 @@ body {
                         <div class="action-bar">
                             <button class="btn-primary" onclick="abrirModalEvaNuevaIncidencia()">➕ Nueva Incidencia EVA</button>
                             <button class="btn-primary blue" onclick="mostrarVistaEstadosEva()">📊 Estado Kioscos EVA</button>
-                            <button class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);" onclick="abrirModalEditarKioscosEva()">✏️ Editar Kioscos</button>
+                            <button id="btnEditarKioscosEva" class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);display:none;" onclick="abrirModalEditarKioscosEva()">✏️ Editar Kioscos</button>
                         </div>
                     </div>
 
@@ -2286,7 +2289,7 @@ body {
                         <div class="page-title">🎰 Cronograma de Eventos</div>
                         <div class="page-subtitle">Programá tareas recurrentes por día de semana o eventos únicos — se generan automáticamente</div>
                     </div>
-                    <div class="action-bar">
+                    <div class="action-bar" id="cronogramaEventosAcciones" style="display:none;">
                         <button class="btn-primary blue" onclick="abrirModalEvento()">➕ Nuevo Evento</button>
                         <button class="btn-primary" style="background:rgba(159,122,234,.18);border:1px solid rgba(159,122,234,.5);color:#c4a8ff;" onclick="abrirModalEventoUnico()">📅 Evento Único</button>
                         <button class="btn-primary" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);" onclick="generarTareasEventosHoy(true)">⚡ Generar hoy</button>
@@ -2591,7 +2594,7 @@ body {
                         <div class="page-subtitle">Correctivos, preventivos y seguimiento de contadoras</div>
                     </div>
                     <div class="action-bar">
-                        <button class="btn-secondary" onclick="abrirModalEditarListaContadoras()" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">✏️ Editar Contadoras</button>
+                        <button id="btnEditarContadoras" class="btn-secondary" onclick="abrirModalEditarListaContadoras()" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:none;align-items:center;gap:6px;">✏️ Editar Contadoras</button>
                         <button class="btn-primary" onclick="abrirModalContadoraNuevaIncidencia()">➕ Nueva Incidencia</button>
                     </div>
                 </div>
@@ -2678,8 +2681,8 @@ body {
                             <span id="ppMesTitulo">Preventivos del mes</span>
                             <div style="display:flex;gap:8px;align-items:center;">
                                 <span class="badge-count" id="ppBadgeMes">0</span>
-                                <button class="btn-primary" onclick="ppEnviarATareas()" style="font-size:12px;padding:6px 14px;background:var(--accent);" title="Crea una tarea pendiente por cada preventivo no realizado">📋 Enviar a Tareas</button>
-                                <button class="btn-primary blue" onclick="ppGenerarMes()" style="font-size:12px;padding:6px 12px;">⚡ Regenerar</button>
+                                <button id="btnPpEnviarTareas" class="btn-primary" onclick="ppEnviarATareas()" style="font-size:12px;padding:6px 14px;background:var(--accent);display:none;" title="Crea una tarea pendiente por cada preventivo no realizado">📋 Enviar a Tareas</button>
+                                <button id="btnPpRegenerar" class="btn-primary blue" onclick="ppGenerarMes()" style="font-size:12px;padding:6px 12px;display:none;">⚡ Regenerar</button>
                             </div>
                         </div>
                         <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Asigná un técnico a cada preventivo. Podés cambiar el estado una vez iniciado el trabajo.</div>
@@ -2929,7 +2932,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.4</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.5</span>
         </div>
 
         </div><!-- /main -->
@@ -4471,6 +4474,13 @@ function iniciarApp(){
     let btnEditHist = document.getElementById("btnEditarIslasHistorial");
     if(btnEditHist) btnEditHist.style.display = usuarioActual.rol === "Admin" ? "flex" : "none";
 
+    // Botones solo para Admin: Editar Kioscos EVA, Editar Contadoras, Enviar a Tareas, Regenerar
+    const _adminDisplay = usuarioActual.rol === "Admin" ? "flex" : "none";
+    ["btnEditarKioscosEva","btnEditarContadoras","btnPpEnviarTareas","btnPpRegenerar"].forEach(id => {
+        let el = document.getElementById(id);
+        if(el) el.style.display = _adminDisplay;
+    });
+
     // Menús exclusivos de Admin y SuperAdmin
     let navGU = document.getElementById("nav-gestionUsuarios");
     if(navGU) navGU.style.display = esAdminOSuperAdmin() ? "flex" : "none";
@@ -5350,7 +5360,11 @@ function mostrar(sec){
     if(sec === 'control-ppt') initPpt();
     if(sec === 'carteles') renderCartelesAdmin();
     if(sec === 'plan-preventivo') ppIniciar();
-    if(sec === 'cronograma-eventos') renderCronogramaEventos?.();
+    if(sec === 'cronograma-eventos') {
+        let acciones = document.getElementById("cronogramaEventosAcciones");
+        if(acciones) acciones.style.display = esAdminOSuperAdmin() ? "flex" : "none";
+        renderCronogramaEventos?.();
+    }
     if(sec === 'gestionUsuarios'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderGestionUsuarios(); if(esSuperAdmin()) renderUbicaciones(); }
     // Cerrar sidebar en mobile
     document.querySelector('.sidebar')?.classList.remove('open');
@@ -8484,7 +8498,7 @@ function cerrarDetalleContadora(){
 
 // ─── RENDER ───────────────────────────────────────
 function renderContadoras(){
-    let todos = [...contadorasData].sort((a,b) => b.id - a.id);
+    let todos = [...contadorasData].sort((a,b) => (b.fecha || "").localeCompare(a.fecha || "") || b.id - a.id);
     let badge = document.getElementById("badgeCntTotal");
     if(badge) badge.textContent = todos.length;
 
@@ -8592,7 +8606,7 @@ function renderFds(){
             return texto.includes(filtroBuscar);
         }
         return true;
-    });
+    }).sort((a, b) => (b.fechaSalida || "").localeCompare(a.fechaSalida || ""));
 
     let tbody = document.querySelector("#tablaFds tbody");
     if(!tbody) return;
@@ -13873,13 +13887,13 @@ function renderCronogramaEventos(){
                             </td>`;
                         }).join("")}
                         <td style="text-align:center;padding:10px 6px;">
-                            <button onclick="toggleEventoActivo(${ev.id})" style="background:${ev.activo?'rgba(0,212,168,.15)':'rgba(255,255,255,.06)'};border:1px solid ${ev.activo?'var(--accent)':'var(--border)'};color:${ev.activo?'var(--accent)':'var(--muted)'};border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;">
+                            ${esAdminOSuperAdmin() ? `<button onclick="toggleEventoActivo(${ev.id})" style="background:${ev.activo?'rgba(0,212,168,.15)':'rgba(255,255,255,.06)'};border:1px solid ${ev.activo?'var(--accent)':'var(--border)'};color:${ev.activo?'var(--accent)':'var(--muted)'};border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;">
                                 ${ev.activo ? '🟢 Activo' : '⚪ Inactivo'}
-                            </button>
+                            </button>` : `<span style="font-size:11px;font-weight:700;color:${ev.activo?'var(--accent)':'var(--muted)'};">${ev.activo ? '🟢 Activo' : '⚪ Inactivo'}</span>`}
                         </td>
                         <td style="text-align:right;padding:10px 12px;">
-                            <button onclick="abrirModalEvento(${ev.id})" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;" title="Editar">✏️</button>
-                            <button onclick="eliminarEvento(${ev.id})" style="background:none;border:1px solid rgba(255,77,109,.3);color:var(--red);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;" title="Eliminar">🗑️</button>
+                            ${esAdminOSuperAdmin() ? `<button onclick="abrirModalEvento(${ev.id})" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;" title="Editar">✏️</button>
+                            <button onclick="eliminarEvento(${ev.id})" style="background:none;border:1px solid rgba(255,77,109,.3);color:var(--red);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;" title="Eliminar">🗑️</button>` : ""}
                         </td>
                     </tr>`;
                 }).join("")}
@@ -14066,6 +14080,14 @@ function _saveEventosUnicos(){
     localStorage.setItem("eventosUnicos", JSON.stringify(eventosUnicos));
 }
 
+// Sincronizar eventosUnicos desde Firebase cuando llega un update en tiempo real
+_fbListen("eventosUnicos", (val) => {
+    if(val !== undefined) eventosUnicos = val ?? [];
+    if(document.getElementById("cronograma-eventos")?.classList.contains("active")){
+        renderEventosUnicos?.();
+    }
+});
+
 function abrirModalEventoUnico(id){
     eventoUnicoEditandoId = id || null;
     let ev = id ? eventosUnicos.find(e => e.id === id) : null;
@@ -14159,8 +14181,8 @@ function renderEventosUnicos(){
                 <td style="text-align:center;padding:10px 12px;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:${esHoy?'var(--yellow)':esPasado?'var(--muted)':'var(--white)'};">${ev.fecha}</td>
                 <td style="text-align:center;padding:10px 6px;">${estadoHtml}</td>
                 <td style="text-align:right;padding:10px 12px;">
-                    <button onclick="abrirModalEventoUnico(${ev.id})" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;" title="Editar">✏️</button>
-                    <button onclick="eliminarEventoUnico(${ev.id})" style="background:none;border:1px solid rgba(255,77,109,.3);color:var(--red);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;" title="Eliminar">🗑️</button>
+                    ${esAdminOSuperAdmin() ? `<button onclick="abrirModalEventoUnico(${ev.id})" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;" title="Editar">✏️</button>
+                    <button onclick="eliminarEventoUnico(${ev.id})" style="background:none;border:1px solid rgba(255,77,109,.3);color:var(--red);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;" title="Eliminar">🗑️</button>` : ""}
                 </td>
             </tr>`;
         }).join("")}
