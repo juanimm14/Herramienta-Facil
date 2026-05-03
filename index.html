@@ -131,6 +131,11 @@ localStorage.setItem = function(clave, valor) {
         }
         let parsed;
         try { parsed = JSON.parse(valor); } catch { parsed = valor; }
+        // Actualizar cache síncronamente ANTES de escribir en Firestore
+        _cache[clave] = parsed;
+        // Marcar timestamp de escritura local para rechazar snapshots viejos
+        window._fbWriteTs = window._fbWriteTs || {};
+        window._fbWriteTs[clave] = Date.now();
         _fbSet(clave, parsed);
         // también en localStorage como respaldo offline
         _localStorageOrig.setItem(clave, valor);
@@ -263,21 +268,24 @@ function _activarListenersTiempoReal() {
     };
 
     _FB_KEYS.forEach(clave => {
-        _colRef().doc(clave).onSnapshot(snap => {
-            // Si acabamos de escribir esta clave localmente, ignorar el próximo snapshot
-            // para evitar race condition (el snapshot puede llegar con datos viejos)
-            if (window._fbIgnoreNext && window._fbIgnoreNext[clave] > Date.now()) {
+        _colRef().doc(clave).onSnapshot({ includeMetadataChanges: true }, snap => {
+            // Ignorar snapshots con escrituras pendientes (eco de nuestro propio write local)
+            if (snap.metadata && snap.metadata.hasPendingWrites) return;
+            // Ignorar la confirmación del servidor si fue provocada por nuestra propia escritura reciente
+            // (dentro de los 5s posteriores a un localStorage.setItem de esta clave)
+            if (window._fbWriteTs && window._fbWriteTs[clave] && (Date.now() - window._fbWriteTs[clave]) < 5000) {
+                // Permitir solo si el dato del servidor ya incluye nuestros cambios
+                // (es decir, si _cache coincide con lo que vino del server)
+                // Para simplificar: simplemente ignorar y dejar _cache como fuente de verdad
                 return;
             }
             if (snap.exists) {
                 _cache[clave] = snap.data().data;
                 _localStorageOrig.setItem(clave, JSON.stringify(snap.data().data));
             } else {
-                // El documento fue eliminado o quedó vacío → limpiar cache y localStorage
                 delete _cache[clave];
                 _localStorageOrig.removeItem(clave);
             }
-            // Siempre re-renderizar, tanto si el doc existe como si fue borrado
             reRender();
         });
     });
@@ -2940,7 +2948,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.0</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.1</span>
         </div>
 
         </div><!-- /main -->
@@ -6278,7 +6286,9 @@ function avanzarTarea(id){
     if(t.estado === "pendiente"){
         t.estado = "en-curso";
         t.iniciadoEn = ahora;
-        localStorage.setItem("tareas", JSON.stringify(tareas));
+        _cache["tareas"] = tareas;
+        _fbSet("tareas", tareas);
+        _localStorageOrig.setItem("tareas", JSON.stringify(tareas));
     } else if(t.estado === "en-curso"){
         t.estado = "realizado";
         t.finalizadoEn = ahora;
@@ -6340,13 +6350,12 @@ function avanzarTarea(id){
             }
         }
 
-        // Batch write: guardar tareas e incidencias juntos para evitar race condition
+        // Batch write: guardar tareas e incidencias juntos
         _cache["tareas"] = tareas;
         _cache["incidencias"] = incidencias;
-        // Ignorar snapshots entrantes por 4s para evitar que Firestore pise los datos locales
-        window._fbIgnoreNext = window._fbIgnoreNext || {};
-        window._fbIgnoreNext["tareas"] = Date.now() + 4000;
-        window._fbIgnoreNext["incidencias"] = Date.now() + 4000;
+        window._fbWriteTs = window._fbWriteTs || {};
+        window._fbWriteTs["tareas"] = Date.now();
+        window._fbWriteTs["incidencias"] = Date.now();
         _db.batch()
             .set(_colRef().doc("tareas"),     { data: tareas })
             .set(_colRef().doc("incidencias"),{ data: incidencias })
@@ -12338,13 +12347,12 @@ function confirmarQuienRealizoMulti(){
             });
         }    }
 
-    // Batch write: guardar tareas e incidencias juntos para evitar race condition
+    // Batch write: guardar tareas e incidencias juntos
     _cache["tareas"] = tareas;
     _cache["incidencias"] = incidencias;
-    // Ignorar snapshots entrantes por 4s para evitar que Firestore pise los datos locales
-    window._fbIgnoreNext = window._fbIgnoreNext || {};
-    window._fbIgnoreNext["tareas"] = Date.now() + 4000;
-    window._fbIgnoreNext["incidencias"] = Date.now() + 4000;
+    window._fbWriteTs = window._fbWriteTs || {};
+    window._fbWriteTs["tareas"] = Date.now();
+    window._fbWriteTs["incidencias"] = Date.now();
     _db.batch()
         .set(_colRef().doc("tareas"),     { data: tareas })
         .set(_colRef().doc("incidencias"),{ data: incidencias })
