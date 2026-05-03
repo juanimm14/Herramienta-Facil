@@ -2935,7 +2935,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.8</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.0.9</span>
         </div>
 
         </div><!-- /main -->
@@ -12309,7 +12309,7 @@ function confirmarQuienRealizoMulti(){
                 let islaId = cb.value;
                 islasSeleccionadas.push(islaId);
                 let islaDef = (islasActivas||[]).find(i => String(typeof i==="object" ? i.id : i) === String(islaId));
-                let cant = islaDef && typeof islaDef === "object" && islaDef.maquinas ? islaDef.maquinas.length : 0;
+                let cant = islaDef && typeof islaDef === "object" ? (islaDef.slots || 0) : 0;
                 islasMaquinasMap[islaId] = cant;
             });
             let totalMaq = Object.values(islasMaquinasMap).reduce((a,b) => a+b, 0);
@@ -12350,6 +12350,7 @@ function confirmarQuienRealizoMulti(){
 
     renderTareas?.();
     renderDashboard?.();
+    renderCorrectivos?.();
     renderIncidenciasPreventivos?.();
     toast.success("Tarea cerrada ✅", `Realizada por: ${t.realizadoPor}`);
 }
