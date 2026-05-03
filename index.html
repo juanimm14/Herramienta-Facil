@@ -44,6 +44,19 @@ let EMPRESA_ID = localStorage.getItem("empresaId") || sessionStorage.getItem("em
 
 const _cache = {};  // cache en memoria: { [clave]: valor }
 
+// ── Loading screen helpers ──
+function _mostrarLoadingScreen(msg) {
+    let ls = document.getElementById("loadingScreen");
+    if(!ls) return;
+    ls.style.display = "flex";
+    let msgEl = document.getElementById("_loadingMsg");
+    if(msgEl && msg) msgEl.textContent = msg;
+}
+function _ocultarLoadingScreen() {
+    let ls = document.getElementById("loadingScreen");
+    if(ls) ls.style.display = "none";
+}
+
 const _colRef = () => _db.collection("empresas").doc(EMPRESA_ID).collection("datos");
 
 // ── Colección global /config/empresas  (sin autenticación para leer en login) ──
@@ -1679,6 +1692,110 @@ body {
 <div id="toastContainer" class="toast-container"></div>
 
 <!-- LOGIN -->
+<!-- ═══ SPLASH DE CARGA ═══ -->
+<div id="splashCarga" style="
+    position:fixed;inset:0;z-index:99999;
+    background:linear-gradient(135deg,#0a0e1a 0%,#0d1526 50%,#0a1020 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
+    font-family:'Rajdhani',sans-serif;
+">
+    <!-- Logo -->
+    <div style="text-align:center;">
+        <div style="font-size:32px;font-weight:700;letter-spacing:4px;color:#00d4a8;text-transform:uppercase;margin-bottom:6px;">
+            ⚡ HERRAMIENTA FÁCIL
+        </div>
+        <div style="font-size:13px;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;">
+            Sistema de Gestión de Incidencias
+        </div>
+    </div>
+
+    <!-- Gráfico animado: 3 barras pulsando -->
+    <div style="display:flex;align-items:flex-end;gap:7px;height:52px;">
+        <div style="width:10px;background:#00d4a8;border-radius:5px 5px 0 0;animation:splashBar .9s ease-in-out infinite alternate;animation-delay:0s;"></div>
+        <div style="width:10px;background:#00d4a8;border-radius:5px 5px 0 0;animation:splashBar .9s ease-in-out infinite alternate;animation-delay:.15s;"></div>
+        <div style="width:10px;background:#00d4a8;border-radius:5px 5px 0 0;animation:splashBar .9s ease-in-out infinite alternate;animation-delay:.30s;"></div>
+        <div style="width:10px;background:#00d4a8;border-radius:5px 5px 0 0;animation:splashBar .9s ease-in-out infinite alternate;animation-delay:.45s;"></div>
+        <div style="width:10px;background:#00d4a8;border-radius:5px 5px 0 0;animation:splashBar .9s ease-in-out infinite alternate;animation-delay:.60s;"></div>
+        <div style="width:10px;background:#4f8eff;border-radius:5px 5px 0 0;animation:splashBar .9s ease-in-out infinite alternate;animation-delay:.75s;"></div>
+        <div style="width:10px;background:#4f8eff;border-radius:5px 5px 0 0;animation:splashBar .9s ease-in-out infinite alternate;animation-delay:.90s;"></div>
+    </div>
+
+    <!-- Texto -->
+    <div style="text-align:center;">
+        <div style="font-size:16px;font-weight:600;color:rgba(255,255,255,.85);margin-bottom:6px;">Cargando información…</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.35);letter-spacing:1px;">Por favor esperá</div>
+    </div>
+
+    <!-- Barra de progreso indeterminada -->
+    <div style="width:220px;height:3px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;">
+        <div style="height:100%;width:40%;background:linear-gradient(90deg,transparent,#00d4a8,transparent);border-radius:99px;animation:splashProgress 1.4s ease-in-out infinite;"></div>
+    </div>
+</div>
+<style>
+@keyframes splashBar {
+    from { height: 14px; opacity:.5; }
+    to   { height: 52px; opacity:1; }
+}
+@keyframes splashProgress {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(600%); }
+}
+</style>
+
+<!-- ═══ PANTALLA DE CARGA ═══ -->
+<div id="loadingScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#0d1117;
+     flex-direction:column;align-items:center;justify-content:center;gap:28px;">
+    <div style="text-align:center;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;
+                    color:#00d4a8;letter-spacing:3px;margin-bottom:6px;">HERRAMIENTA FÁCIL</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.45);letter-spacing:1px;">Sistema de Gestión de Incidencias</div>
+    </div>
+    <!-- Spinner animado -->
+    <div style="position:relative;width:72px;height:72px;">
+        <svg viewBox="0 0 72 72" style="width:72px;height:72px;animation:_ls_spin 1.4s linear infinite;">
+            <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(0,212,168,0.15)" stroke-width="5"/>
+            <circle cx="36" cy="36" r="28" fill="none" stroke="#00d4a8" stroke-width="5"
+                    stroke-linecap="round" stroke-dasharray="100 76"
+                    style="animation:_ls_dash 1.4s ease-in-out infinite;transform-origin:center;"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+                    font-size:22px;">⚙️</div>
+    </div>
+    <!-- Barra de progreso -->
+    <div style="width:220px;">
+        <div style="height:3px;background:rgba(0,212,168,.15);border-radius:99px;overflow:hidden;">
+            <div id="_loadingBar" style="height:100%;width:0%;background:linear-gradient(90deg,#00d4a8,#4f8eff);
+                 border-radius:99px;transition:width .4s ease;animation:_ls_bar 2.5s ease-in-out infinite;"></div>
+        </div>
+        <div id="_loadingMsg" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,0.55);
+             text-align:center;letter-spacing:.3px;">Cargando información, por favor espere…</div>
+    </div>
+    <!-- Puntos animados -->
+    <div style="display:flex;gap:8px;">
+        <div style="width:7px;height:7px;border-radius:50%;background:#00d4a8;animation:_ls_dot 1.2s ease-in-out infinite;"></div>
+        <div style="width:7px;height:7px;border-radius:50%;background:#4f8eff;animation:_ls_dot 1.2s ease-in-out .2s infinite;"></div>
+        <div style="width:7px;height:7px;border-radius:50%;background:#00d4a8;animation:_ls_dot 1.2s ease-in-out .4s infinite;"></div>
+    </div>
+</div>
+<style>
+@keyframes _ls_spin { to { transform:rotate(360deg); } }
+@keyframes _ls_dash {
+    0%   { stroke-dashoffset:0; }
+    50%  { stroke-dashoffset:-88; }
+    100% { stroke-dashoffset:-176; }
+}
+@keyframes _ls_bar  {
+    0%   { width:0%; }
+    40%  { width:65%; }
+    70%  { width:85%; }
+    100% { width:98%; }
+}
+@keyframes _ls_dot  {
+    0%,100% { transform:translateY(0); opacity:.4; }
+    50%      { transform:translateY(-6px); opacity:1; }
+}
+</style>
+
 <div id="loginDiv">
     <div class="login-box">
         <div class="login-logo">HERRAMIENTA FÁCIL</div>
@@ -9067,19 +9184,31 @@ function crearCartelBarajadora(){
 // ─── Firebase Auth listener — maneja sesión automáticamente ──
 _auth.onAuthStateChanged(async (firebaseUser) => {
     if(firebaseUser){
-        // Recuperar empresa de session o localStorage (por si recargó la página)
-        let savedEmpresa = sessionStorage.getItem("empresaId") || localStorage.getItem("empresaId");
+        // Recuperar empresa de session o localStorage (persiste entre recargas)
+        let savedEmpresa = localStorage.getItem("empresaId") || sessionStorage.getItem("empresaId");
+        let savedNombre  = localStorage.getItem("empresaNombre") || sessionStorage.getItem("empresaNombre") || savedEmpresa;
         if (!savedEmpresa) {
             // No hay empresa seleccionada → forzar logout y volver al login
             await _auth.signOut();
+            let _sp2 = document.getElementById("splashCarga");
+            if(_sp2) _sp2.style.display = "none";
             document.getElementById("loginDiv").style.display = "flex";
             document.getElementById("app").style.display = "none";
             loginIniciarCasinos();
             return;
         }
         EMPRESA_ID = savedEmpresa;
+        // Sincronizar sessionStorage para que el resto del código lo encuentre
+        sessionStorage.setItem("empresaId",     savedEmpresa);
+        sessionStorage.setItem("empresaNombre", savedNombre);
+
+        // Mostrar pantalla de carga mientras baja Firebase
+        document.getElementById("loginDiv").style.display = "none";
+        document.getElementById("app").style.display = "none";
+        // splashCarga ya visible — no hace falta mostrar nada más
+
         // Usuario autenticado — cargar datos y arrancar app
-        try { await _cargarDatosFirebase(); } catch(e){}
+        try { await _cargarDatosFirebase(); } catch(e){ console.error(e); }
         _activarListenersTiempoReal();
 
         // Buscar el perfil (nombre + rol) en usersDB usando el email
@@ -9097,9 +9226,12 @@ _auth.onAuthStateChanged(async (firebaseUser) => {
         let btn = document.getElementById("btnLogin");
         if(btn){ btn.textContent = "INGRESAR →"; btn.disabled = false; }
 
+        let _sp3 = document.getElementById("splashCarga"); if(_sp3) _sp3.style.display = "none";
         iniciarApp();
     } else {
-        // Sin sesión — mostrar login y cargar lista de casinos
+        // Sin sesión — ocultar splash y mostrar login
+        let _sp = document.getElementById("splashCarga");
+        if(_sp) _sp.style.display = "none";
         document.getElementById("loginDiv").style.display = "flex";
         document.getElementById("app").style.display = "none";
         loginIniciarCasinos();
@@ -12190,6 +12322,12 @@ renderTareas = _renderTareasConTurno;
             <label class="form-label">Técnico 3 <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
             <select id="qrTec3" class="form-select"></select>
         </div>
+        <!-- Resolución para correctivo (se muestra solo si tipo=correctivo o tiene máquina) -->
+        <div id="qrResolucionSection" style="display:none;margin-top:4px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--red);text-transform:uppercase;margin-bottom:8px;">🔧 ¿Qué se hizo? (resolución)</div>
+            <textarea id="qrResolucion" class="form-textarea" placeholder="Describí brevemente qué se realizó, qué se reemplazó, cómo se resolvió…" style="min-height:80px;"></textarea>
+            <div style="font-size:11px;color:var(--muted);margin-top:5px;">Este texto quedará como resolución en el registro del correctivo.</div>
+        </div>
         <!-- Islas para preventivo (se muestra solo si tipo=preventivo) -->
         <div id="qrIslasSection" style="display:none;margin-top:4px;">
             <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">🏝️ Islas intervenidas</div>
@@ -12227,6 +12365,13 @@ function abrirQuienRealizo(id){
         let match = [...s1.options].find(o => o.value === t.asignado);
         if(match) s1.value = t.asignado;
     }
+
+    // Mostrar/ocultar sección resolución (para correctivos)
+    let resSection = document.getElementById("qrResolucionSection");
+    let resTextarea = document.getElementById("qrResolucion");
+    let _esCorrectivoPrev = t && (t.tipo === "correctivo" || (!t.tipo && t.maquina));
+    resSection.style.display = _esCorrectivoPrev ? "block" : "none";
+    if(resTextarea) resTextarea.value = "";
 
     // Mostrar/ocultar sección islas según tipo
     let islasSection = document.getElementById("qrIslasSection");
@@ -12294,10 +12439,12 @@ function confirmarQuienRealizoMulti(){
             i._fromTareaId === t.id ||
             (i.tipo === "Correctivo" && i.estado !== "Resuelto" && String(i.maquina) === String(t.maquina||t.desc) && String(i.isla||"") === String(t.isla||""))
         );
+        let _resText = (document.getElementById("qrResolucion")?.value || "").trim();
         if(idxExist >= 0){
             incidencias[idxExist].estado = "Resuelto";
             incidencias[idxExist].tecnico = tecnico;
             incidencias[idxExist]._fromTareaId = t.id;
+            if(_resText) incidencias[idxExist].resolucion = _resText;
         } else {
             incidencias.push({
                 tipo: "Correctivo",
@@ -12306,7 +12453,7 @@ function confirmarQuienRealizoMulti(){
                 isla: t.isla || "",
                 tecnico: tecnico,
                 nota: t.desc + (t.notas ? " — " + t.notas : ""),
-                resolucion: "",
+                resolucion: (document.getElementById("qrResolucion")?.value || "").trim(),
                 estado: "Resuelto",
                 _fromTareaId: t.id
             });
