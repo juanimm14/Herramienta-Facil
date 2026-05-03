@@ -6287,7 +6287,9 @@ function avanzarTarea(id){
         ppRegistrarEnHistorial(t);
 
         // ── Crear/actualizar incidencia al cerrar la tarea ──
-        if(t.tipo === "correctivo"){
+        // Se considera "correctivo" si tipo === "correctivo" O si tiene máquina cargada y no es preventivo/evento/sistema
+        let _esCorrectivo = t.tipo === "correctivo" || (!t.tipo && t.maquina);
+        if(_esCorrectivo){
             let tecnico = t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||"");
             let idxExist = incidencias.findIndex(i =>
                 i._fromTareaId === t.id ||
@@ -12284,7 +12286,9 @@ function confirmarQuienRealizoMulti(){
     ppRegistrarEnHistorial?.(t);
 
     // ── Crear/actualizar incidencia al cerrar la tarea ──
-    if(t.tipo === "correctivo"){
+    // Se considera "correctivo" si tipo === "correctivo" O si tiene máquina cargada y no es preventivo/evento/sistema
+    let _esCorrectivo = t.tipo === "correctivo" || (!t.tipo && t.maquina);
+    if(_esCorrectivo){
         let tecnico = t.realizadoPor || (t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||""));
         let idxExist = incidencias.findIndex(i =>
             i._fromTareaId === t.id ||
