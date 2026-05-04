@@ -1045,6 +1045,7 @@ body {
 .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
 .form-select option { background: var(--bg3); }
 .form-textarea { resize: vertical; min-height: 80px; }
+#grupoResolucion { border: 2px solid var(--red); border-radius: 10px; padding: 12px 14px; background: rgba(255,77,109,.06); }
 .modal-footer { display: flex; gap: 10px; margin-top: 20px; }
 .btn-modal-save {
     flex: 1; padding: 13px;
@@ -3096,7 +3097,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.9</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.2.0</span>
         </div>
 
         </div><!-- /main -->
@@ -3678,12 +3679,12 @@ body {
                 <option value="Resuelto">Resuelto</option>
             </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="grupoNota">
             <label class="form-label">Descripción / Nota</label>
             <textarea id="nota" class="form-textarea" placeholder="Describe el problema o la acción realizada..."></textarea>
         </div>
         <div class="form-group" id="grupoResolucion" style="display:none;">
-            <label class="form-label">Resolución (¿Qué se hizo?)</label>
+            <label class="form-label" id="labelResolucion">Resolución (¿Qué se hizo?)</label>
             <textarea id="resolucion" class="form-textarea" placeholder="Detallá cómo se resolvió el problema..."></textarea>
         </div>
         <div class="form-group" id="grupoRatingCorrectivo">
@@ -6303,7 +6304,17 @@ function renderRatingsDash(elId, lista, tipo){
 // ──────────────────────────────────────────────
 function toggleResolucion(){
     let est = document.getElementById("estadoIncidencia").value;
-    document.getElementById("grupoResolucion").style.display = est === "Resuelto" ? "block" : "none";
+    let esResuelto = est === "Resuelto";
+    // Mostrar/ocultar resolución y nota según estado
+    document.getElementById("grupoResolucion").style.display = esResuelto ? "block" : "none";
+    let grupoNota = document.getElementById("grupoNota");
+    if(grupoNota) grupoNota.style.display = esResuelto ? "none" : "block";
+    // Resaltar label resolución en rojo
+    let labelRes = document.getElementById("labelResolucion");
+    if(labelRes){
+        labelRes.style.color      = esResuelto ? "var(--red)" : "";
+        labelRes.style.fontWeight = esResuelto ? "700" : "";
+    }
     _actualizarEstiloEstadoIncidencia();
 }
 
@@ -6311,9 +6322,9 @@ function _actualizarEstiloEstadoIncidencia(){
     let sel = document.getElementById("estadoIncidencia");
     if(!sel) return;
     if(sel.value === "Resuelto"){
-        sel.style.borderColor = "var(--red)";
-        sel.style.background  = "rgba(255,77,109,.12)";
-        sel.style.color       = "var(--red)";
+        sel.style.borderColor = "var(--accent)";
+        sel.style.background  = "rgba(0,212,168,.12)";
+        sel.style.color       = "var(--accent)";
         sel.style.fontWeight  = "700";
     } else {
         sel.style.borderColor = "";
@@ -6333,8 +6344,7 @@ function abrirModalCorrectivo(){
     document.getElementById("nota").value = "";
     document.getElementById("resolucion").value = "";
     document.getElementById("estadoIncidencia").value = "Resuelto";
-    document.getElementById("grupoResolucion").style.display = "block";
-    _actualizarEstiloEstadoIncidencia();
+    toggleResolucion();
     resetRating("starCorrectivo");
     // Pre-seleccionar técnico logueado
     let selTec = document.getElementById("tecnico");
@@ -6390,8 +6400,7 @@ function editarIncidencia(index){
     document.getElementById("resolucion").value = i.resolucion || "";
     let estado = (i.estado === "Resuelto") ? "Resuelto" : "En Curso";
     document.getElementById("estadoIncidencia").value = estado;
-    document.getElementById("grupoResolucion").style.display = estado === "Resuelto" ? "block" : "none";
-    _actualizarEstiloEstadoIncidencia();
+    toggleResolucion();
     loadRating("starCorrectivo", i.rating || 0);
     document.getElementById("grupoRatingCorrectivo").style.display = usuarioActual?.rol === "Admin" ? "block" : "none";
     document.getElementById("modalCorrectivo").classList.add("open");
@@ -13749,26 +13758,26 @@ function pptDescargarPDF() {
         let fecha  = new Date().toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
         let y = 18;
 
-        // Header
-        doc.setFillColor(15, 17, 23);
+        // Fondo blanco (para impresión)
+        doc.setFillColor(255, 255, 255);
         doc.rect(0, 0, 210, 297, "F");
 
         // Título
         doc.setFont("helvetica", "bold");
         doc.setFontSize(16);
-        doc.setTextColor(0, 212, 168);
+        doc.setTextColor(20, 20, 20);
         doc.text(titulo, MARGIN, y);
         y += 7;
 
         // Fecha
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
-        doc.setTextColor(180, 180, 180);
+        doc.setTextColor(100, 100, 100);
         doc.text("Herramienta Fácil · Casino Melincué · Generado: " + fecha, MARGIN, y);
         y += 8;
 
         // Línea separadora
-        doc.setDrawColor(42, 51, 72);
+        doc.setDrawColor(180, 180, 180);
         doc.setLineWidth(0.4);
         doc.line(MARGIN, y, PAGE_W - MARGIN, y);
         y += 6;
@@ -13778,31 +13787,31 @@ function pptDescargarPDF() {
             if (!items.length) return;
 
             // Verificar si hay espacio para el encabezado del lote
-            if (y > 270) { doc.addPage(); doc.setFillColor(15, 17, 23); doc.rect(0, 0, 210, 297, "F"); y = 18; }
+            if (y > 270) { doc.addPage(); doc.setFillColor(255, 255, 255); doc.rect(0, 0, 210, 297, "F"); y = 18; }
 
             // Encabezado del lote
-            doc.setFillColor(30, 37, 53);
+            doc.setFillColor(225, 225, 225);
             doc.roundedRect(MARGIN, y - 4, PAGE_W - MARGIN * 2, 9, 1, 1, "F");
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
-            doc.setTextColor(232, 237, 245);
+            doc.setTextColor(20, 20, 20);
             doc.text(lote.periodo, MARGIN + 3, y + 2);
             let tecnicos = [lote.tecnico1, lote.tecnico2].filter(Boolean).join(" + ");
             doc.setFont("helvetica", "normal");
             doc.setFontSize(8);
-            doc.setTextColor(150, 160, 180);
+            doc.setTextColor(80, 80, 80);
             doc.text(tecnicos, PAGE_W - MARGIN - 3, y + 2, { align: "right" });
             y += 10;
 
             // Header columnas
             doc.setFont("helvetica", "bold");
             doc.setFontSize(8);
-            doc.setTextColor(120, 130, 150);
+            doc.setTextColor(80, 80, 80);
             doc.text("MTM", COL_MTM, y);
             doc.text("ISLA", COL_ISLA, y);
             doc.text("PROBLEMA / FALLA", COL_FALLA, y);
             y += 2;
-            doc.setDrawColor(42, 51, 72);
+            doc.setDrawColor(180, 180, 180);
             doc.setLineWidth(0.3);
             doc.line(MARGIN, y, PAGE_W - MARGIN, y);
             y += 4;
@@ -13817,47 +13826,47 @@ function pptDescargarPDF() {
                 // Nueva página si no hay espacio
                 if (y + rowH > 280) {
                     doc.addPage();
-                    doc.setFillColor(15, 17, 23);
+                    doc.setFillColor(255, 255, 255);
                     doc.rect(0, 0, 210, 297, "F");
                     y = 18;
                     // Repetir header columnas
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(8);
-                    doc.setTextColor(120, 130, 150);
+                    doc.setTextColor(80, 80, 80);
                     doc.text("MTM", COL_MTM, y);
                     doc.text("ISLA", COL_ISLA, y);
                     doc.text("PROBLEMA / FALLA", COL_FALLA, y);
                     y += 2;
-                    doc.setDrawColor(42, 51, 72);
+                    doc.setDrawColor(180, 180, 180);
                     doc.line(MARGIN, y, PAGE_W - MARGIN, y);
                     y += 4;
                 }
 
                 // Fondo alternado
                 if (i % 2 === 0) {
-                    doc.setFillColor(22, 27, 39);
+                    doc.setFillColor(245, 245, 245);
                     doc.rect(MARGIN, y - 3, PAGE_W - MARGIN * 2, rowH + 1, "F");
                 }
 
                 // MTM
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(9);
-                doc.setTextColor(79, 142, 255);
+                doc.setTextColor(30, 80, 180);
                 doc.text(String(item.mtm || "—"), COL_MTM, y + 1);
 
                 // Isla
                 doc.setFont("helvetica", "normal");
-                doc.setTextColor(232, 237, 245);
+                doc.setTextColor(20, 20, 20);
                 doc.text(String(item.isla || "—"), COL_ISLA, y + 1);
 
                 // Falla (multilínea)
-                doc.setTextColor(200, 205, 215);
+                doc.setTextColor(40, 40, 40);
                 doc.text(fallaLines, COL_FALLA, y + 1);
 
                 y += rowH + 1;
 
                 // Línea separadora fina
-                doc.setDrawColor(35, 43, 60);
+                doc.setDrawColor(210, 210, 210);
                 doc.setLineWidth(0.2);
                 doc.line(MARGIN, y, PAGE_W - MARGIN, y);
                 y += 1;
@@ -13869,7 +13878,7 @@ function pptDescargarPDF() {
         // Pie de página en última hoja
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
-        doc.setTextColor(80, 90, 110);
+        doc.setTextColor(130, 130, 130);
         doc.text("Herramienta Fácil · Juan Mucci · " + fecha, PAGE_W / 2, 290, { align: "center" });
 
         // Nombre del archivo
