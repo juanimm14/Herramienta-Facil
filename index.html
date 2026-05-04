@@ -3062,7 +3062,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.4</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.7</span>
         </div>
 
         </div><!-- /main -->
@@ -12068,10 +12068,7 @@ function getTecnicosTurno(turno){
 // ──────────────────────────────────────────────
 function getTecnicosTurno(){
     let db = getUsersDB();
-    // Usuarios con turno = "MAÑANA" o como fallback: todos (si ninguno tiene turno asignado)
-    let conTurno = db.filter(u => u.turno === "MAÑANA" && u.rol !== "Visita").map(u => u.nombre);
-    if(conTurno.length === 0) return db.filter(u => u.rol !== "Visita").map(u => u.nombre); // fallback: todos
-    return conTurno;
+    return db.filter(u => u.turno === "MAÑANA" && u.rol !== "Visita").map(u => u.nombre);
 }
 
 // Filtros que usan __turno_MANANA__ deben tratarlo como lista de técnicos
@@ -12144,8 +12141,10 @@ function _renderTareasConTurno(){
     }
 
     function perteneceAlTurno(t){
-        // Tareas asignadas a "todos" o al turno mañana directamente → siempre visibles para el turno
-        if(t.asignado === "__todos__" || t.asignado === "__turno_MANANA__") return true;
+        // Si no hay técnicos con turno configurado, solo mostrar tareas
+        // asignadas explícitamente a "Turno mañana"
+        if(tecsTurno.length === 0) return t.asignado === "__turno_MANANA__";
+        if(t.asignado === "__turno_MANANA__") return true;
         return tecsTurno.includes(t.asignado);
     }
 
@@ -12198,7 +12197,7 @@ function _renderTareasConTurno(){
     }
 
     let pendientes = _aplicarOrdenTareas(sortMisTareasArriba(tareas.filter(t => t.estado === "pendiente" && cumpleFiltro(t))));
-    let enCurso    = sortMisTareasArriba(tareas.filter(t => t.estado === "en-curso" && cumpleFiltro(t)));
+    let enCurso    = sortMisTareasArriba(tareas.filter(t => t.estado === "en-curso"));
 
     let esTecnico = usuarioActual?.rol !== "Admin";
     let miNombre  = usuarioActual?.nombre;
