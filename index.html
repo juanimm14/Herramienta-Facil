@@ -78,7 +78,6 @@ async function guardarListaEmpresas(lista) {
     await _db.collection("config").doc("empresas").set({ lista });
 }
 
-// Guardar en Firestore (async, fire-and-forget)
 async function _fbSet(clave, valor) {
     _cache[clave] = valor;
     try {
@@ -88,12 +87,10 @@ async function _fbSet(clave, valor) {
     }
 }
 
-// Leer desde cache (síncrono) — el cache se llena al iniciar
 function _fbGet(clave) {
     return _cache[clave] ?? null;
 }
 
-// Suscribirse a cambios en tiempo real de una clave
 function _fbListen(clave, callback) {
     return _colRef().doc(clave).onSnapshot(snap => {
         if (snap.exists) {
@@ -145,8 +142,6 @@ localStorage.setItem = function(clave, valor) {
         let parsed;
         try { parsed = JSON.parse(valor); } catch { parsed = valor; }
         _fbSet(clave, parsed);
-        // también en localStorage como respaldo offline
-        _localStorageOrig.setItem(clave, valor);
     } else {
         _localStorageOrig.setItem(clave, valor);
     }
@@ -167,17 +162,53 @@ localStorage.removeItem = function(clave) {
     _localStorageOrig.removeItem(clave);
 };
 
+// ─── Sincroniza variables globales desde el cache ─────────────
+// IMPORTANTE: usar !== undefined para que arrays vacíos [] también se apliquen
+function _sincronizarVariables() {
+    try {
+        if (_cache["incidencias"]      !== undefined) incidencias      = _cache["incidencias"]      ?? [];
+        if (_cache["tareas"]           !== undefined) tareas           = _cache["tareas"]           ?? [];
+        if (_cache["islasActivas"]     !== undefined) islasActivas     = _cache["islasActivas"]     ?? [];
+        if (_cache["ccbCronogramas"]   !== undefined) ccbCronogramas   = _cache["ccbCronogramas"]   ?? [];
+        if (_cache["ccbIslasConfig"]   !== undefined) ccbIslasConfig   = _cache["ccbIslasConfig"]   ?? [];
+        if (_cache["pchkCronogramas"]  !== undefined) pchkCronogramas  = _cache["pchkCronogramas"]  ?? [];
+        if (_cache["pchkIslasConfig"]  !== undefined) pchkIslasConfig  = _cache["pchkIslasConfig"]  ?? [];
+        if (_cache["mgiCronogramas"]   !== undefined) mgiCronogramas   = _cache["mgiCronogramas"]   ?? [];
+        if (_cache["mgiPlanes"]        !== undefined) mgiPlanes        = _cache["mgiPlanes"]        ?? [];
+        if (_cache["ppPreventivos"]    !== undefined) ppPreventivos    = _cache["ppPreventivos"]    ?? [];
+        if (_cache["ppTareas"]         !== undefined) ppTareas         = _cache["ppTareas"]         ?? [];
+        if (_cache["evaIncidencias"]   !== undefined) evaIncidencias   = _cache["evaIncidencias"]   ?? [];
+        if (_cache["evaDiarios"]       !== undefined) evaDiarios       = _cache["evaDiarios"]       ?? [];
+        if (_cache["validadoresData"]  !== undefined) validadoresData  = _cache["validadoresData"]  ?? [];
+        if (_cache["indicesAceptacion"] !== undefined) indicesAceptacion = _cache["indicesAceptacion"] ?? [];
+        if (_cache["fdsData"]          !== undefined) fdsData          = _cache["fdsData"]          ?? [];
+        if (_cache["contadorasData"]   !== undefined) contadorasData   = _cache["contadorasData"]   ?? [];
+        if (_cache["listaContadoras"]  !== undefined) listaContadoras  = _cache["listaContadoras"]  ?? [..._CNT_DEFAULT];
+        if (_cache["equiposEVA"]       !== undefined) listaKioscosEva  = _cache["equiposEVA"]       ?? ["EVA1","EVA2","EVA3","EVA4"];
+        if (_cache["cartelesData"]     !== undefined) cartelesData     = _cache["cartelesData"]     ?? [];
+        if (_cache["auditLog"]         !== undefined) auditLog         = _cache["auditLog"]         ?? [];
+        if (_cache["pptData"]          !== undefined) pptData          = _cache["pptData"]          ?? [];
+        if (_cache["eventosConfig"]    !== undefined) eventosConfig    = _cache["eventosConfig"]    ?? [];
+        if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
+        if (_cache["eventosUnicos"]    !== undefined) eventosUnicos    = _cache["eventosUnicos"]    ?? [];
+        if (_cache["sidebarConfig"]    !== undefined) {
+            _sidebarConfig = _cache["sidebarConfig"];
+            if (document.getElementById("app")?.style.display !== "none") {
+                aplicarSidebarConfig?.();
+            }
+        }
+    } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
+}
+
 // ─── Carga inicial: descarga Firestore → cache → arranca app ──
 async function _cargarDatosFirebase() {
     const snap = await _colRef().get();
     snap.forEach(doc => {
         if (_FB_KEYS.has(doc.id)) {
             _cache[doc.id] = doc.data().data;
-            // Sincronizar al localStorage local también
             _localStorageOrig.setItem(doc.id, JSON.stringify(doc.data().data));
         }
     });
-
 
     // Marcar que la carga inicial completó — a partir de aquí getUsersDB()
     // y cargarIslas() pueden escribir defaults sin riesgo de pisar datos reales.
@@ -189,8 +220,6 @@ async function _cargarDatosFirebase() {
     (function _restaurarIslas() {
         const ISLAS_REALES = [{"id":10,"slots":6},{"id":92,"slots":4},{"id":93,"slots":3},{"id":107,"slots":3},{"id":110,"slots":4},{"id":116,"slots":2},{"id":119,"slots":3},{"id":124,"slots":8},{"id":125,"slots":4},{"id":126,"slots":5},{"id":131,"slots":4},{"id":139,"slots":6},{"id":141,"slots":4},{"id":143,"slots":2},{"id":146,"slots":4},{"id":148,"slots":4},{"id":149,"slots":6},{"id":150,"slots":3},{"id":152,"slots":5},{"id":153,"slots":5},{"id":155,"slots":2},{"id":158,"slots":2},{"id":159,"slots":6},{"id":160,"slots":4},{"id":161,"slots":6},{"id":168,"slots":3},{"id":169,"slots":4},{"id":172,"slots":8},{"id":175,"slots":10},{"id":176,"slots":4},{"id":179,"slots":6},{"id":180,"slots":2},{"id":186,"slots":2},{"id":187,"slots":6},{"id":188,"slots":2},{"id":191,"slots":4},{"id":192,"slots":4},{"id":193,"slots":4},{"id":194,"slots":4},{"id":199,"slots":6},{"id":200,"slots":6},{"id":201,"slots":8},{"id":203,"slots":8},{"id":204,"slots":8},{"id":205,"slots":6},{"id":207,"slots":7},{"id":208,"slots":4},{"id":209,"slots":4},{"id":210,"slots":6},{"id":211,"slots":6},{"id":212,"slots":4},{"id":213,"slots":6},{"id":214,"slots":10},{"id":215,"slots":8},{"id":216,"slots":6},{"id":217,"slots":4},{"id":218,"slots":6},{"id":219,"slots":4},{"id":220,"slots":4},{"id":221,"slots":4},{"id":222,"slots":6},{"id":223,"slots":4},{"id":224,"slots":8},{"id":225,"slots":4},{"id":226,"slots":4},{"id":227,"slots":4},{"id":228,"slots":4},{"id":230,"slots":6},{"id":231,"slots":8},{"id":232,"slots":6},{"id":233,"slots":6},{"id":234,"slots":8},{"id":235,"slots":8},{"id":236,"slots":6},{"id":237,"slots":6},{"id":238,"slots":8},{"id":239,"slots":4},{"id":240,"slots":4},{"id":241,"slots":8},{"id":500,"slots":2},{"id":501,"slots":2}];
         const actual = _cache["islasActivas"];
-        // Detectar si tiene el default erróneo: alguna isla entre 100-180 con slots=8
-        // O si está vacío / no existe
         const esDefault = !actual || actual.length === 0 ||
             (actual.length > 0 && actual.every(i => i.id >= 100 && i.id <= 180 && i.slots === 8));
         if (esDefault) {
@@ -200,101 +229,25 @@ async function _cargarDatosFirebase() {
             _fbSet("islasActivas", ISLAS_REALES);
         }
     })();
-    // ── FIN RESTAURACIÓN ──────────────────────────────────────────────────
 
-    // Recargar TODAS las variables globales desde el cache ya poblado
-    try {
-        if (_cache["incidencias"])    incidencias    = _cache["incidencias"];
-        if (_cache["tareas"])         tareas         = _cache["tareas"];
-        if (_cache["ccbCronogramas"]) ccbCronogramas = _cache["ccbCronogramas"];
-        if (_cache["ccbIslasConfig"]) ccbIslasConfig = _cache["ccbIslasConfig"];
-        if (_cache["pchkCronogramas"]) pchkCronogramas = _cache["pchkCronogramas"];
-        if (_cache["pchkIslasConfig"]) pchkIslasConfig = _cache["pchkIslasConfig"];
-        if (_cache["mgiCronogramas"]) mgiCronogramas = _cache["mgiCronogramas"];
-        if (_cache["mgiPlanes"])      mgiPlanes      = _cache["mgiPlanes"];
-        if (_cache["ppPreventivos"])  ppPreventivos  = _cache["ppPreventivos"];
-        if (_cache["ppTareas"])       ppTareas       = _cache["ppTareas"];
-        if (_cache["evaIncidencias"]) evaIncidencias = _cache["evaIncidencias"];
-        if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
-        if (_cache["validadoresData"]) {
-            validadoresData = _cache["validadoresData"];
-        } else {
-        }
-        if (_cache["indicesAceptacion"]) indicesAceptacion = _cache["indicesAceptacion"];
-        if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
-        if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
-        if (_cache["listaContadoras"]) listaContadoras = _cache["listaContadoras"];
-        if (_cache["equiposEVA"])     listaKioscosEva = _cache["equiposEVA"];
-        if (_cache["cartelesData"])   cartelesData   = _cache["cartelesData"];
-        if (_cache["auditLog"])       auditLog       = _cache["auditLog"];
-        if (_cache["pptData"])        pptData        = _cache["pptData"]        ?? [];
-        if (_cache["eventosConfig"])  try { eventosConfig  = _cache["eventosConfig"]  ?? []; } catch(e){}
-        if (_cache["eventosGenerados"]) try { eventosGenerados = _cache["eventosGenerados"] ?? {}; } catch(e){}
-        if (_cache["eventosUnicos"])  try { eventosUnicos  = _cache["eventosUnicos"]  ?? []; } catch(e){}
-    } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
-
-    // Recargar islasActivas desde el cache ya poblado
-    try {
-        if (_cache["islasActivas"] !== undefined) {
-            islasActivas = _cache["islasActivas"] ?? [];
-        }
-        // Si no hay nada en cache, dejar islasActivas como está ([] o lo que cargarIslas() puso)
-    } catch(e) { /* islasActivas aún no declarada — se inicializará con cargarIslas() */ }
-
-    // (campo usuario ahora es input de texto libre, no requiere poblar)
+    _sincronizarVariables();
 }
 
 // ─── Listeners en tiempo real (multi-dispositivo) ─────────────
 function _activarListenersTiempoReal() {
     const reRender = () => {
-        try {
-            // Re-sincronizar variables globales con el cache
-            // IMPORTANTE: usar !== undefined para que arrays vacíos [] también se apliquen
-            if (_cache["incidencias"]    !== undefined) incidencias    = _cache["incidencias"]    ?? [];
-            if (_cache["tareas"]         !== undefined) tareas         = _cache["tareas"]         ?? [];
-            if (_cache["islasActivas"]   !== undefined) islasActivas   = _cache["islasActivas"]   ?? [];
-            if (_cache["ccbCronogramas"] !== undefined) ccbCronogramas = _cache["ccbCronogramas"] ?? [];
-            if (_cache["ccbIslasConfig"] !== undefined) ccbIslasConfig = _cache["ccbIslasConfig"] ?? [];
-            if (_cache["pchkCronogramas"] !== undefined) pchkCronogramas = _cache["pchkCronogramas"] ?? [];
-            if (_cache["pchkIslasConfig"] !== undefined) pchkIslasConfig = _cache["pchkIslasConfig"] ?? [];
-            if (_cache["mgiCronogramas"] !== undefined) mgiCronogramas = _cache["mgiCronogramas"] ?? [];
-            if (_cache["mgiPlanes"]      !== undefined) mgiPlanes      = _cache["mgiPlanes"]      ?? [];
-            if (_cache["ppPreventivos"]  !== undefined) ppPreventivos  = _cache["ppPreventivos"]  ?? [];
-            if (_cache["ppTareas"]       !== undefined) ppTareas       = _cache["ppTareas"]       ?? [];
-            if (_cache["evaIncidencias"] !== undefined) evaIncidencias = _cache["evaIncidencias"] ?? [];
-            if (_cache["evaDiarios"]     !== undefined) evaDiarios     = _cache["evaDiarios"]     ?? [];
-            if (_cache["validadoresData"] !== undefined) validadoresData = _cache["validadoresData"] ?? [];
-            if (_cache["fdsData"]        !== undefined) fdsData        = _cache["fdsData"]        ?? [];
-            if (_cache["contadorasData"] !== undefined) contadorasData = _cache["contadorasData"] ?? [];
-            if (_cache["listaContadoras"] !== undefined) listaContadoras = _cache["listaContadoras"] ?? [..._CNT_DEFAULT];
-            if (_cache["equiposEVA"]      !== undefined) listaKioscosEva = _cache["equiposEVA"]      ?? ["EVA1","EVA2","EVA3","EVA4"];
-            if (_cache["cartelesData"]   !== undefined) cartelesData   = _cache["cartelesData"]   ?? [];
-            if (_cache["auditLog"]       !== undefined) auditLog       = _cache["auditLog"]       ?? [];
-            if (_cache["pptData"]        !== undefined) pptData        = _cache["pptData"]        ?? [];
-            if (_cache["eventosConfig"]  !== undefined) eventosConfig  = _cache["eventosConfig"]  ?? [];
-            if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
-            if (_cache["eventosUnicos"]  !== undefined) eventosUnicos  = _cache["eventosUnicos"]  ?? [];
-            // Sidebar config — aplicar si cambió desde otro dispositivo
-            if (_cache["sidebarConfig"] !== undefined) {
-                _sidebarConfig = _cache["sidebarConfig"];
-                if (document.getElementById("app")?.style.display !== "none") {
-                    aplicarSidebarConfig?.();
-                }
-            }
-            // Re-render si la app ya está iniciada
-            if (document.getElementById("app")?.style.display !== "none") {
-                renderDashboard?.();
-                renderCorrectivos?.();
-                renderTareas?.();
-                renderValidadores?.();
-                renderPpt?.();
-                poblarSelectsTecnicos?.();
-                cargarAniosPrev?.();
-                renderIncidenciasPreventivos?.();
-            }
-            // Actualizar select de login si está visible
-            // (campo usuario es input de texto, no requiere actualización dinámica)
-        } catch(e) { /* variables aún no declaradas en la primera carga */ }
+        _sincronizarVariables();
+        // Re-render si la app ya está iniciada
+        if (document.getElementById("app")?.style.display !== "none") {
+            renderDashboard?.();
+            renderCorrectivos?.();
+            renderTareas?.();
+            renderValidadores?.();
+            renderPpt?.();
+            poblarSelectsTecnicos?.();
+            cargarAniosPrev?.();
+            renderIncidenciasPreventivos?.();
+        }
     };
 
     _FB_KEYS.forEach(clave => {
