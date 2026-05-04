@@ -177,9 +177,7 @@ async function _cargarDatosFirebase() {
             _localStorageOrig.setItem(doc.id, JSON.stringify(doc.data().data));
         }
     });
-    // Diagnóstico
-    console.log("[HF] _cargarDatosFirebase completó. Docs recibidos:", snap.size);
-    console.log("[HF] _cache validadoresData:", JSON.stringify(_cache["validadoresData"]).slice(0,300));
+
 
     // Marcar que la carga inicial completó — a partir de aquí getUsersDB()
     // y cargarIslas() pueden escribir defaults sin riesgo de pisar datos reales.
@@ -220,9 +218,7 @@ async function _cargarDatosFirebase() {
         if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
         if (_cache["validadoresData"]) {
             validadoresData = _cache["validadoresData"];
-            console.log('[HF] validadoresData cargado desde Firebase:', validadoresData.length, 'lotes', JSON.stringify(validadoresData).slice(0,300));
         } else {
-            console.warn('[HF] validadoresData NO encontrado en cache Firebase');
         }
         if (_cache["indicesAceptacion"]) indicesAceptacion = _cache["indicesAceptacion"];
         if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
@@ -3061,6 +3057,7 @@ body {
                         <select id="filtroPptPeriodo" onchange="renderPpt()" class="form-input" style="margin:0;min-width:180px;">
                             <option value="">— Todos los períodos —</option>
                         </select>
+                        <button onclick="pptDescargarPDF()" style="background:rgba(255,77,109,.12);border:1px solid var(--red);color:var(--red);border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">📄 Descargar PDF</button>
                         <select id="filtroPptEstado" onchange="renderPpt()" class="form-input" style="margin:0;min-width:150px;">
                             <option value="">— Todos los estados —</option>
                             <option value="PENDIENTE">Pendiente</option>
@@ -3099,7 +3096,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.8</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.9</span>
         </div>
 
         </div><!-- /main -->
@@ -13335,10 +13332,6 @@ function renderValidadores() {
     let tecnicoF = document.getElementById("filtroValTecnico")?.value || "";
     let buscarF  = (document.getElementById("filtroValBuscar")?.value || "").toLowerCase();
 
-    // Diagnóstico
-    console.log("[HF] renderValidadores - validadoresData:", validadoresData.length, "lotes");
-    if(validadoresData.length) console.log("[HF] primer lote:", JSON.stringify(validadoresData[0]).slice(0,200));
-
     // Flatten items con su periodo — más reciente primero
     let filas = [];
     let valOrdenado = validadoresData
@@ -13724,6 +13717,176 @@ function renderPpt() {
         </tr>`;
     });
     tbody.innerHTML = html;
+}
+
+
+// ─── Descargar PDF Control PPT ────────────────────────────────
+function pptDescargarPDF() {
+    let periodo = document.getElementById("filtroPptPeriodo")?.value || "";
+
+    // Filtrar lotes según período seleccionado
+    let lotesFiltrados = pptData;
+    if (periodo) lotesFiltrados = pptData.filter(l => l.periodo === periodo);
+
+    if (!lotesFiltrados.length || lotesFiltrados.every(l => !l.items?.length)) {
+        toast.warning("Sin datos", periodo ? "No hay datos para ese período" : "No hay relevamientos cargados");
+        return;
+    }
+
+    // Cargar jsPDF dinámicamente si no está cargada
+    function _generarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+        const MARGIN = 14;
+        const PAGE_W = 210;
+        const COL_MTM    = MARGIN;
+        const COL_ISLA   = MARGIN + 28;
+        const COL_FALLA  = MARGIN + 48;
+        const COL_W_FALLA = PAGE_W - MARGIN - 48;
+
+        let titulo = periodo ? "Control PPT — " + periodo : "Control PPT — Todos los períodos";
+        let fecha  = new Date().toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
+        let y = 18;
+
+        // Header
+        doc.setFillColor(15, 17, 23);
+        doc.rect(0, 0, 210, 297, "F");
+
+        // Título
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.setTextColor(0, 212, 168);
+        doc.text(titulo, MARGIN, y);
+        y += 7;
+
+        // Fecha
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(180, 180, 180);
+        doc.text("Herramienta Fácil · Casino Melincué · Generado: " + fecha, MARGIN, y);
+        y += 8;
+
+        // Línea separadora
+        doc.setDrawColor(42, 51, 72);
+        doc.setLineWidth(0.4);
+        doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+        y += 6;
+
+        lotesFiltrados.forEach(lote => {
+            let items = lote.items || [];
+            if (!items.length) return;
+
+            // Verificar si hay espacio para el encabezado del lote
+            if (y > 270) { doc.addPage(); doc.setFillColor(15, 17, 23); doc.rect(0, 0, 210, 297, "F"); y = 18; }
+
+            // Encabezado del lote
+            doc.setFillColor(30, 37, 53);
+            doc.roundedRect(MARGIN, y - 4, PAGE_W - MARGIN * 2, 9, 1, 1, "F");
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(232, 237, 245);
+            doc.text(lote.periodo, MARGIN + 3, y + 2);
+            let tecnicos = [lote.tecnico1, lote.tecnico2].filter(Boolean).join(" + ");
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor(150, 160, 180);
+            doc.text(tecnicos, PAGE_W - MARGIN - 3, y + 2, { align: "right" });
+            y += 10;
+
+            // Header columnas
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            doc.setTextColor(120, 130, 150);
+            doc.text("MTM", COL_MTM, y);
+            doc.text("ISLA", COL_ISLA, y);
+            doc.text("PROBLEMA / FALLA", COL_FALLA, y);
+            y += 2;
+            doc.setDrawColor(42, 51, 72);
+            doc.setLineWidth(0.3);
+            doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+            y += 4;
+
+            // Filas
+            items.forEach((item, i) => {
+                // Calcular altura necesaria para la falla (puede ser multilínea)
+                doc.setFontSize(9);
+                let fallaLines = doc.splitTextToSize(item.problema || "—", COL_W_FALLA - 4);
+                let rowH = Math.max(6, fallaLines.length * 4.5);
+
+                // Nueva página si no hay espacio
+                if (y + rowH > 280) {
+                    doc.addPage();
+                    doc.setFillColor(15, 17, 23);
+                    doc.rect(0, 0, 210, 297, "F");
+                    y = 18;
+                    // Repetir header columnas
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setTextColor(120, 130, 150);
+                    doc.text("MTM", COL_MTM, y);
+                    doc.text("ISLA", COL_ISLA, y);
+                    doc.text("PROBLEMA / FALLA", COL_FALLA, y);
+                    y += 2;
+                    doc.setDrawColor(42, 51, 72);
+                    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+                    y += 4;
+                }
+
+                // Fondo alternado
+                if (i % 2 === 0) {
+                    doc.setFillColor(22, 27, 39);
+                    doc.rect(MARGIN, y - 3, PAGE_W - MARGIN * 2, rowH + 1, "F");
+                }
+
+                // MTM
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(9);
+                doc.setTextColor(79, 142, 255);
+                doc.text(String(item.mtm || "—"), COL_MTM, y + 1);
+
+                // Isla
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(232, 237, 245);
+                doc.text(String(item.isla || "—"), COL_ISLA, y + 1);
+
+                // Falla (multilínea)
+                doc.setTextColor(200, 205, 215);
+                doc.text(fallaLines, COL_FALLA, y + 1);
+
+                y += rowH + 1;
+
+                // Línea separadora fina
+                doc.setDrawColor(35, 43, 60);
+                doc.setLineWidth(0.2);
+                doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+                y += 1;
+            });
+
+            y += 6; // Espacio entre lotes
+        });
+
+        // Pie de página en última hoja
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(80, 90, 110);
+        doc.text("Herramienta Fácil · Juan Mucci · " + fecha, PAGE_W / 2, 290, { align: "center" });
+
+        // Nombre del archivo
+        let nombreArchivo = "PPT_" + (periodo ? periodo.replace(/[^a-zA-Z0-9]/g, "_") : "Todos") + "_" + fecha.replace(/\//g, "-") + ".pdf";
+        doc.save(nombreArchivo);
+    }
+
+    // Cargar jsPDF si no está disponible
+    if (window.jspdf) {
+        _generarPDF();
+    } else {
+        let script = document.createElement("script");
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+        script.onload = _generarPDF;
+        script.onerror = () => toast.error("Error", "No se pudo cargar la librería PDF");
+        document.head.appendChild(script);
+    }
 }
 
 // ─── Modal Nuevo Relevamiento ─────────────────────────────────
