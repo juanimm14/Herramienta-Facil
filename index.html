@@ -6287,6 +6287,23 @@ function renderRatingsDash(elId, lista, tipo){
 function toggleResolucion(){
     let est = document.getElementById("estadoIncidencia").value;
     document.getElementById("grupoResolucion").style.display = est === "Resuelto" ? "block" : "none";
+    _actualizarEstiloEstadoIncidencia();
+}
+
+function _actualizarEstiloEstadoIncidencia(){
+    let sel = document.getElementById("estadoIncidencia");
+    if(!sel) return;
+    if(sel.value === "Resuelto"){
+        sel.style.borderColor = "var(--red)";
+        sel.style.background  = "rgba(255,77,109,.12)";
+        sel.style.color       = "var(--red)";
+        sel.style.fontWeight  = "700";
+    } else {
+        sel.style.borderColor = "";
+        sel.style.background  = "";
+        sel.style.color       = "";
+        sel.style.fontWeight  = "";
+    }
 }
 
 function abrirModalCorrectivo(){
@@ -6298,8 +6315,9 @@ function abrirModalCorrectivo(){
     document.getElementById("isla").value = "";
     document.getElementById("nota").value = "";
     document.getElementById("resolucion").value = "";
-    document.getElementById("estadoIncidencia").value = "En Curso";
-    document.getElementById("grupoResolucion").style.display = "none";
+    document.getElementById("estadoIncidencia").value = "Resuelto";
+    document.getElementById("grupoResolucion").style.display = "block";
+    _actualizarEstiloEstadoIncidencia();
     resetRating("starCorrectivo");
     // Pre-seleccionar técnico logueado
     let selTec = document.getElementById("tecnico");
@@ -6356,6 +6374,7 @@ function editarIncidencia(index){
     let estado = (i.estado === "Resuelto") ? "Resuelto" : "En Curso";
     document.getElementById("estadoIncidencia").value = estado;
     document.getElementById("grupoResolucion").style.display = estado === "Resuelto" ? "block" : "none";
+    _actualizarEstiloEstadoIncidencia();
     loadRating("starCorrectivo", i.rating || 0);
     document.getElementById("grupoRatingCorrectivo").style.display = usuarioActual?.rol === "Admin" ? "block" : "none";
     document.getElementById("modalCorrectivo").classList.add("open");
