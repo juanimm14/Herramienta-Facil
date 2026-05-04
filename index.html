@@ -13325,6 +13325,7 @@ function renderValidadores() {
             return fb.localeCompare(fa);
         });
     valOrdenado.forEach(({ lote, idx: loteIdx }) => {
+        if (!Array.isArray(lote.items)) return; // lote sin items válidos → saltar
         lote.items.forEach((item, itemIdx) => {
             filas.push({ ...item, periodo: lote.periodo, loteIdx, itemIdx });
         });
@@ -13419,6 +13420,7 @@ function _poblarFiltrosValidadores() {
     let curPer = selPer?.value || "";
     let periodos = [...new Set(
         [...validadoresData]
+            .filter(l => l && l.periodo)
             .sort((a, b) => (b.createdAt || b.periodo || "").localeCompare(a.createdAt || a.periodo || ""))
             .map(l => l.periodo)
     )];
@@ -13448,8 +13450,9 @@ function _renderBannerTareaValidadores() {
     if (!ultimoLote) { tareaBanner.style.display = "none"; return; }
 
     // Verificar si hay items pendientes
-    let pendientes = ultimoLote.items.filter(i => i.estado === "PENDIENTE").length;
-    let total = ultimoLote.items.length;
+    let items = Array.isArray(ultimoLote.items) ? ultimoLote.items : [];
+    let pendientes = items.filter(i => i.estado === "PENDIENTE").length;
+    let total = items.length;
     let realizados = total - pendientes;
 
     // Buscar la tarea asociada
