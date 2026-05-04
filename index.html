@@ -2033,7 +2033,7 @@ body {
                         </div>
                     </div>
 
-                    <div class="grid2" style="margin-top:16px;">
+                    <div style="margin-top:16px;">
                         <div class="card-box">
                             <div class="card-box-title">
                                 🔧 Preventivos del Día
@@ -2043,10 +2043,7 @@ body {
                                 <div class="empty-state"><div class="empty-icon">🔧</div><p>Sin preventivos registrados</p></div>
                             </div>
                         </div>
-                        <div class="card-box">
-                            <div class="card-box-title">Actividad Reciente</div>
-                            <div id="actividadReciente"></div>
-                        </div>
+                        <div id="actividadReciente" style="display:none;"></div>
                     </div>
                 </div>
 
@@ -2069,11 +2066,8 @@ body {
                         </div>
                     </div>
 
-                    <!-- Actividad Reciente — full width -->
-                    <div class="card-box">
-                        <div class="card-box-title">Actividad Reciente</div>
-                        <div id="actividadRecienteTec"></div>
-                    </div>
+                    <!-- Actividad Reciente — oculta -->
+                    <div id="actividadRecienteTec" style="display:none;"></div>
                 </div>
 
                 <!-- DESEMPEÑO Y CALIFICACIONES — Solo Admin -->
@@ -2128,6 +2122,20 @@ body {
                             <span class="badge-count" id="badgeAniosChart">—</span>
                         </div>
                         <div id="dashCorrectivosPrevPorAnio"></div>
+                    </div>
+                </div>
+
+                <!-- TIEMPO EVENTOS Y SISTEMAS — solo Admin -->
+                <div id="boxTiempoEventosSistemas" style="display:none; margin-top:16px;">
+                    <div class="grid2">
+                        <div class="card-box">
+                            <div class="card-box-title" style="color:var(--yellow);">🎰 Tiempo en Tareas de Eventos — Mes Actual</div>
+                            <div id="dashTiempoEventos"></div>
+                        </div>
+                        <div class="card-box">
+                            <div class="card-box-title" style="color:#b47aff;">💻 Tiempo en Tareas de Sistemas — Mes Actual</div>
+                            <div id="dashTiempoSistemas"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3730,6 +3738,21 @@ body {
         <div class="form-group">
             <label class="form-label">Fecha Límite</label>
             <input type="date" id="tareaFecha" class="form-input">
+        </div>
+        <!-- Tiempo manual — visible si tipo es sistema o evento -->
+        <div id="tareaTiempoSection" style="display:none;background:rgba(180,120,255,.06);border:1px solid rgba(180,120,255,.25);border-radius:10px;padding:12px;margin-bottom:4px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#b47aff;text-transform:uppercase;margin-bottom:10px;">⏱ Tiempo que llevó realizarla</div>
+            <div class="grid2" style="gap:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Horas</label>
+                    <input type="number" id="tareaTiempoHoras" class="form-input" min="0" max="99" placeholder="0" style="text-align:center;">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Minutos</label>
+                    <input type="number" id="tareaTiempoMinutos" class="form-input" min="0" max="59" placeholder="0" style="text-align:center;">
+                </div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">Se contabiliza en las estadísticas del dashboard.</div>
         </div>
         <div class="form-group">
             <label class="form-label">Notas adicionales</label>
@@ -6097,6 +6120,109 @@ function renderDashboard(){
                 elAnioChart.innerHTML = html;
             }
         }
+
+        // ── TIEMPO EVENTOS Y SISTEMAS DEL MES ACTUAL ──
+        let boxTiempoES = document.getElementById("boxTiempoEventosSistemas");
+        if(boxTiempoES) boxTiempoES.style.display = "block";
+
+        // Mes y año actual
+        let _ahora = new Date();
+        let _mesActual = String(_ahora.getMonth() + 1).padStart(2, "0");
+        let _anioActual = String(_ahora.getFullYear());
+        let _mesKeyActual = `${_anioActual}-${_mesActual}`;
+
+        // Excluir tareas cuya descripción contenga "nivelar RA" o "excepción" (case-insensitive)
+        function _esExcluida(t){
+            let d = (t.desc || "").toLowerCase();
+            return d.includes("nivelar ra") || d.includes("excepcion") || d.includes("excepción");
+        }
+
+        // Helper: obtener minutos de una tarea realizada
+        function _getMins(t){
+            if(t.tiempoManualMins) return t.tiempoManualMins;
+            if(t.iniciadoEn && t.finalizadoEn){
+                let m = Math.round((t.finalizadoEn - t.iniciadoEn) / 60000);
+                return m > 0 ? m : 0;
+            }
+            return 0;
+        }
+
+        // Filtrar tareas del mes actual ya realizadas
+        function _tareasDelMes(tipo){
+            return tareas.filter(t => {
+                if(t.tipo !== tipo) return false;
+                if(t.estado !== "realizado") return false;
+                if(_esExcluida(t)) return false;
+                // Verificar que sea del mes actual
+                let fechaRef = t.fecha || (t.finalizadoEn ? new Date(t.finalizadoEn).toISOString().split("T")[0] : "");
+                return fechaRef.startsWith(_mesKeyActual);
+            });
+        }
+
+        function _renderTiempoStats(elId, tipo, color){
+            let el = document.getElementById(elId);
+            if(!el) return;
+            let lista = _tareasDelMes(tipo);
+            if(lista.length === 0){
+                el.innerHTML = `<div class="empty-state"><div class="empty-icon">⏱</div><p>Sin tareas de ${tipo} realizadas este mes</p></div>`;
+                return;
+            }
+            let totalMins = lista.reduce((s, t) => s + _getMins(t), 0);
+            let conTiempo  = lista.filter(t => _getMins(t) > 0);
+            let sinTiempo  = lista.filter(t => _getMins(t) === 0);
+
+            function fmtM(m){
+                if(m < 60) return `${m}m`;
+                let h = Math.floor(m/60), r = m%60;
+                return r > 0 ? `${h}h ${r}m` : `${h}h`;
+            }
+
+            // Desglose por técnico
+            let porTec = {};
+            lista.forEach(t => {
+                let tecs = t.realizadoPor ? t.realizadoPor.split(", ").map(s=>s.trim()) : (t.asignado ? [mostrarAsignado(t.asignado)] : ["—"]);
+                let m = _getMins(t);
+                tecs.forEach(nombre => {
+                    if(!porTec[nombre]) porTec[nombre] = { mins: 0, cant: 0 };
+                    porTec[nombre].mins += m;
+                    porTec[nombre].cant++;
+                });
+            });
+
+            let tecList = Object.entries(porTec).sort((a,b) => b[1].mins - a[1].mins);
+            let maxTecMins = tecList.length ? tecList[0][1].mins : 1;
+
+            el.innerHTML = `
+                <div style="display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap;">
+                    <div style="text-align:center;">
+                        <div style="font-size:28px;font-weight:800;font-family:'Rajdhani',sans-serif;color:${color};">${fmtM(totalMins)}</div>
+                        <div style="font-size:11px;color:var(--muted);">Total este mes</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:24px;font-weight:700;font-family:'Rajdhani',sans-serif;color:var(--white);">${lista.length}</div>
+                        <div style="font-size:11px;color:var(--muted);">Tareas realizadas</div>
+                    </div>
+                    ${sinTiempo.length > 0 ? `<div style="text-align:center;">
+                        <div style="font-size:20px;font-weight:700;font-family:'Rajdhani',sans-serif;color:var(--yellow);">${sinTiempo.length}</div>
+                        <div style="font-size:11px;color:var(--muted);">Sin tiempo registrado</div>
+                    </div>` : ""}
+                </div>
+                ${tecList.length > 0 ? `
+                <div style="border-top:1px solid var(--border);padding-top:12px;">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Por técnico</div>
+                    ${tecList.map(([nombre, d]) => `
+                        <div class="perf-bar-row">
+                            <div class="perf-name" title="${nombre}">${nombre.split(" ")[0]}</div>
+                            <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${maxTecMins > 0 ? Math.round(d.mins/maxTecMins*100) : 0}%;background:${color};"></div></div>
+                            <div class="perf-count" style="color:${color};width:60px;font-size:11px;">${d.mins > 0 ? fmtM(d.mins) : "—"} <span style="color:var(--muted);font-size:10px;">(${d.cant})</span></div>
+                        </div>`).join("")}
+                </div>` : ""}
+            `;
+        }
+
+        _renderTiempoStats("dashTiempoEventos", "evento", "var(--yellow)");
+        _renderTiempoStats("dashTiempoSistemas", "sistema", "#b47aff");
+
     }
 }
 
@@ -6346,12 +6472,18 @@ function abrirModalTarea(){
     document.getElementById("tareaMaquina").value = "";
     document.getElementById("tareaIsla").value = "";
     document.getElementById("tareaTipoCorrectivoExtra").style.display = "none";
+    let _tiempoSec = document.getElementById("tareaTiempoSection");
+    if(_tiempoSec) _tiempoSec.style.display = "none";
+    if(document.getElementById("tareaTiempoHoras")) document.getElementById("tareaTiempoHoras").value = "";
+    if(document.getElementById("tareaTiempoMinutos")) document.getElementById("tareaTiempoMinutos").value = "";
     document.getElementById("modalTarea").classList.add("open");
 }
 
 function tareaTipoChange(){
     let tipo = document.getElementById("tareaTipo").value;
     document.getElementById("tareaTipoCorrectivoExtra").style.display = tipo === "correctivo" ? "block" : "none";
+    let tiempoSec = document.getElementById("tareaTiempoSection");
+    if(tiempoSec) tiempoSec.style.display = (tipo === "sistema" || tipo === "evento") ? "block" : "none";
 }
 
 function cerrarModalTarea(){
@@ -6365,6 +6497,23 @@ function guardarTarea(){
     let estado = document.getElementById("tareaEstado").value;
     let tipo  = document.getElementById("tareaTipo").value;
     let ahora = Date.now();
+
+    // Calcular tiempo manual para sistema/evento
+    let _tiempoManualMins = 0;
+    if(tipo === "sistema" || tipo === "evento"){
+        let h = parseInt(document.getElementById("tareaTiempoHoras")?.value || "0") || 0;
+        let m = parseInt(document.getElementById("tareaTiempoMinutos")?.value || "0") || 0;
+        _tiempoManualMins = h * 60 + m;
+    }
+
+    let _finalizadoEn = tareaEditando?.finalizadoEn || (estado === "realizado" ? ahora : null);
+    let _iniciadoEn   = tareaEditando?.iniciadoEn   || (estado === "en-curso" || estado === "realizado" ? ahora : null);
+    // Si hay tiempo manual y estado es realizado, sobreescribir iniciadoEn para reflejar la duración
+    if(_tiempoManualMins > 0 && estado === "realizado"){
+        _finalizadoEn = _finalizadoEn || ahora;
+        _iniciadoEn   = _finalizadoEn - _tiempoManualMins * 60000;
+    }
+
     let obj = {
         id: tareaEditando?.id || ahora,
         desc,
@@ -6376,11 +6525,13 @@ function guardarTarea(){
         estado: estado,
         done: estado === "realizado",
         creadoEn: tareaEditando?.creadoEn || ahora,
-        iniciadoEn: tareaEditando?.iniciadoEn || (estado === "en-curso" ? ahora : null),
-        finalizadoEn: tareaEditando?.finalizadoEn || (estado === "realizado" ? ahora : null),
+        iniciadoEn: _iniciadoEn,
+        finalizadoEn: _finalizadoEn,
         maquina: (document.getElementById("tareaMaquina")?.value||"").trim() || tareaEditando?.maquina || "",
         isla:    (document.getElementById("tareaIsla")?.value||"").trim()    || tareaEditando?.isla    || ""
     };
+    if(_tiempoManualMins > 0) obj.tiempoManualMins = _tiempoManualMins;
+
     if(tareaEditando){
         let idx = tareas.findIndex(t => t.id === tareaEditando.id);
         tareas[idx] = obj;
@@ -8269,6 +8420,21 @@ function editarTareaDesdeDetalle(id){
 
     // Mostrar/ocultar sección correctivo
     document.getElementById("tareaTipoCorrectivoExtra").style.display = t.tipo === "correctivo" ? "block" : "none";
+
+    // Mostrar/ocultar y restaurar sección tiempo para sistema/evento
+    let _editTiempoSec = document.getElementById("tareaTiempoSection");
+    if(_editTiempoSec){
+        _editTiempoSec.style.display = (t.tipo === "sistema" || t.tipo === "evento") ? "block" : "none";
+        if(t.tiempoManualMins){
+            let _h = Math.floor(t.tiempoManualMins / 60);
+            let _m = t.tiempoManualMins % 60;
+            if(document.getElementById("tareaTiempoHoras"))   document.getElementById("tareaTiempoHoras").value   = _h || "";
+            if(document.getElementById("tareaTiempoMinutos")) document.getElementById("tareaTiempoMinutos").value = _m || "";
+        } else {
+            if(document.getElementById("tareaTiempoHoras"))   document.getElementById("tareaTiempoHoras").value   = "";
+            if(document.getElementById("tareaTiempoMinutos")) document.getElementById("tareaTiempoMinutos").value = "";
+        }
+    }
 
     document.getElementById("modalTarea").classList.add("open");
 }
@@ -12398,6 +12564,21 @@ renderTareas = _renderTareasConTurno;
             <div id="qrIslasCheckGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:180px;overflow-y:auto;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;"></div>
             <div style="font-size:11px;color:var(--muted);margin-top:6px;">Los slots de cada isla se calcularán automáticamente.</div>
         </div>
+        <!-- Tiempo manual (se muestra para sistema y evento) -->
+        <div id="qrTiempoSection" style="display:none;margin-top:4px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#b47aff;text-transform:uppercase;margin-bottom:8px;">⏱ Tiempo que llevó realizarla</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Horas</label>
+                    <input type="number" id="qrTiempoHoras" class="form-input" min="0" max="99" placeholder="0" style="text-align:center;">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Minutos</label>
+                    <input type="number" id="qrTiempoMinutos" class="form-input" min="0" max="59" placeholder="0" style="text-align:center;">
+                </div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:5px;">Este tiempo se usará para las estadísticas del dashboard.</div>
+        </div>
         <div class="modal-footer">
             <button class="btn-modal-save" onclick="confirmarQuienRealizoMulti()">✔ Confirmar y cerrar tarea</button>
             <button class="btn-modal-cancel" onclick="document.getElementById('modalQuienRealizoMulti').classList.remove('open')">Cancelar</button>
@@ -12459,6 +12640,15 @@ function abrirQuienRealizo(id){
         islasGrid.innerHTML = "";
     }
 
+    // Mostrar/ocultar sección tiempo manual (para sistema y evento)
+    let tiempoSection = document.getElementById("qrTiempoSection");
+    let _esTiempoManual = t && (t.tipo === "sistema" || t.tipo === "evento");
+    if(tiempoSection) {
+        tiempoSection.style.display = _esTiempoManual ? "block" : "none";
+        if(document.getElementById("qrTiempoHoras")) document.getElementById("qrTiempoHoras").value = "";
+        if(document.getElementById("qrTiempoMinutos")) document.getElementById("qrTiempoMinutos").value = "";
+    }
+
     document.getElementById("modalQuienRealizoMulti").classList.add("open");
 }
 
@@ -12491,6 +12681,18 @@ function confirmarQuienRealizoMulti(){
     t.finalizadoEn = Date.now();
     if(!t.iniciadoEn) t.iniciadoEn = t.finalizadoEn;
     t.done = true;
+
+    // Capturar tiempo manual si corresponde (sistema o evento)
+    if(t.tipo === "sistema" || t.tipo === "evento"){
+        let horas = parseInt(document.getElementById("qrTiempoHoras")?.value || "0") || 0;
+        let mins  = parseInt(document.getElementById("qrTiempoMinutos")?.value || "0") || 0;
+        let totalMins = horas * 60 + mins;
+        if(totalMins > 0){
+            // Sobreescribir iniciadoEn para que calcularDuracion refleje el tiempo manual
+            t.iniciadoEn = t.finalizadoEn - totalMins * 60000;
+            t.tiempoManualMins = totalMins;
+        }
+    }
 
     ppRegistrarEnHistorial?.(t);
 
