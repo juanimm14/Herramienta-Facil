@@ -182,6 +182,25 @@ async function _cargarDatosFirebase() {
     // y cargarIslas() pueden escribir defaults sin riesgo de pisar datos reales.
     window._fbCargaCompleta = true;
 
+    // ── RESTAURACIÓN DE ISLAS ──────────────────────────────────────────────
+    // Si Firestore tiene el default erróneo (islas 100-180 con 8 slots),
+    // lo reemplaza automáticamente con las islas reales del casino.
+    (function _restaurarIslas() {
+        const ISLAS_REALES = [{"id":10,"slots":6},{"id":92,"slots":4},{"id":93,"slots":3},{"id":107,"slots":3},{"id":110,"slots":4},{"id":116,"slots":2},{"id":119,"slots":3},{"id":124,"slots":8},{"id":125,"slots":4},{"id":126,"slots":5},{"id":131,"slots":4},{"id":139,"slots":6},{"id":141,"slots":4},{"id":143,"slots":2},{"id":146,"slots":4},{"id":148,"slots":4},{"id":149,"slots":6},{"id":150,"slots":3},{"id":152,"slots":5},{"id":153,"slots":5},{"id":155,"slots":2},{"id":158,"slots":2},{"id":159,"slots":6},{"id":160,"slots":4},{"id":161,"slots":6},{"id":168,"slots":3},{"id":169,"slots":4},{"id":172,"slots":8},{"id":175,"slots":10},{"id":176,"slots":4},{"id":179,"slots":6},{"id":180,"slots":2},{"id":186,"slots":2},{"id":187,"slots":6},{"id":188,"slots":2},{"id":191,"slots":4},{"id":192,"slots":4},{"id":193,"slots":4},{"id":194,"slots":4},{"id":199,"slots":6},{"id":200,"slots":6},{"id":201,"slots":8},{"id":203,"slots":8},{"id":204,"slots":8},{"id":205,"slots":6},{"id":207,"slots":7},{"id":208,"slots":4},{"id":209,"slots":4},{"id":210,"slots":6},{"id":211,"slots":6},{"id":212,"slots":4},{"id":213,"slots":6},{"id":214,"slots":10},{"id":215,"slots":8},{"id":216,"slots":6},{"id":217,"slots":4},{"id":218,"slots":6},{"id":219,"slots":4},{"id":220,"slots":4},{"id":221,"slots":4},{"id":222,"slots":6},{"id":223,"slots":4},{"id":224,"slots":8},{"id":225,"slots":4},{"id":226,"slots":4},{"id":227,"slots":4},{"id":228,"slots":4},{"id":230,"slots":6},{"id":231,"slots":8},{"id":232,"slots":6},{"id":233,"slots":6},{"id":234,"slots":8},{"id":235,"slots":8},{"id":236,"slots":6},{"id":237,"slots":6},{"id":238,"slots":8},{"id":239,"slots":4},{"id":240,"slots":4},{"id":241,"slots":8},{"id":500,"slots":2},{"id":501,"slots":2}];
+        const actual = _cache["islasActivas"];
+        // Detectar si tiene el default erróneo: alguna isla entre 100-180 con slots=8
+        // O si está vacío / no existe
+        const esDefault = !actual || actual.length === 0 ||
+            (actual.length > 0 && actual.every(i => i.id >= 100 && i.id <= 180 && i.slots === 8));
+        if (esDefault) {
+            console.warn("[HF] islasActivas con datos de default detectado — restaurando islas reales...");
+            _cache["islasActivas"] = ISLAS_REALES;
+            _localStorageOrig.setItem("islasActivas", JSON.stringify(ISLAS_REALES));
+            _fbSet("islasActivas", ISLAS_REALES);
+        }
+    })();
+    // ── FIN RESTAURACIÓN ──────────────────────────────────────────────────
+
     // Recargar TODAS las variables globales desde el cache ya poblado
     try {
         if (_cache["incidencias"])    incidencias    = _cache["incidencias"];
@@ -210,13 +229,12 @@ async function _cargarDatosFirebase() {
         if (_cache["eventosUnicos"])  try { eventosUnicos  = _cache["eventosUnicos"]  ?? []; } catch(e){}
     } catch(e) { /* variables aún no declaradas — se inicializarán luego */ }
 
-    // Recargar islasActivas desde el cache ya poblado (puede haber quedado [] antes)
+    // Recargar islasActivas desde el cache ya poblado
     try {
-        if (_cache["islasActivas"]) {
-            islasActivas = _cache["islasActivas"];
-        } else {
-            islasActivas = generarListaDefault();
+        if (_cache["islasActivas"] !== undefined) {
+            islasActivas = _cache["islasActivas"] ?? [];
         }
+        // Si no hay nada en cache, dejar islasActivas como está ([] o lo que cargarIslas() puso)
     } catch(e) { /* islasActivas aún no declarada — se inicializará con cargarIslas() */ }
 
     // (campo usuario ahora es input de texto libre, no requiere poblar)
@@ -4408,28 +4426,19 @@ let tareaEditando = null;
 //  ISLAS — ahora guardamos objetos {id, slots}
 // ──────────────────────────────────────────────
 function generarListaDefault(){
-    let arr = [];
-    for(let i=100;i<=180;i++) arr.push({ id: i, slots: 8 });
-    // Solo guardar en Firestore si la carga inicial ya completó
-    // (evita pisar datos reales cuando Firebase aún no respondió)
-    if(window._fbCargaCompleta) {
-        _fbSet("islasActivas", arr);
-    }
-    return arr;
+    // NUNCA escribir en Firestore — solo devolver array vacío como fallback
+    return [];
 }
 
 // Migrar formato viejo (array de números) al nuevo (array de objetos)
 function cargarIslas(){
     let raw = localStorage.getItem("islasActivas");
-    if(!raw) {
-        // Si Firebase aún no cargó, devolver array vacío temporal sin escribir nada
-        if(!window._fbCargaCompleta) return [];
-        return generarListaDefault();
-    }
+    if(!raw) return [];
     let parsed = JSON.parse(raw);
-    if(parsed.length > 0 && typeof parsed[0] === "number"){
-        // Migrar
-        return parsed.map(n => ({ id: n, slots: 8 }));
+    if(!Array.isArray(parsed) || parsed.length === 0) return [];
+    if(typeof parsed[0] === "number"){
+        // Migrar formato viejo: convertir en memoria, sin escribir en FB
+        return parsed.map(n => ({ id: n, slots: 0 }));
     }
     return parsed;
 }
