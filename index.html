@@ -1423,6 +1423,10 @@ body {
     padding: 2px 8px;
     border-radius: 10px;
 }
+@keyframes pulsoVencida {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,80,80,0); }
+    50% { opacity: .85; box-shadow: 0 0 8px 2px rgba(255,80,80,.18); }
+}
 .cartel-badge-vencido {
     display: inline-block;
     background: var(--border);
@@ -3058,7 +3062,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.2</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.4</span>
         </div>
 
         </div><!-- /main -->
@@ -6818,14 +6822,28 @@ function renderTareas(){
             }
         }
 
+        // ── Detección de tarea vencida ──
+        let vencida = false;
+        if(t.fecha && t.estado !== "realizado"){
+            let hoyV = new Date(); hoyV.setHours(0,0,0,0);
+            let limV  = new Date(t.fecha + "T00:00:00");
+            vencida = limV < hoyV;
+        }
+        let vencidaBanner = vencida ? `
+            <div style="margin-top:8px;padding:8px 12px;background:rgba(255,50,50,.13);border:1px solid rgba(255,80,80,.5);border-radius:8px;display:flex;align-items:center;gap:8px;animation:pulsoVencida 1.8s ease-in-out infinite;">
+                <span style="font-size:16px;">⚠️</span>
+                <span style="font-size:12px;font-weight:700;color:#ff6b6b;letter-spacing:.3px;">TAREA VENCIDA — Finalizarla lo antes posible</span>
+            </div>` : "";
+
         let esMiTarea = esTecnico && t.asignado === miNombre;
         return `
-        <div class="tarea-row" style="${esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
+        <div class="tarea-row" style="${vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
             <div class="item-main" style="width:100%">
                 <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
                     <div class="tarea-text ${t.estado==="realizado"?"done-text":""}" style="flex:1;">${t.desc}</div>
                     <div style="display:flex;gap:6px;align-items:center;">
                         ${miTareaBadge}
+                        ${vencida ? '<span style="font-size:10px;background:rgba(255,50,50,.2);border:1px solid rgba(255,80,80,.5);color:#ff6b6b;padding:1px 7px;border-radius:5px;font-weight:700;">🔴 VENCIDA</span>' : ''}
                         ${tipoBadge}
                         ${ppBadge}
                         <span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span>
@@ -6835,9 +6853,10 @@ function renderTareas(){
                     ${reasignar}
                     ${t.maquina ? `<span style="font-size:11px;color:var(--red);font-weight:700;">🔧 Máq: ${t.maquina}</span>` : ""}
                     ${t.isla ? `<span style="font-size:11px;color:var(--muted);">📍 Isla: ${t.isla}</span>` : ""}
-                    ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
+                    ${t.fecha ? `<span style="font-size:11px;color:${vencida ? '#ff6b6b' : 'var(--muted)'};font-weight:${vencida ? '700' : '400'};">📅 ${t.fecha}</span>` : ""}
                     ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
                 </div>
+                ${vencidaBanner}
                 ${ccbInlineHtml}
                 ${pchkInlineHtml}
                 ${acciones}
@@ -12118,9 +12137,33 @@ function _renderTareasConTurno(){
     let fMes    = document.getElementById("filtroTareasMes")?.value   || "todos";
     let fBuscar = (document.getElementById("filtroTareasBuscar")?.value || "").toLowerCase().trim();
 
+    function esVencida(t){
+        if(!t.fecha || t.estado === "realizado") return false;
+        let hoyV = new Date(); hoyV.setHours(0,0,0,0);
+        return new Date(t.fecha + "T00:00:00") < hoyV;
+    }
+
+    function perteneceAlTurno(t){
+        // Tareas asignadas a "todos" o al turno mañana directamente → siempre visibles para el turno
+        if(t.asignado === "__todos__" || t.asignado === "__turno_MANANA__") return true;
+        return tecsTurno.includes(t.asignado);
+    }
+
     function cumpleFiltro(t){
+        // Las tareas vencidas (no realizadas) siempre se muestran, ignorando filtros de mes/año
+        if(esVencida(t)){
+            // Solo respetar filtro de técnico y búsqueda
+            if(esTurno){
+                if(!perteneceAlTurno(t)) return false;
+            } else if(fTecnicoRaw !== "todos" && t.asignado !== fTecnicoRaw) return false;
+            if(fBuscar){
+                let haystack = (t.desc + " " + t.asignado + " " + (t.realizadoPor||"") + " " + (t.notas||"")).toLowerCase();
+                if(!haystack.includes(fBuscar)) return false;
+            }
+            return true;
+        }
         if(esTurno){
-            if(!tecsTurno.includes(t.asignado)) return false;
+            if(!perteneceAlTurno(t)) return false;
         } else if(fTecnicoRaw !== "todos" && t.asignado !== fTecnicoRaw) return false;
         if(fAnio !== "todos"){
             let anioT = t.creadoEn ? String(new Date(t.creadoEn).getFullYear()) : (t.fecha ? t.fecha.slice(0,4) : "");
@@ -12138,8 +12181,15 @@ function _renderTareasConTurno(){
     }
 
     function sortMisTareasArriba(lista){
-        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => b.id - a.id);
+        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => {
+            // Vencidas primero
+            let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
+            if(aV !== bV) return aV - bV;
+            return b.id - a.id;
+        });
         return lista.sort((a,b) => {
+            let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
+            if(aV !== bV) return aV - bV;
             let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
             let bMia = b.asignado === usuarioActual?.nombre ? 0 : 1;
             if(aMia !== bMia) return aMia - bMia;
@@ -12148,7 +12198,7 @@ function _renderTareasConTurno(){
     }
 
     let pendientes = _aplicarOrdenTareas(sortMisTareasArriba(tareas.filter(t => t.estado === "pendiente" && cumpleFiltro(t))));
-    let enCurso    = sortMisTareasArriba(tareas.filter(t => t.estado === "en-curso"));
+    let enCurso    = sortMisTareasArriba(tareas.filter(t => t.estado === "en-curso" && cumpleFiltro(t)));
 
     let esTecnico = usuarioActual?.rol !== "Admin";
     let miNombre  = usuarioActual?.nombre;
@@ -12261,20 +12311,34 @@ function _renderTareasConTurno(){
             }
         }
 
+        // ── Detección de tarea vencida ──
+        let vencida = false;
+        if(t.fecha && t.estado !== "realizado"){
+            let hoyV = new Date(); hoyV.setHours(0,0,0,0);
+            let limV  = new Date(t.fecha + "T00:00:00");
+            vencida = limV < hoyV;
+        }
+        let vencidaBanner = vencida ? `
+            <div style="margin-top:8px;padding:8px 12px;background:rgba(255,50,50,.13);border:1px solid rgba(255,80,80,.5);border-radius:8px;display:flex;align-items:center;gap:8px;animation:pulsoVencida 1.8s ease-in-out infinite;">
+                <span style="font-size:16px;">⚠️</span>
+                <span style="font-size:12px;font-weight:700;color:#ff6b6b;letter-spacing:.3px;">TAREA VENCIDA — Finalizarla lo antes posible</span>
+            </div>` : "";
+
         let esMiTarea = esTecnico && t.asignado === miNombre;
-        return `<div class="tarea-row" style="${esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
+        return `<div class="tarea-row" style="${vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
             <div class="item-main" style="width:100%">
                 <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
                     <div class="tarea-text ${t.estado==='realizado'?'done-text':''}" style="flex:1;">${t.desc}</div>
-                    <div style="display:flex;gap:6px;align-items:center;">${miTareaBadge}${ppBadge}<span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span></div>
+                    <div style="display:flex;gap:6px;align-items:center;">${miTareaBadge}${ppBadge}${vencida ? '<span style="font-size:10px;background:rgba(255,50,50,.2);border:1px solid rgba(255,80,80,.5);color:#ff6b6b;padding:1px 7px;border-radius:5px;font-weight:700;">🔴 VENCIDA</span>' : ''}<span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
                     ${reasignar}
                     ${t.maquina ? `<span style="font-size:11px;color:var(--red);font-weight:700;">🔧 Máq: ${t.maquina}</span>` : ""}
                     ${t.isla ? `<span style="font-size:11px;color:var(--muted);">📍 Isla: ${t.isla}</span>` : ""}
-                    ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
+                    ${t.fecha ? `<span style="font-size:11px;color:${vencida ? '#ff6b6b' : 'var(--muted)'};font-weight:${vencida ? '700' : '400'};">📅 ${t.fecha}</span>` : ""}
                     ${dur ? `<span class="tarea-duracion">⏱ ${dur}</span>` : ""}
                 </div>
+                ${vencidaBanner}
                 ${ccbInlineHtml}
                 ${pchkInlineHtml}
                 ${acciones}
