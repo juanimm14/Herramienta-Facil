@@ -13243,12 +13243,35 @@ function valRenderIndicesPanel() {
     let mesesDiv = document.getElementById("valIndicesMeses");
     if (!mesesDiv || !data || !data.promedios) return;
 
+    // Encontrar el valor más alto y más bajo para resaltar
+    let valoresMeses = VAL_MESES.map(m => data.promedios[m]).filter(v => v != null);
+    let maxVal = valoresMeses.length ? Math.max(...valoresMeses) : null;
+    let minVal = valoresMeses.length ? Math.min(...valoresMeses) : null;
+    let hayVariedad = valoresMeses.length > 1 && maxVal !== minVal;
+
     mesesDiv.innerHTML = VAL_MESES.map(m => {
         let pct = data.promedios[m];
         if (pct == null) return "";
-        let color = valColorIndice(pct);
-        let bgAlpha = pct >= 88 ? "rgba(0,212,168,.12)" : pct >= 84 ? "rgba(245,166,35,.12)" : "rgba(255,77,109,.12)";
-        return '<div style="background:' + bgAlpha + ';border:1px solid ' + color + ';border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;"><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">' + m.slice(0,3) + '</div><div style="font-size:18px;font-weight:700;color:' + color + ';">' + pct.toFixed(1) + '%</div></div>';
+        let esMax = hayVariedad && pct === maxVal;
+        let esMin = hayVariedad && pct === minVal;
+        let color, bgAlpha, borderExtra = "", badge = "";
+        if (esMax) {
+            color = "#00d4a8"; bgAlpha = "rgba(0,212,168,.22)";
+            borderExtra = "border-width:2px;box-shadow:0 0 8px rgba(0,212,168,.25);";
+            badge = '<div style="font-size:9px;font-weight:800;color:#00d4a8;letter-spacing:.5px;margin-top:3px;">▲ MAYOR</div>';
+        } else if (esMin) {
+            color = "var(--red)"; bgAlpha = "rgba(255,77,109,.22)";
+            borderExtra = "border-width:2px;box-shadow:0 0 8px rgba(255,77,109,.25);";
+            badge = '<div style="font-size:9px;font-weight:800;color:var(--red);letter-spacing:.5px;margin-top:3px;">▼ MENOR</div>';
+        } else {
+            color = valColorIndice(pct);
+            bgAlpha = pct >= 88 ? "rgba(0,212,168,.12)" : pct >= 84 ? "rgba(245,166,35,.12)" : "rgba(255,77,109,.12)";
+        }
+        return '<div style="background:' + bgAlpha + ';border:1px solid ' + color + ';' + borderExtra + 'border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">' +
+            '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">' + m.slice(0,3) + '</div>' +
+            '<div style="font-size:18px;font-weight:700;color:' + color + ';">' + pct.toFixed(1) + '%</div>' +
+            badge +
+        '</div>';
     }).join("");
 }
 
@@ -13265,9 +13288,12 @@ let validadoresData = (_cache["validadoresData"]) ? [..._cache["validadoresData"
 function valGetPeriodoActual() {
     let raw = document.getElementById("filtroValPeriodo")?.value || "";
     if (raw) return raw;
-    // ultimo periodo cargado
+    // ultimo periodo cargado (más reciente)
     if (validadoresData.length) {
-        return validadoresData[validadoresData.length - 1].periodo;
+        let masReciente = [...validadoresData].sort((a, b) =>
+            (b.createdAt || b.periodo || "").localeCompare(a.createdAt || a.periodo || "")
+        )[0];
+        return masReciente.periodo;
     }
     return null;
 }
@@ -13289,11 +13315,18 @@ function renderValidadores() {
     let tecnicoF = document.getElementById("filtroValTecnico")?.value || "";
     let buscarF  = (document.getElementById("filtroValBuscar")?.value || "").toLowerCase();
 
-    // Flatten items con su periodo
+    // Flatten items con su periodo — más reciente primero
     let filas = [];
-    validadoresData.forEach(lote => {
-        lote.items.forEach((item, idx) => {
-            filas.push({ ...item, periodo: lote.periodo, loteIdx: validadoresData.indexOf(lote), itemIdx: idx });
+    let valOrdenado = validadoresData
+        .map((lote, idx) => ({ lote, idx }))
+        .sort((a, b) => {
+            let fa = a.lote.createdAt || a.lote.periodo || "";
+            let fb = b.lote.createdAt || b.lote.periodo || "";
+            return fb.localeCompare(fa);
+        });
+    valOrdenado.forEach(({ lote, idx: loteIdx }) => {
+        lote.items.forEach((item, itemIdx) => {
+            filas.push({ ...item, periodo: lote.periodo, loteIdx, itemIdx });
         });
     });
 
@@ -13384,7 +13417,11 @@ function _poblarFiltrosValidadores() {
     // Periodos
     let selPer = document.getElementById("filtroValPeriodo");
     let curPer = selPer?.value || "";
-    let periodos = [...new Set(validadoresData.map(l => l.periodo))];
+    let periodos = [...new Set(
+        [...validadoresData]
+            .sort((a, b) => (b.createdAt || b.periodo || "").localeCompare(a.createdAt || a.periodo || ""))
+            .map(l => l.periodo)
+    )];
     if (selPer) {
         selPer.innerHTML = '<option value="">— Todos los períodos —</option>'
             + periodos.map(p => `<option value="${p}" ${p===curPer?"selected":""}>${p}</option>`).join("");
@@ -13404,7 +13441,10 @@ function _renderBannerTareaValidadores() {
     let tareaBanner = document.getElementById("validadoresTareaBanner");
     if (!tareaBanner) return;
 
-    let ultimoLote = validadoresData.length ? validadoresData[validadoresData.length - 1] : null;
+    // Tomar el lote más reciente (por createdAt o periodo)
+    let ultimoLote = validadoresData.length
+        ? [...validadoresData].sort((a, b) => (b.createdAt || b.periodo || "").localeCompare(a.createdAt || a.periodo || ""))[0]
+        : null;
     if (!ultimoLote) { tareaBanner.style.display = "none"; return; }
 
     // Verificar si hay items pendientes
@@ -13512,8 +13552,14 @@ function renderPpt() {
     let selPeriodo = document.getElementById("filtroPptPeriodo");
     if (!selPeriodo) return;
     let periodoActual = selPeriodo.value;
+    // Períodos ordenados más reciente primero
+    let pptPeriodosOrden = [...pptData].sort((a, b) => {
+        let fa = a.createdAt || a.periodo || "";
+        let fb = b.createdAt || b.periodo || "";
+        return fb.localeCompare(fa);
+    });
     selPeriodo.innerHTML = '<option value="">— Todos los períodos —</option>' +
-        pptData.map(l => `<option value="${l.periodo}" ${periodoActual === l.periodo ? 'selected' : ''}>${l.periodo}</option>`).join("");
+        pptPeriodosOrden.map(l => `<option value="${l.periodo}" ${periodoActual === l.periodo ? 'selected' : ''}>${l.periodo}</option>`).join("");
 
     // Poblar filtro técnico
     let selTec = document.getElementById("filtroPptTecnico");
@@ -13529,9 +13575,17 @@ function renderPpt() {
     let tecnicoFiltro = document.getElementById("filtroPptTecnico")?.value || "";
     let buscar        = (document.getElementById("filtroPptBuscar")?.value || "").toLowerCase();
 
-    // Aplanar items con referencia al lote
+    // Aplanar items con referencia al lote — más reciente primero
     let rows = [];
-    pptData.forEach((lote, loteIdx) => {
+    // Ordenar lotes por fecha más reciente primero
+    let pptOrdenado = pptData
+        .map((lote, loteIdx) => ({ lote, loteIdx }))
+        .sort((a, b) => {
+            let fa = a.lote.createdAt || a.lote.periodo || "";
+            let fb = b.lote.createdAt || b.lote.periodo || "";
+            return fb.localeCompare(fa);
+        });
+    pptOrdenado.forEach(({ lote, loteIdx }) => {
         if (periodoFiltro && lote.periodo !== periodoFiltro) return;
         (lote.items || []).forEach((item, itemIdx) => {
             if (estadoFiltro && item.estado !== estadoFiltro) return;
