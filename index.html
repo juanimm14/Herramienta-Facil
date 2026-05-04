@@ -13024,7 +13024,7 @@ function guardarListaKioscosEva(){
 // ══════════════════════════════════════════════════════
 
 // indicesAceptacion = { anio: { meses: {ENERO:.., FEBRERO:..}, slots: { "1326": {ENERO:.., ..}, ... } } }
-let indicesAceptacion = (_cache["indicesAceptacion"]) ? {..._cache["indicesAceptacion"]} : {};
+let indicesAceptacion = JSON.parse(localStorage.getItem("indicesAceptacion")) || {};
 
 const VAL_MESES = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
 let _valAnioActivo = null;
@@ -13280,7 +13280,7 @@ function valRenderIndicesPanel() {
 //  (original continúa abajo)
 // ══════════════════════════════════════════════════════
 
-let validadoresData = (_cache["validadoresData"]) ? [..._cache["validadoresData"]] : [];
+let validadoresData = JSON.parse(localStorage.getItem("validadoresData")) || [];
 // validadoresData = [{ periodo, createdAt, items:[{slot,isla,modelo,detalle,tecnico,estado,fechaRealizado}], tareaId }]
 
 // ─── Helpers ─────────────────────────────────────────
