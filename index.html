@@ -177,6 +177,9 @@ async function _cargarDatosFirebase() {
             _localStorageOrig.setItem(doc.id, JSON.stringify(doc.data().data));
         }
     });
+    // Diagnóstico
+    console.log("[HF] _cargarDatosFirebase completó. Docs recibidos:", snap.size);
+    console.log("[HF] _cache validadoresData:", JSON.stringify(_cache["validadoresData"]).slice(0,300));
 
     // Marcar que la carga inicial completó — a partir de aquí getUsersDB()
     // y cargarIslas() pueden escribir defaults sin riesgo de pisar datos reales.
@@ -215,7 +218,12 @@ async function _cargarDatosFirebase() {
         if (_cache["ppTareas"])       ppTareas       = _cache["ppTareas"];
         if (_cache["evaIncidencias"]) evaIncidencias = _cache["evaIncidencias"];
         if (_cache["evaDiarios"])     evaDiarios     = _cache["evaDiarios"];
-        if (_cache["validadoresData"]) validadoresData = _cache["validadoresData"];
+        if (_cache["validadoresData"]) {
+            validadoresData = _cache["validadoresData"];
+            console.log('[HF] validadoresData cargado desde Firebase:', validadoresData.length, 'lotes', JSON.stringify(validadoresData).slice(0,300));
+        } else {
+            console.warn('[HF] validadoresData NO encontrado en cache Firebase');
+        }
         if (_cache["indicesAceptacion"]) indicesAceptacion = _cache["indicesAceptacion"];
         if (_cache["fdsData"])        fdsData        = _cache["fdsData"];
         if (_cache["contadorasData"]) contadorasData = _cache["contadorasData"];
@@ -295,10 +303,13 @@ function _activarListenersTiempoReal() {
 
     _FB_KEYS.forEach(clave => {
         _colRef().doc(clave).onSnapshot(snap => {
-            // Ignorar snapshots que vienen solo del cache local (sin confirmación del servidor)
-            if (snap.metadata && snap.metadata.fromCache) return;
-            // Ignorar snapshots con escrituras pendientes (eco de nuestro propio write local)
-            if (snap.metadata && snap.metadata.hasPendingWrites) return;
+            // Si el cache para esta clave ya tiene datos, ignorar snapshots desde cache local
+            // Si el cache está vacío, aceptar cualquier snapshot (incluso fromCache) para no quedar en blanco
+            let cacheVacio = _cache[clave] === undefined || _cache[clave] === null;
+            if (!cacheVacio) {
+                if (snap.metadata && snap.metadata.fromCache) return;
+                if (snap.metadata && snap.metadata.hasPendingWrites) return;
+            }
             // Ignorar si acabamos de escribir esta clave en los últimos 5 segundos
             if (window._fbWriteTs && window._fbWriteTs[clave] && (Date.now() - window._fbWriteTs[clave]) < 5000) return;
             if (snap.exists) {
@@ -3088,7 +3099,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.7</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.1.8</span>
         </div>
 
         </div><!-- /main -->
@@ -13324,13 +13335,18 @@ function renderValidadores() {
     let tecnicoF = document.getElementById("filtroValTecnico")?.value || "";
     let buscarF  = (document.getElementById("filtroValBuscar")?.value || "").toLowerCase();
 
+    // Diagnóstico
+    console.log("[HF] renderValidadores - validadoresData:", validadoresData.length, "lotes");
+    if(validadoresData.length) console.log("[HF] primer lote:", JSON.stringify(validadoresData[0]).slice(0,200));
+
     // Flatten items con su periodo — más reciente primero
     let filas = [];
     let valOrdenado = validadoresData
         .map((lote, idx) => ({ lote, idx }))
         .sort((a, b) => {
-            let fa = a.lote.createdAt || a.lote.periodo || "";
-            let fb = b.lote.createdAt || b.lote.periodo || "";
+            // createdAt puede ser número (timestamp) o string — normalizar para comparar
+            let fa = String(a.lote.createdAt || a.lote.periodo || "");
+            let fb = String(b.lote.createdAt || b.lote.periodo || "");
             return fb.localeCompare(fa);
         });
     valOrdenado.forEach(({ lote, idx: loteIdx }) => {
@@ -13430,7 +13446,7 @@ function _poblarFiltrosValidadores() {
     let periodos = [...new Set(
         [...validadoresData]
             .filter(l => l && l.periodo)
-            .sort((a, b) => (b.createdAt || b.periodo || "").localeCompare(a.createdAt || a.periodo || ""))
+            .sort((a, b) => String(b.createdAt || b.periodo || "").localeCompare(String(a.createdAt || a.periodo || "")))
             .map(l => l.periodo)
     )];
     if (selPer) {
@@ -13454,7 +13470,7 @@ function _renderBannerTareaValidadores() {
 
     // Tomar el lote más reciente (por createdAt o periodo)
     let ultimoLote = validadoresData.length
-        ? [...validadoresData].sort((a, b) => (b.createdAt || b.periodo || "").localeCompare(a.createdAt || a.periodo || ""))[0]
+        ? [...validadoresData].sort((a, b) => String(b.createdAt || b.periodo || "").localeCompare(String(a.createdAt || a.periodo || "")))[0]
         : null;
     if (!ultimoLote) { tareaBanner.style.display = "none"; return; }
 
