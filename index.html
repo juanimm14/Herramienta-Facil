@@ -4463,24 +4463,8 @@ const CONFIG_DEFAULTS = {
 // Devuelve la lista de técnicos desde usersDB (Firestore) o el default
 function getTecnicos(){
     let db = getUsersDB();
-    let fromDB = (db && db.length > 0) ? db.filter(u => u.rol !== "Visita").map(u => u.nombre) : CONFIG_DEFAULTS.tecnicos;
-
-    // También extraer técnicos que aparecen en los datos reales (incidencias, preventivos, tareas)
-    // para no perder registros históricos de técnicos que ya no están en usersDB
-    let fromData = new Set(fromDB);
-    incidencias.forEach(i => { if(i.tecnico && i.tecnico !== "TODOS") fromData.add(i.tecnico); });
-    preventivos.forEach(p => {
-        if(p.tecnico && p.tecnico !== "TODOS") fromData.add(p.tecnico);
-        if(p.tecnico2 && p.tecnico2 !== "TODOS") fromData.add(p.tecnico2);
-    });
-    tareas.forEach(t => {
-        if(t.asignado && !t.asignado.startsWith("__")) fromData.add(t.asignado);
-        if(t.realizadoPor) t.realizadoPor.split(", ").forEach(n => { if(n.trim()) fromData.add(n.trim()); });
-    });
-
-    // Devolver lista sin duplicados, con los de DB primero
-    let extras = [...fromData].filter(n => !fromDB.includes(n));
-    return [...fromDB, ...extras];
+    if(db && db.length > 0) return db.filter(u => u.rol !== "Visita").map(u => u.nombre);
+    return CONFIG_DEFAULTS.tecnicos;
 }
 
 const CCB_ISLAS_DEFAULT = CONFIG_DEFAULTS.ccbIslasDefault;
@@ -6036,7 +6020,21 @@ function renderDashboard(){
         document.getElementById("boxDesempeno").style.display = "grid";
         document.getElementById("boxHorasPreventivos").style.display = "grid";
         document.getElementById("boxCalificaciones").style.display = "block";
-        let tecnicos = getTecnicos();
+
+        // Construir lista de técnicos dinámica: base desde getTecnicos() + todos los que aparecen en datos reales
+        let tecnicosBase = getTecnicos();
+        let tecSet = new Set(tecnicosBase);
+        incidencias.forEach(i => { if(i.tecnico && !i.tecnico.startsWith("__")) tecSet.add(i.tecnico); });
+        preventivos.forEach(p => {
+            if(p.tecnico && !p.tecnico.startsWith("__")) tecSet.add(p.tecnico);
+            if(p.tecnico2 && !p.tecnico2.startsWith("__")) tecSet.add(p.tecnico2);
+        });
+        tareas.forEach(t => {
+            if(t.asignado && !t.asignado.startsWith("__")) tecSet.add(t.asignado);
+            if(t.realizadoPor) t.realizadoPor.split(", ").forEach(n => { if(n.trim()) tecSet.add(n.trim()); });
+        });
+        let tecnicos = [...tecSet];
+
         let maxVal = 1;
         let counts = tecnicos.map(t => {
             let n = correctivos.filter(i => i.tecnico === t).length;
