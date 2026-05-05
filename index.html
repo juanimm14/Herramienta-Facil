@@ -9538,13 +9538,26 @@ _auth.onAuthStateChanged(async (firebaseUser) => {
         try { await _cargarDatosFirebase(); } catch(e){ console.error(e); }
         _activarListenersTiempoReal();
 
-        // Buscar el perfil (nombre + rol) en usersDB usando el email
+        // Buscar el perfil (nombre + rol) en usersDB
+        // Estrategia 1: por email exacto
+        // Estrategia 2: por parte local del email (juan@casino.com → "Juan")
+        // Estrategia 3: usar el nombre guardado en localStorage de sesión previa
         let db = getUsersDB();
-        let rec = db.find(u => (u.email || "").toLowerCase() === firebaseUser.email.toLowerCase());
+        let rec = db.find(u => u.email && u.email.toLowerCase() === firebaseUser.email.toLowerCase());
+        if(!rec){
+            // Intentar por nombre local del email (ej: "juan.mucci@..." → buscar "Juan Mucci" o "Juan")
+            let localPart = firebaseUser.email.split("@")[0].toLowerCase();
+            rec = db.find(u => u.nombre && u.nombre.toLowerCase().replace(/\s+/g,"") === localPart.replace(/[\.\-_]/g,""));
+        }
+        if(!rec){
+            // Intentar con sesión previa guardada en localStorage
+            let prevUser = JSON.parse(localStorage.getItem("usuario") || "null");
+            if(prevUser?.nombre && prevUser?.rol) rec = { nombre: prevUser.nombre, rol: prevUser.rol };
+        }
         if(rec){
             usuarioActual = { nombre: rec.nombre, rol: rec.rol };
         } else {
-            // Fallback: usar email como nombre si no está en usersDB
+            // Fallback final: usar email como nombre (visible claramente como bug)
             usuarioActual = { nombre: firebaseUser.email, rol: "Tecnico" };
         }
         localStorage.setItem("usuario", JSON.stringify(usuarioActual));
