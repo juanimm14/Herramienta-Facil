@@ -4463,8 +4463,24 @@ const CONFIG_DEFAULTS = {
 // Devuelve la lista de técnicos desde usersDB (Firestore) o el default
 function getTecnicos(){
     let db = getUsersDB();
-    if(db && db.length > 0) return db.filter(u => u.rol !== "Visita").map(u => u.nombre);
-    return CONFIG_DEFAULTS.tecnicos;
+    let fromDB = (db && db.length > 0) ? db.filter(u => u.rol !== "Visita").map(u => u.nombre) : CONFIG_DEFAULTS.tecnicos;
+
+    // También extraer técnicos que aparecen en los datos reales (incidencias, preventivos, tareas)
+    // para no perder registros históricos de técnicos que ya no están en usersDB
+    let fromData = new Set(fromDB);
+    incidencias.forEach(i => { if(i.tecnico && i.tecnico !== "TODOS") fromData.add(i.tecnico); });
+    preventivos.forEach(p => {
+        if(p.tecnico && p.tecnico !== "TODOS") fromData.add(p.tecnico);
+        if(p.tecnico2 && p.tecnico2 !== "TODOS") fromData.add(p.tecnico2);
+    });
+    tareas.forEach(t => {
+        if(t.asignado && !t.asignado.startsWith("__")) fromData.add(t.asignado);
+        if(t.realizadoPor) t.realizadoPor.split(", ").forEach(n => { if(n.trim()) fromData.add(n.trim()); });
+    });
+
+    // Devolver lista sin duplicados, con los de DB primero
+    let extras = [...fromData].filter(n => !fromDB.includes(n));
+    return [...fromDB, ...extras];
 }
 
 const CCB_ISLAS_DEFAULT = CONFIG_DEFAULTS.ccbIslasDefault;
@@ -6045,12 +6061,12 @@ function renderDashboard(){
                 ? t.realizadoPor.split(", ").map(s => s.trim())
                 : (t.asignado ? [t.asignado] : []);
             tecs.forEach(nombre => {
-                if(conteoTareas.hasOwnProperty(nombre)) conteoTareas[nombre]++;
+                if(nombre && !nombre.startsWith("__")) conteoTareas[nombre] = (conteoTareas[nombre]||0) + 1;
             });
         });
-        let tareasCounts = tecnicos
-            .map(t => ({ t, n: conteoTareas[t]||0 }))
-            .filter(x => x.n > 0)
+        let tareasCounts = Object.entries(conteoTareas)
+            .filter(([,n]) => n > 0)
+            .map(([t,n]) => ({t,n}))
             .sort((a,b) => b.n - a.n);
         let maxTareas = tareasCounts.length ? tareasCounts[0].n : 1;
 
@@ -6075,9 +6091,9 @@ function renderDashboard(){
                 ? t.realizadoPor.split(", ").map(s => s.trim())
                 : (t.asignado ? [t.asignado] : []);
             tecs.forEach(nombre => {
-                if(horasPorTec.hasOwnProperty(nombre)){
-                    horasPorTec[nombre] += mins;
-                    cantPorTec[nombre]++;
+                if(nombre && !nombre.startsWith("__")){
+                    horasPorTec[nombre] = (horasPorTec[nombre]||0) + mins;
+                    cantPorTec[nombre]  = (cantPorTec[nombre]||0) + 1;
                 }
             });
         });
@@ -6088,9 +6104,9 @@ function renderDashboard(){
             return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
         }
 
-        let horasData = tecnicos
-            .map(t => ({ t, mins: horasPorTec[t]||0, cant: cantPorTec[t]||0 }))
-            .filter(x => x.mins > 0)
+        let horasData = Object.entries(horasPorTec)
+            .filter(([,mins]) => mins > 0)
+            .map(([t, mins]) => ({ t, mins, cant: cantPorTec[t]||0 }))
             .sort((a,b) => b.mins - a.mins);
         let maxMins = horasData.length ? horasData[0].mins : 1;
 
@@ -6104,9 +6120,9 @@ function renderDashboard(){
             : '<div class="empty-state"><div class="empty-icon">⏱</div><p>Sin datos de duración</p></div>';
 
         // Promedio por tarea
-        let promData = tecnicos
-            .map(t => ({ t, avg: cantPorTec[t] > 0 ? Math.round(horasPorTec[t] / cantPorTec[t]) : 0, cant: cantPorTec[t]||0 }))
-            .filter(x => x.cant > 0)
+        let promData = Object.entries(cantPorTec)
+            .filter(([,cant]) => cant > 0)
+            .map(([t, cant]) => ({ t, avg: Math.round((horasPorTec[t]||0) / cant), cant }))
             .sort((a,b) => b.avg - a.avg);
         let maxAvg = promData.length ? promData[0].avg : 1;
 
@@ -6123,12 +6139,12 @@ function renderDashboard(){
         let prevPorTec = {};
         tecnicos.forEach(t => prevPorTec[t] = 0);
         preventivos.forEach(p => {
-            if(p.tecnico && prevPorTec.hasOwnProperty(p.tecnico)) prevPorTec[p.tecnico]++;
-            if(p.tecnico2 && prevPorTec.hasOwnProperty(p.tecnico2)) prevPorTec[p.tecnico2]++;
+            if(p.tecnico && !p.tecnico.startsWith("__")) prevPorTec[p.tecnico] = (prevPorTec[p.tecnico]||0) + 1;
+            if(p.tecnico2 && !p.tecnico2.startsWith("__")) prevPorTec[p.tecnico2] = (prevPorTec[p.tecnico2]||0) + 1;
         });
-        let prevData = tecnicos
-            .map(t => ({ t, n: prevPorTec[t]||0 }))
-            .filter(x => x.n > 0)
+        let prevData = Object.entries(prevPorTec)
+            .filter(([,n]) => n > 0)
+            .map(([t,n]) => ({t,n}))
             .sort((a,b) => b.n - a.n);
         let maxPrev = prevData.length ? prevData[0].n : 1;
 
