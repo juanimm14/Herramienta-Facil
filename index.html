@@ -4690,7 +4690,7 @@ function esSuperAdmin() {
     return _auth.currentUser?.uid === "KbHZvxoRxQZ75TIEt9DiTkcO4Xl2";
 }
 function esAdminOSuperAdmin() {
-    return esAdminOSuperAdmin() || esSuperAdmin();
+    return usuarioActual?.rol === "Admin" || esSuperAdmin();
 }
 
 function iniciarApp(){
@@ -5738,7 +5738,7 @@ function renderDashboard(){
     let statsAdmin = document.getElementById("statsRowAdmin");
     let statsUser = document.getElementById("statsRowUser");
 
-    if((esAdminOSuperAdmin() || esSuperAdmin()) && statsAdmin){
+    if(esAdminOSuperAdmin() && statsAdmin){
         statsAdmin.style.display = "grid";
         statsAdmin.style.gridTemplateColumns = "repeat(4,1fr)";
         statsAdmin.style.gap = "12px";
@@ -5802,7 +5802,7 @@ function renderDashboard(){
     }
 
     // ── MODO TÉCNICO vs ADMIN ──
-    let esAdmin = esAdminOSuperAdmin() || esSuperAdmin();
+    let esAdmin = esAdminOSuperAdmin();
     let miNombreDash = usuarioActual?.nombre;
 
     // Mostrar/ocultar secciones según rol
