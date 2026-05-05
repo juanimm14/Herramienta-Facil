@@ -5597,23 +5597,36 @@ function renderDashboard(){
         }, 0);
     }
 
-    // Conteo preventivos por cantidad de slots
+    // Conteo preventivos por cantidad de slots — respetando subtipo
+    const PCHK_NO_ISLA_DASH = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]);
     let totalMaqPreventivas = preventivos.reduce((sum, p) => {
-        return sum + calcMaq(getIslasEfectivas(p));
+        let islas = getIslasEfectivas(p);
+        let esPchkNum = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA_DASH.has(p.subTipo);
+        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || esPchkNum){
+            return sum + calcMaq(islas);
+        } else {
+            return sum + islas.length;
+        }
     }, 0);
 
     // Máquinas preventivadas HOY
     let hoyStr = new Date().toISOString().split("T")[0];
     let prevHoy = preventivos.filter(p => p.fecha === hoyStr);
     let maqHoy = prevHoy.reduce((sum, p) => {
-        return sum + calcMaq(getIslasEfectivas(p));
+        let islas = getIslasEfectivas(p);
+        let esPchkNum = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA_DASH.has(p.subTipo);
+        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || esPchkNum){
+            return sum + calcMaq(islas);
+        } else {
+            return sum + islas.length;
+        }
     }, 0);
 
     // Stats — SOLO ADMIN (gráfico) / USUARIO (simple)
     let statsAdmin = document.getElementById("statsRowAdmin");
     let statsUser = document.getElementById("statsRowUser");
 
-    if(usuarioActual?.rol === "Admin" && statsAdmin){
+    if((usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin") && statsAdmin){
         statsAdmin.style.display = "grid";
         statsAdmin.style.gridTemplateColumns = "repeat(4,1fr)";
         statsAdmin.style.gap = "12px";
@@ -5677,7 +5690,7 @@ function renderDashboard(){
     }
 
     // ── MODO TÉCNICO vs ADMIN ──
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
     let miNombreDash = usuarioActual?.nombre;
 
     // Mostrar/ocultar secciones según rol
