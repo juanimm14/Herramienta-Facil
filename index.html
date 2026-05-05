@@ -1091,7 +1091,7 @@ body {
 
 /* DESEMPEÑO BARS */
 .perf-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 13px; }
-.perf-name { width: 90px; color: var(--muted); }
+.perf-name { width: 130px; min-width: 130px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .perf-bar-bg { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
 .perf-bar-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width .6s; }
 .perf-count { width: 28px; text-align: right; font-weight: 600; font-size: 12px; color: var(--accent); }
@@ -6071,7 +6071,7 @@ function renderDashboard(){
         document.getElementById("dashTareasRealizadasTec").innerHTML = tareasCounts.length
             ? tareasCounts.map(x => `
                 <div class="perf-bar-row">
-                    <div class="perf-name">${x.t.split(" ")[0]}</div>
+                    <div class="perf-name">${x.t}</div>
                     <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.n/maxTareas*100)}%;background:#4f8eff;"></div></div>
                     <div class="perf-count" style="color:#4f8eff;">${x.n}</div>
                 </div>`).join("")
@@ -6111,7 +6111,7 @@ function renderDashboard(){
         document.getElementById("dashHorasTecnico").innerHTML = horasData.length
             ? horasData.map(x => `
                 <div class="perf-bar-row">
-                    <div class="perf-name" title="${x.t}">${x.t.split(" ")[0]}</div>
+                    <div class="perf-name" title="${x.t}">${x.t}</div>
                     <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.mins/maxMins*100)}%;background:#ffc947;"></div></div>
                     <div class="perf-count" style="color:#ffc947;width:54px;font-size:11px;">${fmtMins(x.mins)}</div>
                 </div>`).join("")
@@ -6127,7 +6127,7 @@ function renderDashboard(){
         document.getElementById("dashPromedioPorTarea").innerHTML = promData.length
             ? promData.map(x => `
                 <div class="perf-bar-row">
-                    <div class="perf-name" title="${x.t}">${x.t.split(" ")[0]}</div>
+                    <div class="perf-name" title="${x.t}">${x.t}</div>
                     <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.avg/maxAvg*100)}%;background:#4f8eff;"></div></div>
                     <div class="perf-count" style="color:#4f8eff;width:54px;font-size:11px;">${fmtMins(x.avg)}</div>
                 </div>`).join("")
@@ -6149,7 +6149,7 @@ function renderDashboard(){
         document.getElementById("dashPreventivosTecnico").innerHTML = prevData.length
             ? prevData.map(x => `
                 <div class="perf-bar-row">
-                    <div class="perf-name" title="${x.t}">${x.t.split(" ")[0]}</div>
+                    <div class="perf-name" title="${x.t}">${x.t}</div>
                     <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${Math.round(x.n/maxPrev*100)}%;background:#00d4a8;"></div></div>
                     <div class="perf-count" style="color:#00d4a8;">${x.n}</div>
                 </div>`).join("")
@@ -6326,7 +6326,7 @@ function renderDashboard(){
                     <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Por técnico</div>
                     ${tecList.map(([nombre, d]) => `
                         <div class="perf-bar-row">
-                            <div class="perf-name" title="${nombre}">${nombre.split(" ")[0]}</div>
+                            <div class="perf-name" title="${nombre}">${nombre}</div>
                             <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:${maxTecMins > 0 ? Math.round(d.mins/maxTecMins*100) : 0}%;background:${color};"></div></div>
                             <div class="perf-count" style="color:${color};width:60px;font-size:11px;">${d.mins > 0 ? fmtM(d.mins) : "—"} <span style="color:var(--muted);font-size:10px;">(${d.cant})</span></div>
                         </div>`).join("")}
