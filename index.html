@@ -4690,7 +4690,7 @@ function esSuperAdmin() {
     return _auth.currentUser?.uid === "KbHZvxoRxQZ75TIEt9DiTkcO4Xl2";
 }
 function esAdminOSuperAdmin() {
-    return usuarioActual?.rol === "Admin" || esSuperAdmin();
+    return esAdminOSuperAdmin() || esSuperAdmin();
 }
 
 function iniciarApp(){
@@ -4718,14 +4718,14 @@ function iniciarApp(){
 
     // La visibilidad de Admin vs Usuario se maneja en renderDashboard()
 
-    // Botón editar islas solo para Admin
+    // Botón editar islas solo para Admin/SuperAdmin
     let btnEdit = document.getElementById("btnEditarIslasAdmin");
-    if(btnEdit) btnEdit.style.display = usuarioActual.rol === "Admin" ? "flex" : "none";
+    if(btnEdit) btnEdit.style.display = esAdminOSuperAdmin() ? "flex" : "none";
     let btnEditHist = document.getElementById("btnEditarIslasHistorial");
-    if(btnEditHist) btnEditHist.style.display = usuarioActual.rol === "Admin" ? "flex" : "none";
+    if(btnEditHist) btnEditHist.style.display = esAdminOSuperAdmin() ? "flex" : "none";
 
-    // Botones solo para Admin: Editar Kioscos EVA, Editar Contadoras, Enviar a Tareas, Regenerar
-    const _adminDisplay = usuarioActual.rol === "Admin" ? "flex" : "none";
+    // Botones solo para Admin/SuperAdmin: Editar Kioscos EVA, Editar Contadoras, Enviar a Tareas, Regenerar
+    const _adminDisplay = esAdminOSuperAdmin() ? "flex" : "none";
     ["btnEditarKioscosEva","btnEditarContadoras","btnPpEnviarTareas","btnPpRegenerar"].forEach(id => {
         let el = document.getElementById(id);
         if(el) el.style.display = _adminDisplay;
@@ -5653,7 +5653,7 @@ function renderDashboard(){
     if(elSlotsTotal) elSlotsTotal.textContent = totalSlotsNormales;
     if(elKioscos)    elKioscos.textContent    = totalKioscos || "—";
     let infoSlotsEl = document.getElementById("infoSlots");
-    if(infoSlotsEl) infoSlotsEl.style.display = usuarioActual?.rol === "Admin" ? "none" : "flex";
+    if(infoSlotsEl) infoSlotsEl.style.display = esAdminOSuperAdmin() ? "none" : "flex";
 
     // ── FDS EN DASHBOARD ──
     let fdsActivos = fdsData.filter(f => f.estado !== "Habilitado");
@@ -5738,7 +5738,7 @@ function renderDashboard(){
     let statsAdmin = document.getElementById("statsRowAdmin");
     let statsUser = document.getElementById("statsRowUser");
 
-    if(usuarioActual?.rol === "Admin" && statsAdmin){
+    if((esAdminOSuperAdmin() || esSuperAdmin()) && statsAdmin){
         statsAdmin.style.display = "grid";
         statsAdmin.style.gridTemplateColumns = "repeat(4,1fr)";
         statsAdmin.style.gap = "12px";
@@ -5802,7 +5802,7 @@ function renderDashboard(){
     }
 
     // ── MODO TÉCNICO vs ADMIN ──
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = esAdminOSuperAdmin() || esSuperAdmin();
     let miNombreDash = usuarioActual?.nombre;
 
     // Mostrar/ocultar secciones según rol
@@ -6016,7 +6016,7 @@ function renderDashboard(){
     `).join("") : '<div class="empty-state"><p>Sin actividad reciente</p></div>';
 
     // Desempeño (solo Admin)
-    if(usuarioActual?.rol === "Admin"){
+    if(esAdminOSuperAdmin()){
         document.getElementById("boxDesempeno").style.display = "grid";
         document.getElementById("boxHorasPreventivos").style.display = "grid";
         document.getElementById("boxCalificaciones").style.display = "block";
@@ -6431,7 +6431,7 @@ function abrirModalCorrectivo(){
     // Pre-seleccionar técnico logueado
     let selTec = document.getElementById("tecnico");
     if(selTec && usuarioActual?.nombre) selTec.value = usuarioActual.nombre;
-    document.getElementById("grupoRatingCorrectivo").style.display = usuarioActual?.rol === "Admin" ? "block" : "none";
+    document.getElementById("grupoRatingCorrectivo").style.display = esAdminOSuperAdmin() ? "block" : "none";
     document.getElementById("modalCorrectivo").classList.add("open");
 }
 
@@ -6484,7 +6484,7 @@ function editarIncidencia(index){
     document.getElementById("estadoIncidencia").value = estado;
     toggleResolucion();
     loadRating("starCorrectivo", i.rating || 0);
-    document.getElementById("grupoRatingCorrectivo").style.display = usuarioActual?.rol === "Admin" ? "block" : "none";
+    document.getElementById("grupoRatingCorrectivo").style.display = esAdminOSuperAdmin() ? "block" : "none";
     document.getElementById("modalCorrectivo").classList.add("open");
 }
 
@@ -6921,7 +6921,7 @@ function renderTareas(){
 
     // Orden: las tareas del técnico logueado van primero
     function sortMisTareasArriba(lista){
-        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => b.id - a.id);
+        if(esAdminOSuperAdmin()) return lista.sort((a,b) => b.id - a.id);
         return lista.sort((a,b) => {
             let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
             let bMia = b.asignado === usuarioActual?.nombre ? 0 : 1;
@@ -7179,7 +7179,7 @@ function abrirModalLIMPIEZADEISLAS(){
     let selTec = document.getElementById("tecnicoPrev");
     if(selTec && usuarioActual?.nombre) selTec.value = usuarioActual.nombre;
     resetRating("starPrev");
-    document.getElementById("grupoRatingPrev").style.display = usuarioActual?.rol === "Admin" ? "block" : "none";
+    document.getElementById("grupoRatingPrev").style.display = esAdminOSuperAdmin() ? "block" : "none";
     generarIslas();
 }
 function cerrarModalLIMPIEZADEISLAS(){
@@ -7223,7 +7223,7 @@ function abrirVistaIslas(){
     document.getElementById("modalVistaIslas").classList.add("open");
     // Mostrar botón editar islas solo para Admin
     let btn = document.getElementById("btnEditarIslasAdmin");
-    if(btn) btn.style.display = usuarioActual?.rol === "Admin" ? "flex" : "none";
+    if(btn) btn.style.display = esAdminOSuperAdmin() ? "flex" : "none";
     renderIslas();
 }
 function cerrarVistaIslas(){
@@ -7773,11 +7773,11 @@ function abrirModalGenerico(tipo){
     if(selTecGen && usuarioActual?.nombre) selTecGen.value = usuarioActual.nombre;
     document.getElementById("panelEditarEquiposGen").style.display = "none";
     resetRating("starGen");
-    document.getElementById("grupoRatingGen").style.display = usuarioActual?.rol === "Admin" ? "block" : "none";
+    document.getElementById("grupoRatingGen").style.display = esAdminOSuperAdmin() ? "block" : "none";
 
     // Mostrar botón editar solo para Admin y tipos editables
     let editWrap = document.getElementById("btnEditarEquiposWrap");
-    editWrap.style.display = (usuarioActual?.rol === "Admin" && cfg.storageKey) ? "block" : "none";
+    editWrap.style.display = (esAdminOSuperAdmin() && cfg.storageKey) ? "block" : "none";
 
     renderCheckEquiposGen(tipo);
     document.getElementById("modalGenerico").classList.add("open");
@@ -8321,7 +8321,7 @@ function renderEstadosEva(){
             + '</div>'
             + '<div id="eva-estado-'+idx+'" style="display:none;padding:4px 14px 12px;border-top:1px solid var(--border);background:var(--bg3);">'
             + (keys.length ? detalle : '<div style="font-size:13px;color:var(--muted);padding:8px 0;">Sin datos registrados</div>')
-            + (usuarioActual?.rol === "Admin" ? '<div style="margin-top:8px;"><button onclick="eliminarEstadoEva(\''+d.id+'\')" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:7px;padding:4px 12px;cursor:pointer;font-size:12px;">🗑️ Eliminar</button></div>' : "")
+            + (esAdminOSuperAdmin() ? '<div style="margin-top:8px;"><button onclick="eliminarEstadoEva(\''+d.id+'\')" style="background:rgba(255,77,109,.1);border:1px solid var(--red);color:var(--red);border-radius:7px;padding:4px 12px;cursor:pointer;font-size:12px;">🗑️ Eliminar</button></div>' : "")
             + '</div>'
             + '</div>';
     }).join("");
@@ -8398,7 +8398,7 @@ function abrirDetalleEvaIncidencia(id){
         </div></div>`;
     }
 
-    let adminBtns = usuarioActual?.rol === "Admin" ? `
+    let adminBtns = esAdminOSuperAdmin() ? `
         <div style="display:flex;gap:8px;margin-top:14px;">
             <button onclick="if(confirm('¿Eliminar esta incidencia EVA?')){eliminarEvaIncidencia('${e.id}');document.getElementById('modalEvaDetalle').classList.remove('open');}" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;">🗑️ Eliminar</button>
         </div>` : "";
@@ -9095,7 +9095,7 @@ function renderFds(){
             <td><span class="pill ${estadoCls}">${f.estado}</span></td>
             <td>
                 <button onclick="editarFds(${realIdx})" style="background:none;border:none;cursor:pointer;color:var(--accent2);font-size:13px;" title="Editar">✏️</button>
-                ${usuarioActual?.rol === "Admin" ? `<button onclick="eliminarFds(${realIdx})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;" title="Eliminar">🗑️</button>` : ""}
+                ${esAdminOSuperAdmin() ? `<button onclick="eliminarFds(${realIdx})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px;" title="Eliminar">🗑️</button>` : ""}
             </td>
         </tr>`;
     }).join("") || '<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted);">Sin registros FDS</td></tr>';
@@ -9272,13 +9272,13 @@ let cartelEditandoId = null;
 
 function mostrarBotonCartelesAdmin(){
     let btn = document.getElementById("nav-carteles");
-    if(btn && usuarioActual?.rol === "Admin"){
+    if(btn && esAdminOSuperAdmin()){
         btn.style.display = "flex";
     }
     let btnMgi = document.getElementById("nav-mantenimientoIslas");
-    if(btnMgi) btnMgi.style.display = usuarioActual?.rol === "Admin" ? "flex" : "none";
+    if(btnMgi) btnMgi.style.display = esAdminOSuperAdmin() ? "flex" : "none";
     let btnHist = document.getElementById("nav-historialCambios");
-    if(btnHist) btnHist.style.display = usuarioActual?.rol === "Admin" ? "flex" : "none";
+    if(btnHist) btnHist.style.display = esAdminOSuperAdmin() ? "flex" : "none";
     // Botón importar: Admin y SuperAdmin
     let btnImport = document.getElementById("nav-importar");
     if(btnImport) btnImport.style.display = esAdminOSuperAdmin() ? "flex" : "none";
@@ -9623,7 +9623,7 @@ function ppIniciar(){
     document.getElementById("ppVistaMes").style.display = "none";
     // Ocultar botón agregar tarea si no es Admin
     let addRow = document.querySelector(".pp-add-tarea-row");
-    if(addRow) addRow.style.display = usuarioActual?.rol === "Admin" ? "flex" : "none";
+    if(addRow) addRow.style.display = esAdminOSuperAdmin() ? "flex" : "none";
 }
 
 function ppCambiarTab(tab){
@@ -10491,7 +10491,7 @@ ppRenderMes = function(mesIdx){
     }
 
     const PP_IDS_PRIORITARIOS = [3,4,6,7,12,18]; // IDs de tareas a resaltar
-    const esAdmin = usuarioActual?.rol === "Admin";
+    const esAdmin = esAdminOSuperAdmin();
 
     cont.innerHTML = prevs.map((p,i) => {
         let esPrioritaria = PP_IDS_PRIORITARIOS.includes(p.tareaId);
@@ -10942,7 +10942,7 @@ function mgiGuardarStorage(){
 
 // ── Render principal ──────────────────────────────────────
 function mgiRender(){
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = esAdminOSuperAdmin();
 
     let vistaAdmin  = document.getElementById("mgiVistaAdmin");
     let vistaTec    = document.getElementById("mgiVistaTecnico");
@@ -11340,7 +11340,7 @@ function ccbGuardarConfig(){
 
 // ── Abrir modal de configuración (solo Admin) ──────────────
 function ccbAbrirConfigurar(mesKey){
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = esAdminOSuperAdmin();
     if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
 
     document.getElementById("ccbConfMesKey").value = mesKey;
@@ -11414,7 +11414,7 @@ function ccbGuardarConfiguracion(){
 
 // ── Abrir checklist de técnico ─────────────────────────────
 function ccbAbrirChecklist(mesKey){
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = esAdminOSuperAdmin();
 
     // Si no existe cronograma, inicializarlo con la config actual
     if(!ccbCronogramas[mesKey]){
@@ -11641,7 +11641,7 @@ const STACKER_GRUPOS = [
 
 function pchkAbrirConfigurar(mesKey, tid){
     tid = parseInt(tid);
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = esAdminOSuperAdmin();
     if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
     if(typeof PCHK_META === "undefined"){ console.error("[pchk] PCHK_META no definido"); return; }
     let meta = PCHK_META[tid];
@@ -11849,7 +11849,7 @@ function pchkGuardarConfiguracion(){
 
 // ── Abrir checklist técnico ────────────────────────────────
 function pchkAbrirChecklist(mesKey, tid){
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = esAdminOSuperAdmin();
     let cfg     = pchkGetConfig(tid);
     let meta    = PCHK_META[tid];
     if(!meta) return;
@@ -12473,7 +12473,7 @@ function _renderTareasConTurno(){
     }
 
     function sortMisTareasArriba(lista){
-        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => {
+        if(esAdminOSuperAdmin()) return lista.sort((a,b) => {
             // Vencidas primero
             let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
             if(aV !== bV) return aV - bV;
@@ -14816,13 +14816,13 @@ function setTareasSort(key) {
     _actualizarBotonesSort();
     // Mostrar botón guardar solo a admin/superadmin
     let wrap = document.getElementById("sortAdminSaveWrap");
-    if (wrap) wrap.style.display = (esAdminOSuperAdmin?.() || usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin") ? "flex" : "none";
+    if (wrap) wrap.style.display = esAdminOSuperAdmin() ? "flex" : "none";
     renderTareas?.();
 }
 
 // Guardar orden para todos (solo admin)
 function guardarOrdenTareas() {
-    if (!esAdminOSuperAdmin?.() && usuarioActual?.rol !== "Admin" && usuarioActual?.rol !== "SuperAdmin") {
+    if (!esAdminOSuperAdmin()) {
         toast.warning("Sin permiso", "Solo el Admin puede guardar el orden para todos");
         return;
     }
@@ -14902,7 +14902,7 @@ document.addEventListener("DOMContentLoaded", () => {
             _cargarOrdenTareas();
             // Mostrar botón guardar si es admin
             let wrap = document.getElementById("sortAdminSaveWrap");
-            if (wrap && (esAdminOSuperAdmin?.() || usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin")) {
+            if (wrap && esAdminOSuperAdmin()) {
                 // Se mostrará cuando cambie el orden
             }
         };
