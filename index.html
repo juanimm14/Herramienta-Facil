@@ -4377,12 +4377,11 @@ incidencias.forEach(i => {
 localStorage.setItem("incidencias", JSON.stringify(incidencias));
 
 let tareas = JSON.parse(localStorage.getItem("tareas")) || [];
+let tareasFijadas = JSON.parse(localStorage.getItem("tareasFijadas")) || [];
 // Normalizar tareas al nuevo sistema de estados
 tareas.forEach(t => {
     if (!t.estado) t.estado = t.done ? "realizado" : "pendiente";
 });
-
-let tareasFijadas = JSON.parse(localStorage.getItem("tareasFijadas")) || [];
 
 let usuarioActual = JSON.parse(localStorage.getItem("usuario")) || null;
 let indiceEditando = null;
@@ -5599,28 +5598,19 @@ function renderDashboard(){
 
     // Conteo preventivos por cantidad de slots — respetando subtipo
     const PCHK_NO_ISLA_DASH = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]);
-    let totalMaqPreventivas = preventivos.reduce((sum, p) => {
+    function calcMaqPrev(p){
         let islas = getIslasEfectivas(p);
         let esPchkNum = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA_DASH.has(p.subTipo);
-        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || esPchkNum){
-            return sum + calcMaq(islas);
-        } else {
-            return sum + islas.length;
-        }
-    }, 0);
+        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || esPchkNum)
+            return calcMaq(islas);
+        return islas.length;
+    }
+    let totalMaqPreventivas = preventivos.reduce((sum, p) => sum + calcMaqPrev(p), 0);
 
     // Máquinas preventivadas HOY
     let hoyStr = new Date().toISOString().split("T")[0];
     let prevHoy = preventivos.filter(p => p.fecha === hoyStr);
-    let maqHoy = prevHoy.reduce((sum, p) => {
-        let islas = getIslasEfectivas(p);
-        let esPchkNum = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA_DASH.has(p.subTipo);
-        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || esPchkNum){
-            return sum + calcMaq(islas);
-        } else {
-            return sum + islas.length;
-        }
-    }, 0);
+    let maqHoy = prevHoy.reduce((sum, p) => sum + calcMaqPrev(p), 0);
 
     // Stats — SOLO ADMIN (gráfico) / USUARIO (simple)
     let statsAdmin = document.getElementById("statsRowAdmin");
@@ -6648,10 +6638,6 @@ function avanzarTarea(id){
             });
         _localStorageOrig.setItem("tareas",      JSON.stringify(tareas));
         _localStorageOrig.setItem("incidencias", JSON.stringify(incidencias));
-
-        // Auto-desfijar la tarea al completarse
-        let _pinIdx = tareasFijadas.indexOf(id);
-        if(_pinIdx !== -1){ tareasFijadas.splice(_pinIdx, 1); localStorage.setItem("tareasFijadas", JSON.stringify(tareasFijadas)); }
     }
     renderTareas();
     renderDashboard();
@@ -6811,18 +6797,16 @@ function renderTareas(){
         return true;
     }
 
-    // Orden: fijadas primero, luego las del técnico logueado, luego el resto
+    // Orden: fijadas primero, luego las del técnico logueado
     function sortMisTareasArriba(lista){
-        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => {
-            let aFij = tareasFijadas.includes(a.id) ? 0 : 1;
-            let bFij = tareasFijadas.includes(b.id) ? 0 : 1;
-            if(aFij !== bFij) return aFij - bFij;
+        if(usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin") return lista.sort((a,b) => {
+            let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
+            if(aF !== bF) return aF - bF;
             return b.id - a.id;
         });
         return lista.sort((a,b) => {
-            let aFij = tareasFijadas.includes(a.id) ? 0 : 1;
-            let bFij = tareasFijadas.includes(b.id) ? 0 : 1;
-            if(aFij !== bFij) return aFij - bFij;
+            let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
+            if(aF !== bF) return aF - bF;
             let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
             let bMia = b.asignado === usuarioActual?.nombre ? 0 : 1;
             if(aMia !== bMia) return aMia - bMia;
@@ -7015,11 +6999,7 @@ function renderTareas(){
 
         let esMiTarea = esTecnico && t.asignado === miNombre;
         let esFijada = tareasFijadas.includes(t.id);
-        let pinBtn = !esTecnico ? `<button onclick="toggleFijarTarea(${t.id})" title="${esFijada ? 'Desfijar tarea' : 'Fijar tarea arriba'}"
-            style="background:none;border:none;cursor:pointer;font-size:16px;flex-shrink:0;opacity:${esFijada ? '1' : '0.35'};transition:opacity .2s;"
-            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${esFijada ? '1' : '0.35'}'">
-            📌
-        </button>` : "";
+        let pinBtn = !esTecnico ? `<button onclick="toggleFijarTarea(${t.id})" title="${esFijada?'Desfijar':'Fijar arriba'}" style="background:none;border:none;cursor:pointer;font-size:17px;flex-shrink:0;opacity:${esFijada?'1':'0.3'};transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${esFijada?'1':'0.3'}'">📌</button>` : "";
         let fijadaBadge = esFijada ? `<span style="font-size:10px;background:rgba(255,201,71,.18);border:1px solid rgba(255,201,71,.5);color:var(--yellow);padding:1px 7px;border-radius:5px;font-weight:700;">📌 FIJADA</span>` : "";
         return `
         <div class="tarea-row" style="${esFijada ? 'border-color:rgba(255,201,71,.6);box-shadow:0 0 0 1px rgba(255,201,71,.2);' : vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
@@ -7047,7 +7027,7 @@ function renderTareas(){
                 ${pchkInlineHtml}
                 ${acciones}
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
                 ${pinBtn}
                 ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;" title="Eliminar">🗑️</button>` : ""}
             </div>
@@ -7080,7 +7060,7 @@ function reasignarTarea(id, nuevoTecnico){
 }
 
 function toggleFijarTarea(id){
-    if(esVisita && esVisita()) return;
+    if(typeof esVisita === "function" && esVisita()) return;
     let idx = tareasFijadas.indexOf(id);
     if(idx === -1){
         tareasFijadas.push(id);
@@ -10416,7 +10396,7 @@ ppRenderMes = function(mesIdx){
     }
 
     const PP_IDS_PRIORITARIOS = [3,4,6,7,12,18]; // IDs de tareas a resaltar
-    const esAdmin = usuarioActual?.rol === "Admin";
+    const esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
 
     cont.innerHTML = prevs.map((p,i) => {
         let esPrioritaria = PP_IDS_PRIORITARIOS.includes(p.tareaId);
@@ -10867,7 +10847,7 @@ function mgiGuardarStorage(){
 
 // ── Render principal ──────────────────────────────────────
 function mgiRender(){
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
 
     let vistaAdmin  = document.getElementById("mgiVistaAdmin");
     let vistaTec    = document.getElementById("mgiVistaTecnico");
@@ -11265,7 +11245,7 @@ function ccbGuardarConfig(){
 
 // ── Abrir modal de configuración (solo Admin) ──────────────
 function ccbAbrirConfigurar(mesKey){
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
     if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
 
     document.getElementById("ccbConfMesKey").value = mesKey;
@@ -11339,7 +11319,7 @@ function ccbGuardarConfiguracion(){
 
 // ── Abrir checklist de técnico ─────────────────────────────
 function ccbAbrirChecklist(mesKey){
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
 
     // Si no existe cronograma, inicializarlo con la config actual
     if(!ccbCronogramas[mesKey]){
@@ -11566,7 +11546,7 @@ const STACKER_GRUPOS = [
 
 function pchkAbrirConfigurar(mesKey, tid){
     tid = parseInt(tid);
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
     if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
     if(typeof PCHK_META === "undefined"){ console.error("[pchk] PCHK_META no definido"); return; }
     let meta = PCHK_META[tid];
@@ -11774,7 +11754,7 @@ function pchkGuardarConfiguracion(){
 
 // ── Abrir checklist técnico ────────────────────────────────
 function pchkAbrirChecklist(mesKey, tid){
-    let esAdmin = usuarioActual?.rol === "Admin";
+    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
     let cfg     = pchkGetConfig(tid);
     let meta    = PCHK_META[tid];
     if(!meta) return;
@@ -12398,20 +12378,16 @@ function _renderTareasConTurno(){
     }
 
     function sortMisTareasArriba(lista){
-        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => {
-            // Fijadas primero
-            let aFij = tareasFijadas.includes(a.id) ? 0 : 1;
-            let bFij = tareasFijadas.includes(b.id) ? 0 : 1;
-            if(aFij !== bFij) return aFij - bFij;
-            // Vencidas primero
+        if(usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin") return lista.sort((a,b) => {
+            let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
+            if(aF !== bF) return aF - bF;
             let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
             if(aV !== bV) return aV - bV;
             return b.id - a.id;
         });
         return lista.sort((a,b) => {
-            let aFij = tareasFijadas.includes(a.id) ? 0 : 1;
-            let bFij = tareasFijadas.includes(b.id) ? 0 : 1;
-            if(aFij !== bFij) return aFij - bFij;
+            let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
+            if(aF !== bF) return aF - bF;
             let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
             if(aV !== bV) return aV - bV;
             let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
@@ -12550,11 +12526,7 @@ function _renderTareasConTurno(){
 
         let esMiTarea = esTecnico && t.asignado === miNombre;
         let esFijada = tareasFijadas.includes(t.id);
-        let pinBtn = !esTecnico ? `<button onclick="toggleFijarTarea(${t.id})" title="${esFijada ? 'Desfijar tarea' : 'Fijar tarea arriba'}"
-            style="background:none;border:none;cursor:pointer;font-size:16px;flex-shrink:0;opacity:${esFijada ? '1' : '0.35'};transition:opacity .2s;"
-            onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${esFijada ? '1' : '0.35'}'">
-            📌
-        </button>` : "";
+        let pinBtn = !esTecnico ? `<button onclick="toggleFijarTarea(${t.id})" title="${esFijada?'Desfijar':'Fijar arriba'}" style="background:none;border:none;cursor:pointer;font-size:17px;flex-shrink:0;opacity:${esFijada?'1':'0.3'};transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${esFijada?'1':'0.3'}'">📌</button>` : "";
         let fijadaBadge = esFijada ? `<span style="font-size:10px;background:rgba(255,201,71,.18);border:1px solid rgba(255,201,71,.5);color:var(--yellow);padding:1px 7px;border-radius:5px;font-weight:700;">📌 FIJADA</span>` : "";
         return `<div class="tarea-row" style="${esFijada ? 'border-color:rgba(255,201,71,.6);box-shadow:0 0 0 1px rgba(255,201,71,.2);' : vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
             <div class="item-main" style="width:100%">
@@ -12574,7 +12546,7 @@ function _renderTareasConTurno(){
                 ${pchkInlineHtml}
                 ${acciones}
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
                 ${pinBtn}
                 ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;" title="Eliminar">🗑️</button>` : ""}
             </div>
@@ -12852,11 +12824,10 @@ function confirmarQuienRealizoMulti(){
 
     document.getElementById("modalQuienRealizoMulti").classList.remove("open");
     cerrarModalTareaDetalle();
+    // Auto-desfijar al completar
+    let _pi = tareasFijadas.indexOf(id);
+    if(_pi !== -1){ tareasFijadas.splice(_pi,1); localStorage.setItem("tareasFijadas", JSON.stringify(tareasFijadas)); }
     _qrTareaId = null;
-
-    // Auto-desfijar la tarea al completarse
-    let _pinIdx = tareasFijadas.indexOf(id);
-    if(_pinIdx !== -1){ tareasFijadas.splice(_pinIdx, 1); localStorage.setItem("tareasFijadas", JSON.stringify(tareasFijadas)); }
 
     renderTareas?.();
     renderDashboard?.();
@@ -14798,16 +14769,14 @@ function _actualizarBotonesSort() {
     });
 }
 
-// Aplicar orden a una lista de tareas (las fijadas siempre van primero)
+// Aplicar orden a una lista de tareas (fijadas siempre arriba)
 function _aplicarOrdenTareas(lista) {
-    if (!_tareasSort.key) return lista; // sin orden: mantener como viene
+    if (!_tareasSort.key) return lista;
     let key = _tareasSort.key;
     let dir = _tareasSort.dir;
     return [...lista].sort((a, b) => {
-        // Fijadas siempre arriba
-        let aFij = tareasFijadas.includes(a.id) ? 0 : 1;
-        let bFij = tareasFijadas.includes(b.id) ? 0 : 1;
-        if(aFij !== bFij) return aFij - bFij;
+        let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
+        if(aF !== bF) return aF - bF;
         let va, vb;
         if (key === "prioridad") {
             va = _PRIO_ORDER[a.prioridad] ?? 9;
