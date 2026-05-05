@@ -5580,7 +5580,7 @@ function renderDashboard(){
     // Helper: obtener islas efectivas de un preventivo (con fallback desde nota para registros viejos)
     function getIslasEfectivas(p){
         let islas = (p.islas && p.islas.length > 0) ? p.islas : [];
-        if(islas.length === 0 && p.nota){
+        if(islas.length === 0 && (p.subTipo === "plan" || p.subTipo === "mantenimiento-islas") && p.nota){
             let match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
             if(match) islas = match[1].split(",").map(s => s.trim()).filter(Boolean);
         }
@@ -5589,20 +5589,35 @@ function renderDashboard(){
     function calcMaq(islasArr){
         return islasArr.reduce((s, islaId) => {
             let isla = islasActivas.find(il => il.id === parseInt(islaId));
-            return s + (isla ? isla.slots : 0);
+            return s + (isla ? isla.slots : 1);
         }, 0);
     }
 
-    // Conteo preventivos por cantidad de slots
+    // Conteo preventivos por cantidad de slots — respetando subtipo
+    const PCHK_NO_ISLA_DASH = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]);
     let totalMaqPreventivas = preventivos.reduce((sum, p) => {
-        return sum + calcMaq(getIslasEfectivas(p));
+        let islas = getIslasEfectivas(p);
+        let esPchkNum = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA_DASH.has(p.subTipo);
+        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || esPchkNum){
+            // Preventivos de islas: contar slots reales
+            return sum + calcMaq(islas);
+        } else {
+            // Preventivos de equipos (stacker, chipper, etc): contar cantidad de equipos
+            return sum + islas.length;
+        }
     }, 0);
 
     // Máquinas preventivadas HOY
     let hoyStr = new Date().toISOString().split("T")[0];
     let prevHoy = preventivos.filter(p => p.fecha === hoyStr);
     let maqHoy = prevHoy.reduce((sum, p) => {
-        return sum + calcMaq(getIslasEfectivas(p));
+        let islas = getIslasEfectivas(p);
+        let esPchkNum = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA_DASH.has(p.subTipo);
+        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || esPchkNum){
+            return sum + calcMaq(islas);
+        } else {
+            return sum + islas.length;
+        }
     }, 0);
 
     // Stats — SOLO ADMIN (gráfico) / USUARIO (simple)
