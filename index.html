@@ -2798,7 +2798,7 @@ body {
                             <span id="ppMesTitulo">Preventivos del mes</span>
                             <div style="display:flex;gap:8px;align-items:center;">
                                 <span class="badge-count" id="ppBadgeMes">0</span>
-                                <button id="btnPpEnviarTareas" class="btn-primary" onclick="ppEnviarATareas()" style="font-size:12px;padding:6px 14px;background:var(--accent);display:none;" title="Crea una tarea pendiente por cada preventivo no realizado">📋 Enviar a Tareas</button>
+                                <button id="btnPpEnviarTareas" class="btn-primary" onclick="ppAbrirModalEnviarTareas()" style="font-size:12px;padding:6px 14px;background:var(--accent);display:none;" title="Seleccioná qué preventivos enviar a Tareas">📋 Enviar a Tareas</button>
                                 <button id="btnPpRegenerar" class="btn-primary blue" onclick="ppGenerarMes()" style="font-size:12px;padding:6px 12px;display:none;">⚡ Regenerar</button>
                             </div>
                         </div>
@@ -3050,7 +3050,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.2.0</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.3.0</span>
         </div>
 
         </div><!-- /main -->
@@ -15492,6 +15492,232 @@ async function generarExcelCompleto(){
     } finally {
         btn.disabled=false; btn.textContent="📥 Generar Excel";
     }
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL: Selección de preventivos para enviar a Tareas
+     ══════════════════════════════════════════════════════ -->
+<div id="modalEnviarPP" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:28px 26px 22px;width:min(520px,96vw);max-height:80vh;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 60px rgba(0,0,0,.5);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div>
+                <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--white);letter-spacing:.5px;">📋 Enviar preventivos a Tareas</div>
+                <div id="ppModalSubtitulo" style="font-size:12px;color:var(--muted);margin-top:2px;"></div>
+            </div>
+            <button onclick="ppCerrarModalEnviar()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;line-height:1;" title="Cerrar">✕</button>
+        </div>
+
+        <!-- Barra seleccionar todos -->
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:9px 14px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);font-weight:600;">
+                <input type="checkbox" id="ppChkTodos" onchange="ppToggleTodosChk(this.checked)"
+                    style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+                Seleccionar todos
+            </label>
+            <span id="ppModalContador" style="font-size:12px;color:var(--muted);">0 seleccionados</span>
+        </div>
+
+        <!-- Lista scrolleable -->
+        <div id="ppModalLista" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:7px;padding-right:4px;min-height:80px;max-height:380px;"></div>
+
+        <!-- Footer botones -->
+        <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border);">
+            <button onclick="ppCerrarModalEnviar()" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:9px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;">Cancelar</button>
+            <button id="ppBtnConfirmarEnvio" onclick="ppConfirmarEnvioSeleccionado()"
+                style="background:var(--accent);border:none;color:#000;border-radius:9px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;">
+                ✅ Enviar seleccionados
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Modal Enviar Preventivos a Tareas (selección parcial) ─────
+let _ppModalPendientes = [];  // array de items pendientes para el modal
+
+function ppAbrirModalEnviarTareas(){
+    if(esVisita()) return;
+    if(ppTabActivo === "todos") return;
+
+    let mesKey = `${new Date().getFullYear()}-${ppTabActivo}`;
+    let prevs   = ppPreventivos[mesKey] || [];
+    let pendientes = prevs.filter(p => p.estado !== "realizado");
+
+    if(pendientes.length === 0){
+        toast.info("Sin preventivos pendientes", "Todos los preventivos de este mes ya están realizados.");
+        return;
+    }
+
+    let yaEnviados = tareas.filter(t => t._ppMesKey === mesKey).map(t => t._ppTareaId + (t._ppDia ? `-dia${t._ppDia}` : ""));
+    let mesNombre  = PP_MESES[ppTabActivo];
+
+    // Construir lista de items enviables
+    _ppModalPendientes = [];
+    pendientes.forEach(p => {
+        if(MGI_IDS && MGI_IDS.has(p.tareaId)){
+            let key  = mgiGetKey(p.tareaId, mesKey);
+            let cron = mgiCronogramas[key];
+            let label = (typeof MGI_LABELS !== "undefined" && MGI_LABELS[p.tareaId]) || p.nombre;
+            if(cron && cron.dias && cron.dias.length > 0){
+                cron.dias.forEach(d => {
+                    let keyDia = `${p.tareaId}-dia${d.dia}`;
+                    let enviado = yaEnviados.includes(keyDia);
+                    let islasTexto = d.islas && d.islas.length > 0 ? `Islas: ${d.islas.join(", ")}` : "Sin islas asignadas";
+                    _ppModalPendientes.push({
+                        uid: keyDia, label: `${label} — Día ${d.dia}`, sub: islasTexto,
+                        tecnico: d.tecnico, fecha: d.fecha, tareaId: p.tareaId, dia: d.dia, islas: d.islas,
+                        enviado, _tipo:"mgi", _p:p, _d:d, _mesKey:mesKey, _mesNombre:mesNombre
+                    });
+                });
+            } else {
+                let keyGen = `${p.tareaId}`;
+                let enviado = yaEnviados.includes(keyGen);
+                _ppModalPendientes.push({
+                    uid: keyGen, label: label, sub: "Sin cronograma de días",
+                    tecnico: p.tecnico, tareaId: p.tareaId, enviado,
+                    _tipo:"mgi_gen", _p:p, _mesKey:mesKey, _mesNombre:mesNombre
+                });
+            }
+        } else {
+            let keyGen = `${p.tareaId}`;
+            let enviado = yaEnviados.includes(keyGen);
+            let tecnicoLabel = p.tecnico && p.tecnico !== "TODOS" ? p.tecnico : "Sin asignar";
+            _ppModalPendientes.push({
+                uid: keyGen, label: p.nombre, sub: `Técnico: ${tecnicoLabel}`,
+                tecnico: p.tecnico, tareaId: p.tareaId, enviado,
+                _tipo:"normal", _p:p, _mesKey:mesKey, _mesNombre:mesNombre
+            });
+        }
+    });
+
+    // Render lista
+    document.getElementById("ppModalSubtitulo").textContent = `${mesNombre} ${new Date().getFullYear()} · ${_ppModalPendientes.length} preventivo${_ppModalPendientes.length!==1?"s":""} pendiente${_ppModalPendientes.length!==1?"s":""}`;
+    ppModalRenderLista();
+
+    document.getElementById("modalEnviarPP").style.display = "flex";
+}
+
+function ppModalRenderLista(){
+    let cont = document.getElementById("ppModalLista");
+    if(_ppModalPendientes.length === 0){
+        cont.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:24px 0;">No hay preventivos pendientes para enviar.</div>';
+        return;
+    }
+    cont.innerHTML = _ppModalPendientes.map((item, idx) => {
+        let badgeHtml = item.enviado
+            ? `<span style="font-size:10px;background:rgba(255,196,71,.12);color:#ffc447;border:1px solid rgba(255,196,71,.3);border-radius:5px;padding:1px 7px;white-space:nowrap;">ya enviado</span>`
+            : "";
+        let chkDisabled = item.enviado ? "disabled" : "";
+        let chkChecked  = item.enviado ? "" : "checked";
+        let opacity     = item.enviado ? "opacity:.5;" : "";
+        return `
+        <label style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 13px;cursor:${item.enviado?'default':'pointer'};${opacity}">
+            <input type="checkbox" data-idx="${idx}" class="ppItemChk" ${chkChecked} ${chkDisabled}
+                onchange="ppModalActualizarContador()"
+                style="width:16px;height:16px;accent-color:var(--accent);cursor:${item.enviado?'default':'pointer'};flex-shrink:0;">
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.label}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:1px;">${item.sub}</div>
+            </div>
+            ${badgeHtml}
+        </label>`;
+    }).join("");
+    ppModalActualizarContador();
+}
+
+function ppModalActualizarContador(){
+    let chks = document.querySelectorAll(".ppItemChk:not(:disabled)");
+    let sel  = Array.from(chks).filter(c => c.checked).length;
+    document.getElementById("ppModalContador").textContent = `${sel} seleccionado${sel!==1?"s":""}`;
+    // Sincronizar "todos"
+    let total = chks.length;
+    let chkTodos = document.getElementById("ppChkTodos");
+    if(chkTodos) chkTodos.checked = total > 0 && sel === total;
+    document.getElementById("ppBtnConfirmarEnvio").disabled = sel === 0;
+    document.getElementById("ppBtnConfirmarEnvio").style.opacity = sel === 0 ? ".45" : "1";
+}
+
+function ppToggleTodosChk(val){
+    document.querySelectorAll(".ppItemChk:not(:disabled)").forEach(c => c.checked = val);
+    ppModalActualizarContador();
+}
+
+function ppCerrarModalEnviar(){
+    document.getElementById("modalEnviarPP").style.display = "none";
+    _ppModalPendientes = [];
+}
+
+function ppConfirmarEnvioSeleccionado(){
+    if(esVisita()) return;
+    let seleccionados = Array.from(document.querySelectorAll(".ppItemChk:not(:disabled)"))
+        .map((c, i) => c.checked ? _ppModalPendientes[parseInt(c.dataset.idx)] : null)
+        .filter(Boolean);
+
+    if(seleccionados.length === 0){
+        toast.warning("Nada seleccionado", "Marcá al menos un preventivo para enviar.");
+        return;
+    }
+
+    let ahora = Date.now();
+    let anio  = new Date().getFullYear();
+    let fechaHoy = new Date().toISOString().split("T")[0];
+    let nuevasCreadas = 0;
+
+    seleccionados.forEach((item, i) => {
+        let p = item._p;
+        let mesKey = item._mesKey;
+        let mesNombre = item._mesNombre;
+        let tecnico = (item.tecnico && item.tecnico !== "TODOS") ? item.tecnico : "Juan";
+
+        if(item._tipo === "mgi"){
+            let d = item._d;
+            let label = (typeof MGI_LABELS !== "undefined" && MGI_LABELS[p.tareaId]) || p.nombre;
+            let islasTexto = d.islas && d.islas.length > 0 ? `Islas: ${d.islas.join(", ")}` : "Sin islas asignadas";
+            tareas.push({
+                id: ahora + i * 100,
+                desc: `[${label} ${mesNombre}] Día ${d.dia} · ${islasTexto}`,
+                asignado: d.tecnico || "Juan",
+                prioridad: "alta",
+                fecha: d.fecha || fechaHoy,
+                notas: `${label} — ${mesNombre} ${anio}. ${islasTexto}.`,
+                estado: "pendiente", done: false,
+                creadoEn: ahora + i * 100, iniciadoEn: null, finalizadoEn: null,
+                _ppMesKey: mesKey, _ppTareaId: p.tareaId,
+                _ppDia: d.dia, _ppIslas: d.islas, _ppMesNombre: mesNombre, _ppAnio: anio
+            });
+        } else if(item._tipo === "mgi_gen"){
+            let label = (typeof MGI_LABELS !== "undefined" && MGI_LABELS[p.tareaId]) || p.nombre;
+            tareas.push({
+                id: ahora + i,
+                desc: `[Prev ${mesNombre}] ${label}`,
+                asignado: tecnico, prioridad: "alta", fecha: fechaHoy,
+                notas: `Preventivo de ${mesNombre} ${anio}. Programá el cronograma en Plan Preventivo.`,
+                estado: "pendiente", done: false,
+                creadoEn: ahora + i, iniciadoEn: null, finalizadoEn: null,
+                _ppMesKey: mesKey, _ppTareaId: p.tareaId, _ppMesNombre: mesNombre, _ppAnio: anio
+            });
+        } else {
+            tareas.push({
+                id: ahora + i,
+                desc: `[Prev ${mesNombre}] ${p.nombre}`,
+                asignado: tecnico, prioridad: "media", fecha: fechaHoy,
+                notas: `Preventivo de ${mesNombre} ${anio}. Generado desde Plan de Mantenimiento.`,
+                estado: "pendiente", done: false,
+                creadoEn: ahora + i, iniciadoEn: null, finalizadoEn: null,
+                _ppMesKey: mesKey, _ppTareaId: p.tareaId, _ppMesNombre: mesNombre, _ppAnio: anio
+            });
+        }
+        nuevasCreadas++;
+    });
+
+    localStorage.setItem("tareas", JSON.stringify(tareas));
+    renderTareas();
+    ppCerrarModalEnviar();
+    toast.success(
+        `${nuevasCreadas} tarea${nuevasCreadas>1?"s":""} creada${nuevasCreadas>1?"s":""}`,
+        `${nuevasCreadas} preventivo${nuevasCreadas>1?"s":""} enviado${nuevasCreadas>1?"s":""} a Tareas Pendientes.`
+    );
 }
 </script>
 
