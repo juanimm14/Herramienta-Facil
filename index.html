@@ -5580,7 +5580,7 @@ function renderDashboard(){
     // Helper: obtener islas efectivas de un preventivo (con fallback desde nota para registros viejos)
     function getIslasEfectivas(p){
         let islas = (p.islas && p.islas.length > 0) ? p.islas : [];
-        if(islas.length === 0 && (p.subTipo === "plan" || p.subTipo === "mantenimiento-islas") && p.nota){
+        if(islas.length === 0 && p.nota){
             let match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
             if(match) islas = match[1].split(",").map(s => s.trim()).filter(Boolean);
         }
@@ -5589,7 +5589,7 @@ function renderDashboard(){
     function calcMaq(islasArr){
         return islasArr.reduce((s, islaId) => {
             let isla = islasActivas.find(il => il.id === parseInt(islaId));
-            return s + (isla ? isla.slots : 1);
+            return s + (isla ? isla.slots : 0);
         }, 0);
     }
 
