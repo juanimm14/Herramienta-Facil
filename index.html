@@ -127,7 +127,7 @@ const _FB_KEYS = new Set([
     "eventosConfig","eventosGenerados",
     "eventosUnicos",
     "tareasOrden",
-    "tareasFijadas"
+    "partesCriticas"
 ]);
 
 localStorage.setItem = function(clave, valor) {
@@ -192,7 +192,7 @@ function _sincronizarVariables() {
         if (_cache["eventosConfig"]    !== undefined) eventosConfig    = _cache["eventosConfig"]    ?? [];
         if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
         if (_cache["eventosUnicos"]    !== undefined) eventosUnicos    = _cache["eventosUnicos"]    ?? [];
-        if (_cache["tareasFijadas"]    !== undefined) tareasFijadas    = _cache["tareasFijadas"]    ?? [];
+        if (_cache["partesCriticas"]   !== undefined) partesCriticas   = _cache["partesCriticas"]   ?? [];
         if (_cache["sidebarConfig"]    !== undefined) {
             _sidebarConfig = _cache["sidebarConfig"];
             if (document.getElementById("app")?.style.display !== "none") {
@@ -249,6 +249,7 @@ function _activarListenersTiempoReal() {
             poblarSelectsTecnicos?.();
             cargarAniosPrev?.();
             renderIncidenciasPreventivos?.();
+            renderPartesCriticas?.();
         }
     };
 
@@ -1903,6 +1904,9 @@ body {
             </button>
 
             <div class="sidebar-section" style="margin-top:4px;">📌 Gestión</div>
+            <button class="menu-btn" id="nav-partes-criticas" onclick="mostrar('partes-criticas')">
+                <span class="icon">🚨</span> Partes Críticas
+            </button>
             <button class="menu-btn" id="nav-carteles" onclick="mostrar('carteles')" style="display:none;">
                 <span class="icon">📌</span> Carteles
             </button>
@@ -2745,6 +2749,126 @@ body {
                 </div>
             </div>
 
+            <!-- ═══ PARTES CRÍTICAS ═══ -->
+            <div id="partes-criticas" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🚨 Pedidos de Partes Críticas</div>
+                        <div class="page-subtitle">Seguimiento de pedidos de repuestos e insumos críticos</div>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn-primary" onclick="abrirModalNuevaParte()">➕ Nuevo Pedido</button>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label>Estado</label>
+                        <select id="filtroPcEstado" onchange="renderPartesCriticas()">
+                            <option value="todos">Todos</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Recibido">Recibido</option>
+                        </select>
+                    </div>
+                    <div class="filter-group search-input-wrap" style="margin-top:auto;">
+                        <label style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">Buscar</label>
+                        <input type="text" id="filtroPcBuscar" placeholder="Insumo, isla, destino..." oninput="renderPartesCriticas()"
+                            style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;outline:none;transition:border-color .2s;width:220px;">
+                    </div>
+                </div>
+
+                <!-- Stats rápidas -->
+                <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+                    <div class="stat-card yellow">
+                        <div class="stat-label">Pendientes</div>
+                        <div class="stat-value" id="pcStatPendiente">0</div>
+                        <div class="stat-meta">En espera de recepción</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-label">Recibidos</div>
+                        <div class="stat-value" id="pcStatRecibido">0</div>
+                        <div class="stat-meta">Partes confirmadas</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-label">Total</div>
+                        <div class="stat-value" id="pcStatTotal">0</div>
+                        <div class="stat-meta">Todos los pedidos</div>
+                    </div>
+                </div>
+
+                <!-- Tabla -->
+                <div class="card-box" style="padding:0;overflow:hidden;">
+                    <div style="overflow-x:auto;">
+                        <table class="data-table" id="tablaPartesCriticas">
+                            <thead>
+                                <tr>
+                                    <th>Cant.</th>
+                                    <th>Insumo</th>
+                                    <th>Fecha Pedido</th>
+                                    <th>Destino</th>
+                                    <th>Isla</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Recibido</th>
+                                    <th>Observaciones</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyPartesCriticas">
+                                <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted);">Sin pedidos registrados</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ MODAL NUEVA PARTE CRÍTICA ═══ -->
+            <div id="modalNuevaParte" class="modal">
+                <div class="modal-box" style="max-width:520px;width:95%;">
+                    <div class="modal-title">🚨 <span id="tituloModalParte">Nuevo Pedido</span></div>
+                    <input type="hidden" id="pcEditandoId">
+                    <div class="form-group">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" id="pcCantidad" class="form-input" min="1" value="1" placeholder="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Insumo / Parte</label>
+                        <input type="text" id="pcInsumo" class="form-input" placeholder="Ej: Placa main para TV Samsung">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Pedido</label>
+                        <input type="date" id="pcFechaPedido" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Destino (N° pedido/remito)</label>
+                        <input type="text" id="pcDestino" class="form-input" placeholder="Ej: 1712">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Isla</label>
+                        <input type="text" id="pcIsla" class="form-input" placeholder="Ej: 220">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Observaciones</label>
+                        <textarea id="pcObservaciones" class="form-textarea" placeholder="PN, notas, detalles adicionales..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estado</label>
+                        <select id="pcEstado" class="form-select" onchange="pcToggleFechaRecibido()">
+                            <option value="Pendiente">⏳ Pendiente</option>
+                            <option value="Recibido">✅ Recibido</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="pcFechaRecibidoGrp" style="display:none;">
+                        <label class="form-label">Fecha Recibido</label>
+                        <input type="date" id="pcFechaRecibido" class="form-input">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-modal-save" onclick="guardarParte()">💾 Guardar</button>
+                        <button class="btn-modal-cancel" onclick="cerrarModalParte()">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ═══ PLAN PREVENTIVO ═══ -->
             <div id="plan-preventivo" class="section">
                 <div class="page-header">
@@ -3052,7 +3176,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.3.0</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.4.0</span>
         </div>
 
         </div><!-- /main -->
@@ -4377,7 +4501,6 @@ incidencias.forEach(i => {
 localStorage.setItem("incidencias", JSON.stringify(incidencias));
 
 let tareas = JSON.parse(localStorage.getItem("tareas")) || [];
-let tareasFijadas = JSON.parse(localStorage.getItem("tareasFijadas")) || [];
 // Normalizar tareas al nuevo sistema de estados
 tareas.forEach(t => {
     if (!t.estado) t.estado = t.done ? "realizado" : "pendiente";
@@ -4660,6 +4783,7 @@ function iniciarApp(){
     renderCorrectivos();
     renderTareas();
     mostrarAlertas();
+    try { renderPartesCriticas?.(); } catch(e) {}
     // Auto-generar tareas de eventos cronograma al inicio del día
     setTimeout(() => { try { cronogramaEventosAutoInit?.(); } catch(e){} }, 3000);
 }
@@ -4691,6 +4815,7 @@ const SIDEBAR_ITEMS_CONFIG = [
     { id: "nav-kioscos-eva",      label: "🎫 Kioscos EVA",           group: "Otros Equipos" },
     { id: "nav-contadoras",       label: "🔢 Contadoras",            group: "Otros Equipos" },
     { id: "nav-plan-preventivo",  label: "📅 Plan Preventivo",       group: "Gestión" },
+    { id: "nav-partes-criticas",  label: "🚨 Partes Críticas",        group: "Gestión" },
 ];
 
 let _sidebarConfig = null; // { [navId]: true/false }
@@ -5490,6 +5615,7 @@ function mostrar(sec){
     if(sec === 'control-ppt') initPpt();
     if(sec === 'carteles') renderCartelesAdmin();
     if(sec === 'plan-preventivo') ppIniciar();
+    if(sec === 'partes-criticas') renderPartesCriticas();
     if(sec === 'cronograma-eventos') {
         let acciones = document.getElementById("cronogramaEventosAcciones");
         if(acciones) acciones.style.display = esAdminOSuperAdmin() ? "flex" : "none";
@@ -5596,27 +5722,23 @@ function renderDashboard(){
         }, 0);
     }
 
-    // Conteo preventivos por cantidad de slots — respetando subtipo
-    const PCHK_NO_ISLA_DASH = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]);
-    function calcMaqPrev(p){
-        let islas = getIslasEfectivas(p);
-        let esPchkNum = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA_DASH.has(p.subTipo);
-        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || esPchkNum)
-            return calcMaq(islas);
-        return islas.length;
-    }
-    let totalMaqPreventivas = preventivos.reduce((sum, p) => sum + calcMaqPrev(p), 0);
+    // Conteo preventivos por cantidad de slots
+    let totalMaqPreventivas = preventivos.reduce((sum, p) => {
+        return sum + calcMaq(getIslasEfectivas(p));
+    }, 0);
 
     // Máquinas preventivadas HOY
     let hoyStr = new Date().toISOString().split("T")[0];
     let prevHoy = preventivos.filter(p => p.fecha === hoyStr);
-    let maqHoy = prevHoy.reduce((sum, p) => sum + calcMaqPrev(p), 0);
+    let maqHoy = prevHoy.reduce((sum, p) => {
+        return sum + calcMaq(getIslasEfectivas(p));
+    }, 0);
 
     // Stats — SOLO ADMIN (gráfico) / USUARIO (simple)
     let statsAdmin = document.getElementById("statsRowAdmin");
     let statsUser = document.getElementById("statsRowUser");
 
-    if((usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin") && statsAdmin){
+    if(usuarioActual?.rol === "Admin" && statsAdmin){
         statsAdmin.style.display = "grid";
         statsAdmin.style.gridTemplateColumns = "repeat(4,1fr)";
         statsAdmin.style.gap = "12px";
@@ -5680,7 +5802,7 @@ function renderDashboard(){
     }
 
     // ── MODO TÉCNICO vs ADMIN ──
-    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
+    let esAdmin = usuarioActual?.rol === "Admin";
     let miNombreDash = usuarioActual?.nombre;
 
     // Mostrar/ocultar secciones según rol
@@ -6797,16 +6919,10 @@ function renderTareas(){
         return true;
     }
 
-    // Orden: fijadas primero, luego las del técnico logueado
+    // Orden: las tareas del técnico logueado van primero
     function sortMisTareasArriba(lista){
-        if(usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin") return lista.sort((a,b) => {
-            let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
-            if(aF !== bF) return aF - bF;
-            return b.id - a.id;
-        });
+        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => b.id - a.id);
         return lista.sort((a,b) => {
-            let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
-            if(aF !== bF) return aF - bF;
             let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
             let bMia = b.asignado === usuarioActual?.nombre ? 0 : 1;
             if(aMia !== bMia) return aMia - bMia;
@@ -6998,16 +7114,12 @@ function renderTareas(){
             </div>` : "";
 
         let esMiTarea = esTecnico && t.asignado === miNombre;
-        let esFijada = tareasFijadas.includes(t.id);
-        let pinBtn = !esTecnico ? `<button onclick="toggleFijarTarea(${t.id})" title="${esFijada?'Desfijar':'Fijar arriba'}" style="background:none;border:none;cursor:pointer;font-size:17px;flex-shrink:0;opacity:${esFijada?'1':'0.3'};transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${esFijada?'1':'0.3'}'">📌</button>` : "";
-        let fijadaBadge = esFijada ? `<span style="font-size:10px;background:rgba(255,201,71,.18);border:1px solid rgba(255,201,71,.5);color:var(--yellow);padding:1px 7px;border-radius:5px;font-weight:700;">📌 FIJADA</span>` : "";
         return `
-        <div class="tarea-row" style="${esFijada ? 'border-color:rgba(255,201,71,.6);box-shadow:0 0 0 1px rgba(255,201,71,.2);' : vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
+        <div class="tarea-row" style="${vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
             <div class="item-main" style="width:100%">
                 <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
                     <div class="tarea-text ${t.estado==="realizado"?"done-text":""}" style="flex:1;">${t.desc}</div>
                     <div style="display:flex;gap:6px;align-items:center;">
-                        ${fijadaBadge}
                         ${miTareaBadge}
                         ${vencida ? '<span style="font-size:10px;background:rgba(255,50,50,.2);border:1px solid rgba(255,80,80,.5);color:#ff6b6b;padding:1px 7px;border-radius:5px;font-weight:700;">🔴 VENCIDA</span>' : ''}
                         ${tipoBadge}
@@ -7027,10 +7139,7 @@ function renderTareas(){
                 ${pchkInlineHtml}
                 ${acciones}
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
-                ${pinBtn}
-                ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;" title="Eliminar">🗑️</button>` : ""}
-            </div>
+            ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
         </div>`;
     }
 
@@ -7057,20 +7166,6 @@ function reasignarTarea(id, nuevoTecnico){
     localStorage.setItem("tareas", JSON.stringify(tareas));
     renderDashboard();
     toast.info("Reasignada", `Tarea asignada a ${nuevoTecnico}`);
-}
-
-function toggleFijarTarea(id){
-    if(typeof esVisita === "function" && esVisita()) return;
-    let idx = tareasFijadas.indexOf(id);
-    if(idx === -1){
-        tareasFijadas.push(id);
-        toast.success("Tarea fijada 📌", "Quedará siempre arriba hasta completarse");
-    } else {
-        tareasFijadas.splice(idx, 1);
-        toast.info("Tarea desfijada", "Volvió al orden normal");
-    }
-    localStorage.setItem("tareasFijadas", JSON.stringify(tareasFijadas));
-    renderTareas();
 }
 
 // ──────────────────────────────────────────────
@@ -10396,7 +10491,7 @@ ppRenderMes = function(mesIdx){
     }
 
     const PP_IDS_PRIORITARIOS = [3,4,6,7,12,18]; // IDs de tareas a resaltar
-    const esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
+    const esAdmin = usuarioActual?.rol === "Admin";
 
     cont.innerHTML = prevs.map((p,i) => {
         let esPrioritaria = PP_IDS_PRIORITARIOS.includes(p.tareaId);
@@ -10847,7 +10942,7 @@ function mgiGuardarStorage(){
 
 // ── Render principal ──────────────────────────────────────
 function mgiRender(){
-    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
+    let esAdmin = usuarioActual?.rol === "Admin";
 
     let vistaAdmin  = document.getElementById("mgiVistaAdmin");
     let vistaTec    = document.getElementById("mgiVistaTecnico");
@@ -11245,7 +11340,7 @@ function ccbGuardarConfig(){
 
 // ── Abrir modal de configuración (solo Admin) ──────────────
 function ccbAbrirConfigurar(mesKey){
-    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
+    let esAdmin = usuarioActual?.rol === "Admin";
     if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
 
     document.getElementById("ccbConfMesKey").value = mesKey;
@@ -11319,7 +11414,7 @@ function ccbGuardarConfiguracion(){
 
 // ── Abrir checklist de técnico ─────────────────────────────
 function ccbAbrirChecklist(mesKey){
-    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
+    let esAdmin = usuarioActual?.rol === "Admin";
 
     // Si no existe cronograma, inicializarlo con la config actual
     if(!ccbCronogramas[mesKey]){
@@ -11546,7 +11641,7 @@ const STACKER_GRUPOS = [
 
 function pchkAbrirConfigurar(mesKey, tid){
     tid = parseInt(tid);
-    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
+    let esAdmin = usuarioActual?.rol === "Admin";
     if(!esAdmin){ toast.warning("Sin permisos","Solo el Admin puede configurar las islas."); return; }
     if(typeof PCHK_META === "undefined"){ console.error("[pchk] PCHK_META no definido"); return; }
     let meta = PCHK_META[tid];
@@ -11754,7 +11849,7 @@ function pchkGuardarConfiguracion(){
 
 // ── Abrir checklist técnico ────────────────────────────────
 function pchkAbrirChecklist(mesKey, tid){
-    let esAdmin = usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin";
+    let esAdmin = usuarioActual?.rol === "Admin";
     let cfg     = pchkGetConfig(tid);
     let meta    = PCHK_META[tid];
     if(!meta) return;
@@ -12378,16 +12473,13 @@ function _renderTareasConTurno(){
     }
 
     function sortMisTareasArriba(lista){
-        if(usuarioActual?.rol === "Admin" || usuarioActual?.rol === "SuperAdmin") return lista.sort((a,b) => {
-            let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
-            if(aF !== bF) return aF - bF;
+        if(usuarioActual?.rol === "Admin") return lista.sort((a,b) => {
+            // Vencidas primero
             let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
             if(aV !== bV) return aV - bV;
             return b.id - a.id;
         });
         return lista.sort((a,b) => {
-            let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
-            if(aF !== bF) return aF - bF;
             let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
             if(aV !== bV) return aV - bV;
             let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
@@ -12525,14 +12617,11 @@ function _renderTareasConTurno(){
             </div>` : "";
 
         let esMiTarea = esTecnico && t.asignado === miNombre;
-        let esFijada = tareasFijadas.includes(t.id);
-        let pinBtn = !esTecnico ? `<button onclick="toggleFijarTarea(${t.id})" title="${esFijada?'Desfijar':'Fijar arriba'}" style="background:none;border:none;cursor:pointer;font-size:17px;flex-shrink:0;opacity:${esFijada?'1':'0.3'};transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${esFijada?'1':'0.3'}'">📌</button>` : "";
-        let fijadaBadge = esFijada ? `<span style="font-size:10px;background:rgba(255,201,71,.18);border:1px solid rgba(255,201,71,.5);color:var(--yellow);padding:1px 7px;border-radius:5px;font-weight:700;">📌 FIJADA</span>` : "";
-        return `<div class="tarea-row" style="${esFijada ? 'border-color:rgba(255,201,71,.6);box-shadow:0 0 0 1px rgba(255,201,71,.2);' : vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
+        return `<div class="tarea-row" style="${vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
             <div class="item-main" style="width:100%">
                 <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
                     <div class="tarea-text ${t.estado==='realizado'?'done-text':''}" style="flex:1;">${t.desc}</div>
-                    <div style="display:flex;gap:6px;align-items:center;">${fijadaBadge}${miTareaBadge}${ppBadge}${vencida ? '<span style="font-size:10px;background:rgba(255,50,50,.2);border:1px solid rgba(255,80,80,.5);color:#ff6b6b;padding:1px 7px;border-radius:5px;font-weight:700;">🔴 VENCIDA</span>' : ''}<span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span></div>
+                    <div style="display:flex;gap:6px;align-items:center;">${miTareaBadge}${ppBadge}${vencida ? '<span style="font-size:10px;background:rgba(255,50,50,.2);border:1px solid rgba(255,80,80,.5);color:#ff6b6b;padding:1px 7px;border-radius:5px;font-weight:700;">🔴 VENCIDA</span>' : ''}<span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
                     ${reasignar}
@@ -12546,10 +12635,7 @@ function _renderTareasConTurno(){
                 ${pchkInlineHtml}
                 ${acciones}
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
-                ${pinBtn}
-                ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;" title="Eliminar">🗑️</button>` : ""}
-            </div>
+            ${!esTecnico ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
         </div>`;
     }
 
@@ -12824,9 +12910,6 @@ function confirmarQuienRealizoMulti(){
 
     document.getElementById("modalQuienRealizoMulti").classList.remove("open");
     cerrarModalTareaDetalle();
-    // Auto-desfijar al completar
-    let _pi = tareasFijadas.indexOf(id);
-    if(_pi !== -1){ tareasFijadas.splice(_pi,1); localStorage.setItem("tareasFijadas", JSON.stringify(tareasFijadas)); }
     _qrTareaId = null;
 
     renderTareas?.();
@@ -14769,14 +14852,12 @@ function _actualizarBotonesSort() {
     });
 }
 
-// Aplicar orden a una lista de tareas (fijadas siempre arriba)
+// Aplicar orden a una lista de tareas
 function _aplicarOrdenTareas(lista) {
-    if (!_tareasSort.key) return lista;
+    if (!_tareasSort.key) return lista; // sin orden: mantener como viene
     let key = _tareasSort.key;
     let dir = _tareasSort.dir;
     return [...lista].sort((a, b) => {
-        let aF = tareasFijadas.includes(a.id) ? 0 : 1, bF = tareasFijadas.includes(b.id) ? 0 : 1;
-        if(aF !== bF) return aF - bF;
         let va, vb;
         if (key === "prioridad") {
             va = _PRIO_ORDER[a.prioridad] ?? 9;
@@ -15767,6 +15848,194 @@ function ppConfirmarEnvioSeleccionado(){
         `${nuevasCreadas} preventivo${nuevasCreadas>1?"s":""} enviado${nuevasCreadas>1?"s":""} a Tareas Pendientes.`
     );
 }
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  MÓDULO: PEDIDOS DE PARTES CRÍTICAS  (v1.4.0)
+// ══════════════════════════════════════════════════════════════
+
+let partesCriticas = JSON.parse(localStorage.getItem("partesCriticas") || "[]");
+
+// ── Abrir modal nuevo pedido ──
+function abrirModalNuevaParte(id = null) {
+    if (esVisita()) return;
+    document.getElementById("pcEditandoId").value = "";
+    document.getElementById("tituloModalParte").textContent = "Nuevo Pedido";
+    document.getElementById("pcCantidad").value = "1";
+    document.getElementById("pcInsumo").value = "";
+    document.getElementById("pcFechaPedido").value = new Date().toISOString().split("T")[0];
+    document.getElementById("pcDestino").value = "";
+    document.getElementById("pcIsla").value = "";
+    document.getElementById("pcObservaciones").value = "";
+    document.getElementById("pcEstado").value = "Pendiente";
+    document.getElementById("pcFechaRecibido").value = "";
+    document.getElementById("pcFechaRecibidoGrp").style.display = "none";
+
+    if (id !== null) {
+        let p = partesCriticas.find(x => x.id === id);
+        if (!p) return;
+        document.getElementById("pcEditandoId").value = id;
+        document.getElementById("tituloModalParte").textContent = "Editar Pedido";
+        document.getElementById("pcCantidad").value = p.cantidad || 1;
+        document.getElementById("pcInsumo").value = p.insumo || "";
+        document.getElementById("pcFechaPedido").value = p.fechaPedido || "";
+        document.getElementById("pcDestino").value = p.destino || "";
+        document.getElementById("pcIsla").value = p.isla || "";
+        document.getElementById("pcObservaciones").value = p.observaciones || "";
+        document.getElementById("pcEstado").value = p.estado || "Pendiente";
+        document.getElementById("pcFechaRecibido").value = p.fechaRecibido || "";
+        pcToggleFechaRecibido();
+    }
+
+    document.getElementById("modalNuevaParte").classList.add("open");
+}
+
+function cerrarModalParte() {
+    document.getElementById("modalNuevaParte").classList.remove("open");
+}
+
+function pcToggleFechaRecibido() {
+    let est = document.getElementById("pcEstado").value;
+    let grp = document.getElementById("pcFechaRecibidoGrp");
+    grp.style.display = est === "Recibido" ? "block" : "none";
+    if (est === "Recibido" && !document.getElementById("pcFechaRecibido").value) {
+        document.getElementById("pcFechaRecibido").value = new Date().toISOString().split("T")[0];
+    }
+}
+
+function guardarParte() {
+    if (esVisita()) return;
+    let insumo = document.getElementById("pcInsumo").value.trim();
+    if (!insumo) { toast.warning("Falta insumo", "Ingresá el nombre del insumo o parte."); return; }
+
+    let editId = document.getElementById("pcEditandoId").value;
+    let ahora = Date.now();
+
+    let obj = {
+        id:            editId ? Number(editId) : ahora,
+        cantidad:      parseInt(document.getElementById("pcCantidad").value) || 1,
+        insumo:        insumo,
+        fechaPedido:   document.getElementById("pcFechaPedido").value,
+        destino:       document.getElementById("pcDestino").value.trim(),
+        isla:          document.getElementById("pcIsla").value.trim(),
+        observaciones: document.getElementById("pcObservaciones").value.trim(),
+        estado:        document.getElementById("pcEstado").value,
+        fechaRecibido: document.getElementById("pcEstado").value === "Recibido"
+                        ? document.getElementById("pcFechaRecibido").value : "",
+        creadoEn:      editId ? (partesCriticas.find(x => x.id === Number(editId))?.creadoEn || ahora) : ahora
+    };
+
+    if (editId) {
+        let idx = partesCriticas.findIndex(x => x.id === Number(editId));
+        if (idx >= 0) partesCriticas[idx] = obj;
+        else partesCriticas.push(obj);
+        toast.success("Pedido actualizado", `"${insumo}" guardado.`);
+    } else {
+        partesCriticas.push(obj);
+        toast.success("Pedido registrado", `"${insumo}" agregado a Partes Críticas.`);
+    }
+
+    localStorage.setItem("partesCriticas", JSON.stringify(partesCriticas));
+    cerrarModalParte();
+    renderPartesCriticas();
+}
+
+function eliminarParte(id) {
+    if (esVisita()) return;
+    if (!confirm("¿Eliminar este pedido?")) return;
+    partesCriticas = partesCriticas.filter(x => x.id !== id);
+    localStorage.setItem("partesCriticas", JSON.stringify(partesCriticas));
+    renderPartesCriticas();
+    toast.success("Pedido eliminado", "");
+}
+
+function marcarRecibido(id) {
+    if (esVisita()) return;
+    let p = partesCriticas.find(x => x.id === id);
+    if (!p) return;
+    p.estado = "Recibido";
+    p.fechaRecibido = new Date().toISOString().split("T")[0];
+    localStorage.setItem("partesCriticas", JSON.stringify(partesCriticas));
+    renderPartesCriticas();
+    toast.success("Marcado como recibido", p.insumo);
+}
+
+function renderPartesCriticas() {
+    // Sincronizar desde cache si está disponible
+    if (_cache["partesCriticas"] !== undefined) partesCriticas = _cache["partesCriticas"] ?? [];
+
+    let filtroEstado  = document.getElementById("filtroPcEstado")?.value || "todos";
+    let filtroBuscar  = (document.getElementById("filtroPcBuscar")?.value || "").toLowerCase();
+
+    let lista = partesCriticas.slice();
+
+    // Stats
+    let nPend = lista.filter(x => x.estado === "Pendiente").length;
+    let nRec  = lista.filter(x => x.estado === "Recibido").length;
+    let el = id => document.getElementById(id);
+    if (el("pcStatPendiente")) el("pcStatPendiente").textContent = nPend;
+    if (el("pcStatRecibido"))  el("pcStatRecibido").textContent  = nRec;
+    if (el("pcStatTotal"))     el("pcStatTotal").textContent     = lista.length;
+
+    // Filtrar
+    if (filtroEstado !== "todos") lista = lista.filter(x => x.estado === filtroEstado);
+    if (filtroBuscar) {
+        lista = lista.filter(x =>
+            (x.insumo||"").toLowerCase().includes(filtroBuscar) ||
+            (x.isla||"").toLowerCase().includes(filtroBuscar) ||
+            (x.destino||"").toLowerCase().includes(filtroBuscar) ||
+            (x.observaciones||"").toLowerCase().includes(filtroBuscar)
+        );
+    }
+
+    // Ordenar: pendientes primero, luego por fecha desc
+    lista.sort((a,b) => {
+        if (a.estado !== b.estado) return a.estado === "Pendiente" ? -1 : 1;
+        return (b.fechaPedido||"").localeCompare(a.fechaPedido||"");
+    });
+
+    let tbody = document.getElementById("tbodyPartesCriticas");
+    if (!tbody) return;
+
+    if (lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted);">Sin pedidos que coincidan con los filtros</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = lista.map(p => {
+        let estadoPill = p.estado === "Recibido"
+            ? `<span class="pill resuelto">✅ Recibido</span>`
+            : `<span class="pill pendiente">⏳ Pendiente</span>`;
+
+        let accionRecibir = p.estado !== "Recibido"
+            ? `<button class="tbl-actions" style="background:var(--bg3);border:1px solid var(--accent);color:var(--accent);padding:4px 9px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;"
+                onclick="marcarRecibido(${p.id})">✅</button>`
+            : "";
+
+        return `<tr onclick="abrirModalNuevaParte(${p.id})" title="Editar pedido">
+            <td style="font-weight:700;color:var(--white);">${p.cantidad||1}</td>
+            <td style="font-weight:600;color:var(--white);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.insumo||"—"}</td>
+            <td style="color:var(--muted);">${p.fechaPedido||"—"}</td>
+            <td style="color:var(--muted);">${p.destino||"—"}</td>
+            <td style="color:var(--muted);">${p.isla||"—"}</td>
+            <td>${estadoPill}</td>
+            <td style="color:var(--muted);">${p.fechaRecibido||"—"}</td>
+            <td style="color:var(--muted);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.observaciones||""}</td>
+            <td class="tbl-actions" onclick="event.stopPropagation()">
+                ${accionRecibir}
+                <button style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:4px 9px;border-radius:6px;cursor:pointer;font-size:12px;"
+                    onclick="eliminarParte(${p.id})">🗑️</button>
+            </td>
+        </tr>`;
+    }).join("");
+}
+
+// Hookear al listener de tiempo real
+const _pcOrigReRender = window._fbReRender;
+document.addEventListener("DOMContentLoaded", () => {
+    // Asegurar que partesCriticas se sincroniza en re-renders
+});
 </script>
 
 <script>
