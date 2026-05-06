@@ -6041,19 +6041,9 @@ function renderDashboard(){
         document.getElementById("boxHorasPreventivos").style.display = "grid";
         document.getElementById("boxCalificaciones").style.display = "block";
 
-        // Construir lista de técnicos dinámica: base desde getTecnicos() + todos los que aparecen en datos reales
-        let tecnicosBase = getTecnicos();
-        let tecSet = new Set(tecnicosBase);
-        incidencias.forEach(i => { if(i.tecnico && !i.tecnico.startsWith("__")) tecSet.add(i.tecnico); });
-        preventivos.forEach(p => {
-            if(p.tecnico && !p.tecnico.startsWith("__")) tecSet.add(p.tecnico);
-            if(p.tecnico2 && !p.tecnico2.startsWith("__")) tecSet.add(p.tecnico2);
-        });
-        tareas.forEach(t => {
-            if(t.asignado && !t.asignado.startsWith("__")) tecSet.add(t.asignado);
-            if(t.realizadoPor) t.realizadoPor.split(", ").forEach(n => { if(n.trim()) tecSet.add(n.trim()); });
-        });
-        let tecnicos = [...tecSet];
+        // Solo usuarios con cuenta real (tienen email en usersDB)
+        let _usersConCuenta = new Set(getUsersDB().filter(u => u.email && u.email.trim() !== "").map(u => u.nombre));
+        let tecnicos = getTecnicos().filter(t => _usersConCuenta.has(t));
 
         let maxVal = 1;
         let counts = tecnicos.map(t => {
