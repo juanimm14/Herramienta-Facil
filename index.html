@@ -3032,6 +3032,26 @@ body {
                         <button class="btn-primary" onclick="abrirModalNuevoUsuario()">➕ Nuevo Usuario</button>
                     </div>
                 </div>
+                <!-- Stats usuarios con cuenta -->
+                <div id="usuariosStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+                    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Con cuenta</div>
+                        <div id="uStatTotal" style="font-size:26px;font-weight:700;font-family:'Rajdhani',sans-serif;color:var(--accent);">—</div>
+                    </div>
+                    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Admins</div>
+                        <div id="uStatAdmins" style="font-size:26px;font-weight:700;font-family:'Rajdhani',sans-serif;color:var(--accent);">—</div>
+                    </div>
+                    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Técnicos</div>
+                        <div id="uStatTecnicos" style="font-size:26px;font-weight:700;font-family:'Rajdhani',sans-serif;color:var(--accent2);">—</div>
+                    </div>
+                    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Visitas</div>
+                        <div id="uStatVisitas" style="font-size:26px;font-weight:700;font-family:'Rajdhani',sans-serif;color:var(--yellow);">—</div>
+                    </div>
+                </div>
+
                 <div class="card-box" style="padding:0;overflow:hidden;">
                     <table class="data-table" id="tablaUsuarios">
                         <thead>
@@ -12147,12 +12167,23 @@ function renderGestionUsuarios(){
     let tbody = document.getElementById("tbodyUsuarios");
     if(!tbody) return;
 
-    if(db.length === 0){
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">Sin usuarios registrados</td></tr>`;
+    // Solo usuarios con cuenta (tienen email)
+    let conCuenta = db.filter(u => u.email && u.email.trim() !== "");
+
+    // Stats
+    let el = id => document.getElementById(id);
+    if(el("uStatTotal"))    el("uStatTotal").textContent    = conCuenta.length;
+    if(el("uStatAdmins"))   el("uStatAdmins").textContent   = conCuenta.filter(u => u.rol === "Admin").length;
+    if(el("uStatTecnicos")) el("uStatTecnicos").textContent = conCuenta.filter(u => u.rol === "Tecnico").length;
+    if(el("uStatVisitas"))  el("uStatVisitas").textContent  = conCuenta.filter(u => u.rol === "Visita").length;
+
+    if(conCuenta.length === 0){
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">Sin usuarios con cuenta registrada</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = db.map((u, idx) => {
+    tbody.innerHTML = conCuenta.map((u) => {
+        let idx = db.indexOf(u);
         let rolBadge = u.rol === "Admin"
             ? `<span class="pill" style="background:rgba(0,212,168,.15);color:var(--accent);">Admin</span>`
             : u.rol === "Visita"
