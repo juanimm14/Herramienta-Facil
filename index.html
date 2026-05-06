@@ -7626,7 +7626,8 @@ function renderIncidenciasPreventivos(){
 
         const PCHK_NO_ISLA = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]);
         const esPchkNumerico = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA.has(p.subTipo);
-        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || esPchkNumerico){
+        const esMgiIslas = p.subTipo && p.subTipo.startsWith("mgi-");
+        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || esPchkNumerico || esMgiIslas){
             // Islas con slots: contar máquinas reales por isla
             maqCount = islasEfectivas.reduce((s, islaId) => s + getSlots(islaId), 0);
             if(islasEfectivas.length > 0){
@@ -7686,7 +7687,7 @@ function renderIncidenciasPreventivos(){
                 <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Máquinas intervenidas</div>
                 <div id="${cardId}-islas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
                     ${islasEfectivas.map(e => {
-                        const _pchkNoIsla2 = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]); let isIsla = (!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || (p.subTipo && p.subTipo.startsWith("pchk-") && !_pchkNoIsla2.has(p.subTipo)));
+                        const _pchkNoIsla2 = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]); let isIsla = (!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || (p.subTipo && p.subTipo.startsWith("pchk-") && !_pchkNoIsla2.has(p.subTipo)) || (p.subTipo && p.subTipo.startsWith("mgi-")));
                         let lbl = isIsla ? `Isla ${e}` : (String(e).includes("|")?String(e).replace("|"," "):e);
                         let slots = isIsla ? (() => {
                             let isla = islasActivas.find(il => il.id === parseInt(e));
@@ -7699,7 +7700,7 @@ function renderIncidenciasPreventivos(){
                     }).join("")}
                 </div>
                 ${(()=>{
-                    const _pchkNoIsla3 = new Set(['pchk-1','pchk-2','pchk-5','pchk-8']); let isIslaSubtipo = !p.subTipo || p.subTipo === 'plan' || p.subTipo === 'mantenimiento-islas' || p.subTipo === 'control-cooler-botonera' || (p.subTipo && p.subTipo.startsWith('pchk-') && !_pchkNoIsla3.has(p.subTipo));
+                    const _pchkNoIsla3 = new Set(['pchk-1','pchk-2','pchk-5','pchk-8']); let isIslaSubtipo = !p.subTipo || p.subTipo === 'plan' || p.subTipo === 'mantenimiento-islas' || p.subTipo === 'control-cooler-botonera' || (p.subTipo && p.subTipo.startsWith('pchk-') && !_pchkNoIsla3.has(p.subTipo)) || (p.subTipo && p.subTipo.startsWith('mgi-'));
                     if(isIslaSubtipo && maqCount > 0){
                         let est = p.islasMaquinas ? '' : " <span style='font-weight:400;font-size:11px;color:var(--muted);'>(estimado)</span>";
                         return `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(0,212,168,.07);border:1px solid rgba(0,212,168,.25);border-radius:8px;font-size:13px;color:var(--accent);font-weight:700;">🔧 Total: ${maqCount} máquinas en ${islasEfectivas.length} isla(s)${est}</div>`;
