@@ -233,10 +233,6 @@ async function _cargarDatosFirebase() {
     })();
 
     _sincronizarVariables();
-
-    // Reconstruir etiquetas con ppTareas reales de Firebase y migrar subtipos legacy
-    _reconstruirTipoLabels();
-    try { _migrarSubtiposLegacy(); } catch(e){ console.warn("[HF] migrarSubtiposLegacy:", e); }
 }
 
 // ─── Listeners en tiempo real (multi-dispositivo) ─────────────
@@ -2223,6 +2219,49 @@ body {
                         <label>Subtipo</label>
                         <select id="filtroPrevTipo" onchange="renderIncidenciasPreventivos()">
                             <option value="todos">Todos</option>
+                            <option value="">Islas Slots</option>
+                            <option value="plan">Mant. General de Islas</option>
+                            <option value="mantenimiento-islas">Mant. Islas</option>
+                            <option value="mgi-7">Limpieza Sala Semicubierta</option>
+                            <option value="control-cooler-botonera">Control Cooler Botonera</option>
+                            <option value="pchk-1">Mant. Chippers</option>
+                            <option value="pchk-2">Mant. Visualizadores RA</option>
+                            <option value="pchk-5">Limpieza de Fichas</option>
+                            <option value="pchk-8">Limpieza General Stackers</option>
+                            <option value="pchk-11">Limpieza CPU IGT</option>
+                            <option value="pchk-12">Limpieza Filtros AVP IGT</option>
+                            <option value="pchk-13">Control Botones/Calcos OLED IGT</option>
+                            <option value="pchk-14">Control Botones PLAY IGT</option>
+                            <option value="pchk-15">Limpieza Placa Video y Coolers SG</option>
+                            <option value="pchk-16">Test Botones SG</option>
+                            <option value="pchk-17">Test Botones L&amp;W</option>
+                            <option value="pchk-18">Mant. PCs Progresivos + Carteles ZITRO</option>
+                            <option value="pchk-19">Control Botones ZITRO</option>
+                            <option value="pchk-20">Control Audio ZITRO</option>
+                            <option value="pchk-21">Revisión Conectores Fuente ZITRO</option>
+                            <option value="pchk-22">Control Coolers ZITRO</option>
+                            <option value="pchk-23">Revisión Cerraduras Mariposa Stacker</option>
+                            <option value="pchk-24">Control Puertas Belly BALLY v22</option>
+                            <option value="pchk-25">Control Coolers CPU BALLY v22</option>
+                            <option value="pchk-26">Control Coolers CPU BALLY v32</option>
+                            <option value="pchk-27">Control Coolers Placa Video BALLY</option>
+                            <option value="pchk-28">Control Botones PLAY Bally</option>
+                            <option value="pchk-29">Control Cooler Gabinete WMS KC</option>
+                            <option value="pchk-30">Control Remaches Stacker Viridian</option>
+                            <option value="pchk-32">Control Cooler Fuentes Aristocrat</option>
+                            <option value="pchk-33">Control Botones/Calcos Aristocrat</option>
+                            <option value="pchk-34">Control Cooler Placas y CPU Aristocrat</option>
+                            <option value="pchk-35">Control Botones PLAY Ainsworth</option>
+                            <option value="pchk-36">Mant. Preventivo INTERBLOCK</option>
+                            <option value="pchk-37">Control Cooler Monitor BCM</option>
+                            <option value="pchk-38">Mant. Preventivo BCM</option>
+                            <option value="avp">Filtros AVP</option>
+                            <option value="stacker">Stackers</option>
+                            <option value="chipper">Chipper</option>
+                            <option value="pc">PC/Carteles</option>
+                            <option value="cilindros">Cilindros RE</option>
+                            <option value="ra">Visualizadores RA</option>
+                            <option value="eva">Kioscos EVA</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -4512,7 +4551,7 @@ incidencias.forEach(i => {
     if (i.tipo === "Correctivo" && !i.estado) i.estado = "Resuelto";
     if (i.tipo === "Correctivo" && i.estado === "Pendiente") i.estado = "En Curso";
     // Reparar registros CCB que quedaron sin islas: recuperar desde ccbCronogramas
-    if(i.tipo === "Preventivo" && (i.subTipo === "control-cooler-botonera" || i.subTipo === "pp-31") && (!i.islas || i.islas.length === 0)){
+    if(i.tipo === "Preventivo" && i.subTipo === "control-cooler-botonera" && (!i.islas || i.islas.length === 0)){
         let mesKey = i._ppMesKey;
         if(mesKey && ccbCronogramas[mesKey]?.islas?.length > 0){
             let hechas = ccbCronogramas[mesKey].islas.filter(x=>x.hecho).map(x=>String(x.id));
@@ -4520,10 +4559,10 @@ incidencias.forEach(i => {
         }
     }
     // Reparar registros "plan" sin islas que sean CCB: detectar por la nota
-    if(i.tipo === "Preventivo" && (i.subTipo === "plan" || !i.subTipo) && (!i.islas || i.islas.length === 0)){
+    if(i.tipo === "Preventivo" && i.subTipo === "plan" && (!i.islas || i.islas.length === 0)){
         if(i.nota && i.nota.toLowerCase().includes("cooler botonera") && i._ppMesKey){
             let mesKey = i._ppMesKey;
-            i.subTipo = "pp-31";
+            i.subTipo = "control-cooler-botonera";
             if(ccbCronogramas[mesKey]?.islas?.length > 0){
                 let hechas = ccbCronogramas[mesKey].islas.filter(x=>x.hecho).map(x=>String(x.id));
                 i.islas = hechas.length > 0 ? hechas : ccbCronogramas[mesKey].islas.map(x=>String(x.id));
@@ -5785,7 +5824,7 @@ function renderDashboard(){
     // Helper: obtener islas efectivas de un preventivo (con fallback desde nota para registros viejos)
     function getIslasEfectivas(p){
         let islas = (p.islas && p.islas.length > 0) ? p.islas : [];
-        if(islas.length === 0 && _esSubtipoDeIslas(p.subTipo) && p.nota){
+        if(islas.length === 0 && (p.subTipo === "plan" || p.subTipo === "mantenimiento-islas") && p.nota){
             let match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
             if(match) islas = match[1].split(",").map(s => s.trim()).filter(Boolean);
         }
@@ -6036,13 +6075,13 @@ function renderDashboard(){
         document.getElementById("dashPreventivos").innerHTML = ultPrev.map(p => {
             // Obtener islas efectivas — fallback extrayendo de la nota para registros viejos sin array
             let islasEfectivas = (p.islas && p.islas.length > 0) ? p.islas : [];
-            if(islasEfectivas.length === 0 && _esSubtipoDeIslas(p.subTipo) && p.nota){
+            if(islasEfectivas.length === 0 && (p.subTipo === "plan" || p.subTipo === "mantenimiento-islas") && p.nota){
                 let match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
                 if(match) islasEfectivas = match[1].split(",").map(s => s.trim()).filter(Boolean);
             }
             let maqCount = 0;
             let resumenDash = "";
-            if(_esSubtipoDeIslas(p.subTipo)){
+            const _pchkNoIsla = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]); const _esPchkNum = p.subTipo && p.subTipo.startsWith("pchk-") && !_pchkNoIsla.has(p.subTipo); if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || _esPchkNum){
                 maqCount = islasEfectivas.reduce((s, islaId) => {
                     let isla = islasActivas.find(il => il.id === parseInt(islaId));
                     return s + (isla ? isla.slots : 1);
@@ -6050,7 +6089,7 @@ function renderDashboard(){
                 resumenDash = islasEfectivas.length > 0
                     ? `${islasEfectivas.length} islas${maqCount ? ` · <b style="color:var(--accent)">${maqCount} máq.</b>` : ""}`
                     : `<span style="color:var(--yellow);font-size:11px;">Sin islas</span>`;
-            } else if(p.subTipo === "control-cooler-botonera" || p.subTipo === "pp-31"){
+            } else if(p.subTipo === "control-cooler-botonera"){
                 maqCount = islasEfectivas.reduce((s, islaId) => {
                     let isla = islasActivas.find(il => il.id === parseInt(islaId));
                     return s + (isla ? isla.slots : 1);
@@ -6063,7 +6102,7 @@ function renderDashboard(){
                     ? `${islasEfectivas.length} máquinas`
                     : "Sin máquinas";
             }
-            let tipoLabel = (p.nombre) || TIPO_LABELS_PREV[p.subTipo] || p.subTipo || "Preventivo";
+            let tipoLabel = (p.subTipo === "plan" && p.nombre) ? p.nombre : (TIPO_LABELS_PREV[p.subTipo] || p.subTipo || "Slots");
             return `
             <div class="item-row">
                 <div class="item-dot ${p.validado?"green":"blue"}"></div>
@@ -7462,136 +7501,59 @@ function guardarEdicionIslas(){
 // ──────────────────────────────────────────────
 //  INCIDENCIAS — PREVENTIVOS (sección historial)
 // ──────────────────────────────────────────────
-// ── Helper: determina si un subTipo registra islas/slots (true) o equipos individuales (false)
-// Con el sistema pp-{id}, los IDs de equipos individuales (no islas) son:
-//   1=Chippers, 2=Visualizadores RA, 3=Cilindros, 4=Rotación Cilindros,
-//   5=Fichas, 9=Compresor, 10=Peanas, 39=EVA, 40=Contadoras
-// Todo lo demás opera sobre islas con slots.
-const _PP_EQUIPO_IDS = new Set([1, 2, 3, 4, 5, 9, 10, 39, 40]);
-
-function _esSubtipoDeIslas(subTipo){
-    if(!subTipo) return true;  // sin subtipo → islas slots (legacy)
-    // Nuevo formato canónico
-    if(subTipo.startsWith("pp-")){
-        const id = parseInt(subTipo.slice(3));
-        return !_PP_EQUIPO_IDS.has(id);
-    }
-    // Legado — mantener compatibilidad retroactiva
-    const _legacy_noIsla = new Set(["pchk-1","pchk-2","pchk-5","pchk-8","avp","stacker","chipper","pc","cilindros","ra","eva"]);
-    if(_legacy_noIsla.has(subTipo)) return false;
-    if(subTipo === "plan" || subTipo === "mantenimiento-islas" || subTipo === "control-cooler-botonera") return true;
-    if(subTipo.startsWith("pchk-") || subTipo.startsWith("mgi-")) return true;
-    return true;
-}
-
-// ── TIPO_LABELS_PREV — se construye dinámicamente desde ppTareas ──────────────
-// Los subtipos son "pp-{id}" para todas las tareas del plan.
-// Los valores legacy (pchk-*, mgi-*, plan, control-cooler-botonera, etc.) se
-// mantienen como alias de lectura para que registros viejos sigan mostrando
-// su etiqueta correcta, pero NO aparecen en los selects de alta ni edición.
-//
-// Mapa de migración: subtipo legacy → tareaId del plan
-const _LEGACY_TO_PP = {
-    "plan":                   6,   // Mant. General de Islas
-    "mantenimiento-islas":    6,
-    "mgi-7":                  7,   // Limpieza Sala Semicubierta
-    "control-cooler-botonera":31,  // Control Cooler Botoneras Aristocrat
-    "pchk-1":   1,  "pchk-2":   2,  "pchk-5":   5,  "pchk-8":   8,
-    "pchk-11": 11,  "pchk-12": 12,  "pchk-13": 13,  "pchk-14": 14,
-    "pchk-15": 15,  "pchk-16": 16,  "pchk-17": 17,  "pchk-18": 18,
-    "pchk-19": 19,  "pchk-20": 20,  "pchk-21": 21,  "pchk-22": 22,
-    "pchk-23": 23,  "pchk-24": 24,  "pchk-25": 25,  "pchk-26": 26,
-    "pchk-27": 27,  "pchk-28": 28,  "pchk-29": 29,  "pchk-30": 30,
-    "pchk-32": 32,  "pchk-33": 33,  "pchk-34": 34,  "pchk-35": 35,
-    "pchk-36": 36,  "pchk-37": 37,  "pchk-38": 38,
-    // Genéricos legacy — mapear al tipo más cercano o dejamos sin pp-id
-    "avp":       12,  // Limpieza Filtros AVP IGT
-    "stacker":    8,  // Limpieza General de Stackers
-    "chipper":    1,  // Mantenimiento de Chippers
-    "ra":         2,  // Mantenimiento Visualizadores de RA
-    "cilindros":  3,  // Mant. y Control de Cilindros RA
+const TIPO_LABELS_PREV = {
+    "": "Islas Slots",
+    "plan": "Mant. General de Islas",
+    "mantenimiento-islas": "Mant. Islas",
+    "mgi-7": "Limpieza Sala Semicubierta",
+    "control-cooler-botonera": "Control Cooler Botonera",
+    "pchk-1":  "Mantenimiento de Chippers",
+    "pchk-2":  "Mantenimiento de Visualizadores de RA",
+    "pchk-5":  "Limpieza de Fichas",
+    "pchk-8":  "Limpieza General de Stackers",
+    "pchk-11": "Limpieza CPU IGT",
+    "pchk-12": "Limpieza Filtros AVP IGT",
+    "pchk-13": "Control Botones/Calcos OLED IGT",
+    "pchk-14": "Control Botones PLAY IGT",
+    "pchk-15": "Limpieza Placa Video y Coolers SG",
+    "pchk-16": "Test Botones SG",
+    "pchk-17": "Test Botones L&W",
+    "pchk-18": "Mant. PCs Progresivos + Carteles ZITRO",
+    "pchk-19": "Control Botones ZITRO",
+    "pchk-20": "Control Audio ZITRO",
+    "pchk-21": "Revisión Conectores Fuente ZITRO",
+    "pchk-22": "Control Coolers ZITRO",
+    "pchk-23": "Revisión Cerraduras Mariposa Stacker",
+    "pchk-24": "Control Puertas Belly BALLY v22",
+    "pchk-25": "Control Coolers CPU BALLY v22",
+    "pchk-26": "Control Coolers CPU BALLY v32",
+    "pchk-27": "Control Coolers Placa Video BALLY",
+    "pchk-28": "Control Botones PLAY Bally",
+    "pchk-29": "Control Cooler Gabinete WMS KC",
+    "pchk-30": "Control Remaches Stacker Viridian",
+    "pchk-32": "Control Cooler Fuentes Aristocrat",
+    "pchk-33": "Control Botones/Calcos Aristocrat",
+    "pchk-34": "Control Cooler Placas y CPU Aristocrat",
+    "pchk-35": "Control Botones PLAY Ainsworth",
+    "pchk-36": "Mant. Preventivo INTERBLOCK",
+    "pchk-37": "Control Cooler Monitor BCM",
+    "pchk-38": "Mant. Preventivo BCM",
+    avp: "Filtros AVP",
+    stacker: "Stackers",
+    chipper: "Chipper",
+    pc: "PC/Carteles",
+    cilindros: "Cilindros RE",
+    ra: "Visualizadores RA",
+    eva: "Kioscos EVA"
 };
 
-// Construye/actualiza TIPO_LABELS_PREV desde las ppTareas actuales.
-// Se llama al iniciar y cada vez que se agrega/edita una tarea del plan.
-let TIPO_LABELS_PREV = {};
-
-function _reconstruirTipoLabels(){
-    TIPO_LABELS_PREV = {};
-    // Alias legacy de sólo-lectura (para mostrar registros viejos correctamente)
-    const _tareasRef = (typeof ppTareas !== "undefined" && ppTareas.length) ? ppTareas : PP_TAREAS_BASE;
-    Object.entries(_LEGACY_TO_PP).forEach(([legacyKey, tareaId]) => {
-        const tarea = _tareasRef.find(t => t.id === tareaId);
-        TIPO_LABELS_PREV[legacyKey] = tarea ? tarea.nombre : legacyKey;
-    });
-    // Entradas "pc" y "eva" sin mapeo directo: dejar etiqueta genérica
-    TIPO_LABELS_PREV["pc"]  = TIPO_LABELS_PREV["pc"]  || "PC/Carteles";
-    TIPO_LABELS_PREV["eva"] = TIPO_LABELS_PREV["eva"] || "Kioscos EVA";
-    // Entradas canónicas pp-{id} — una por cada tarea del plan
-    _tareasRef.forEach(t => {
-        TIPO_LABELS_PREV[`pp-${t.id}`] = t.nombre;
-    });
-}
-
-// Primera construcción con PP_TAREAS_BASE (ppTareas aún no cargó desde Firebase)
-_reconstruirTipoLabels();
-
-// ── Migración de subtipos legacy → pp-{id} ─────────────────────────────────
-// Corre UNA VEZ después de que Firebase termine de cargar.
-// No borra nada: solo reemplaza el campo subTipo en memoria y persiste.
-function _migrarSubtiposLegacy(){
-    let modificado = false;
-    incidencias.forEach(inc => {
-        if(inc.tipo !== "Preventivo") return;
-        const st = inc.subTipo;
-        // Ya está en formato canónico
-        if(st && st.startsWith("pp-")) return;
-        // Tiene un alias legacy conocido
-        if(st !== undefined && _LEGACY_TO_PP[st] !== undefined){
-            inc.subTipo = `pp-${_LEGACY_TO_PP[st]}`;
-            modificado = true;
-            return;
-        }
-        // Sin subtipo o subtipo vacío → buscar por coincidencia de nombre en ppTareas
-        if(!st){
-            const nombreBuscar = (inc.nombre || inc.nota || "").toLowerCase();
-            const match = ppTareas.find(t =>
-                nombreBuscar && t.nombre.toLowerCase().split(" ").filter(w=>w.length>4)
-                    .some(w => nombreBuscar.includes(w))
-            );
-            if(match){ inc.subTipo = `pp-${match.id}`; modificado = true; }
-        }
-    });
-    if(modificado){
-        localStorage.setItem("incidencias", JSON.stringify(incidencias));
-        console.log("[HF] Migración de subtipos legacy completada.");
-    }
-}
-
 function cargarAniosPrev(){
-    // Reconstruir etiquetas dinámicas desde ppTareas (por si se agregó una nueva)
-    _reconstruirTipoLabels();
-
     let sel = document.getElementById("filtroPrevAnio");
     if(!sel) return;
     let anios = [...new Set(incidencias.filter(i=>i.tipo==="Preventivo"&&i.fecha).map(i=>i.fecha.slice(0,4)))].sort().reverse();
     let actual = sel.value;
     sel.innerHTML = '<option value="todos">Todos</option>' + anios.map(a=>`<option value="${a}">${a}</option>`).join("");
     if(anios.includes(actual)) sel.value = actual;
-
-    // Poblar dinámicamente el select de subtipo del filtro
-    _poblarSelectSubtipoPrev();
-}
-
-function _poblarSelectSubtipoPrev(){
-    const sel = document.getElementById("filtroPrevTipo");
-    if(!sel) return;
-    const actualVal = sel.value;
-    const _tareasRef = (typeof ppTareas !== "undefined" && ppTareas.length) ? ppTareas : PP_TAREAS_BASE;
-    sel.innerHTML = '<option value="todos">Todos</option>' +
-        _tareasRef.map(t => `<option value="pp-${t.id}">${t.nombre}</option>`).join("");
-    // Restaurar selección previa si sigue siendo válida
-    if([...sel.options].some(o => o.value === actualVal)) sel.value = actualVal;
 }
 
 function renderIncidenciasPreventivos(){
@@ -7634,11 +7596,15 @@ function renderIncidenciasPreventivos(){
 
     cont.innerHTML = lista.map(p => {
         let globalIdx = incidencias.indexOf(p);
-        let tipoLabel = p.nombre || TIPO_LABELS_PREV[p.subTipo ?? ""] || p.subTipo || "Preventivo";
+        let tipoLabel = (p.subTipo === "plan" && p.nombre)
+            ? p.nombre
+            : (p.subTipo === "plan" && p.nota)
+                ? p.nota.replace(/^\[.*?\]\s*/, "").split("·")[0].trim()
+                : TIPO_LABELS_PREV[p.subTipo != null ? (p.subTipo || "") : ""] || p.subTipo || "Slots";
 
-        // Obtener array de islas efectivo — para registros legacy sin islas, extraer de la nota
+        // Obtener array de islas efectivo — para registros "plan" viejos sin islas, extraer de la nota
         let islasEfectivas = (p.islas && p.islas.length > 0) ? p.islas : [];
-        if(islasEfectivas.length === 0 && _esSubtipoDeIslas(p.subTipo) && p.nota){
+        if(islasEfectivas.length === 0 && (p.subTipo === "plan" || p.subTipo === "mantenimiento-islas") && p.nota){
             let match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
             if(match) islasEfectivas = match[1].split(",").map(s => s.trim()).filter(Boolean);
         }
@@ -7658,7 +7624,10 @@ function renderIncidenciasPreventivos(){
             return fromActivas ?? saved ?? 1;
         };
 
-        if(_esSubtipoDeIslas(p.subTipo)){
+        const PCHK_NO_ISLA = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]);
+        const esPchkNumerico = p.subTipo && p.subTipo.startsWith("pchk-") && !PCHK_NO_ISLA.has(p.subTipo);
+        const esMgiIslas = p.subTipo && p.subTipo.startsWith("mgi-");
+        if(!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || esPchkNumerico || esMgiIslas){
             // Islas con slots: contar máquinas reales por isla
             maqCount = islasEfectivas.reduce((s, islaId) => s + getSlots(islaId), 0);
             if(islasEfectivas.length > 0){
@@ -7666,7 +7635,7 @@ function renderIncidenciasPreventivos(){
             } else {
                 resumenEquipos = `<span style="color:var(--yellow);font-size:11px;">⚠️ Sin islas registradas — expandí para cargarlas</span>`;
             }
-        } else if(p.subTipo === "control-cooler-botonera" || p.subTipo === "pp-31"){
+        } else if(p.subTipo === "control-cooler-botonera"){
             // CCB: contar máquinas reales por isla
             maqCount = islasEfectivas.reduce((s, islaId) => s + getSlots(islaId), 0);
             if(islasEfectivas.length > 0){
@@ -7718,7 +7687,7 @@ function renderIncidenciasPreventivos(){
                 <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Máquinas intervenidas</div>
                 <div id="${cardId}-islas" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
                     ${islasEfectivas.map(e => {
-                        let isIsla = _esSubtipoDeIslas(p.subTipo);
+                        const _pchkNoIsla2 = new Set(["pchk-1","pchk-2","pchk-5","pchk-8"]); let isIsla = (!p.subTipo || p.subTipo === "plan" || p.subTipo === "mantenimiento-islas" || p.subTipo === "control-cooler-botonera" || (p.subTipo && p.subTipo.startsWith("pchk-") && !_pchkNoIsla2.has(p.subTipo)) || (p.subTipo && p.subTipo.startsWith("mgi-")));
                         let lbl = isIsla ? `Isla ${e}` : (String(e).includes("|")?String(e).replace("|"," "):e);
                         let slots = isIsla ? (() => {
                             let isla = islasActivas.find(il => il.id === parseInt(e));
@@ -7731,7 +7700,7 @@ function renderIncidenciasPreventivos(){
                     }).join("")}
                 </div>
                 ${(()=>{
-                    let isIslaSubtipo = _esSubtipoDeIslas(p.subTipo);
+                    const _pchkNoIsla3 = new Set(['pchk-1','pchk-2','pchk-5','pchk-8']); let isIslaSubtipo = !p.subTipo || p.subTipo === 'plan' || p.subTipo === 'mantenimiento-islas' || p.subTipo === 'control-cooler-botonera' || (p.subTipo && p.subTipo.startsWith('pchk-') && !_pchkNoIsla3.has(p.subTipo)) || (p.subTipo && p.subTipo.startsWith('mgi-'));
                     if(isIslaSubtipo && maqCount > 0){
                         let est = p.islasMaquinas ? '' : " <span style='font-weight:400;font-size:11px;color:var(--muted);'>(estimado)</span>";
                         return `<div style="margin-bottom:12px;padding:8px 12px;background:rgba(0,212,168,.07);border:1px solid rgba(0,212,168,.25);border-radius:8px;font-size:13px;color:var(--accent);font-weight:700;">🔧 Total: ${maqCount} máquinas en ${islasEfectivas.length} isla(s)${est}</div>`;
@@ -7805,20 +7774,18 @@ function abrirEditarSubtipoPreventivo(idx){
     let p = incidencias[idx];
     if(!p) return;
 
-    // Poblar select dinámicamente desde ppTareas
+    // Poblar select con todos los subtipos conocidos
     let sel = document.getElementById("editSubtipoSelect");
-    const _tareasRef = (typeof ppTareas !== "undefined" && ppTareas.length) ? ppTareas : PP_TAREAS_BASE;
-    sel.innerHTML = _tareasRef
-        .map(t => `<option value="pp-${t.id}"${(p.subTipo ?? "") === `pp-${t.id}` ? " selected" : ""}>${t.nombre}</option>`)
+    sel.innerHTML = Object.entries(TIPO_LABELS_PREV)
+        .map(([val, lbl]) => `<option value="${val}"${(p.subTipo ?? "") === val ? " selected" : ""}>${lbl}</option>`)
         .join("");
 
     // Mostrar info del registro
     let fechaStr = p.fecha || "—";
     let tecStr   = p.tecnico || "—";
-    const _labelActual = TIPO_LABELS_PREV[p.subTipo ?? ""] || p.subTipo || "Sin subtipo";
     document.getElementById("editSubtipoInfo").innerHTML =
         `<b style="color:var(--accent2);">${fechaStr}</b> · Técnico: <b style="color:var(--white);">${tecStr}</b><br>
-         <span style="color:var(--muted);font-size:12px;">Subtipo actual: <b style="color:var(--yellow);">${_labelActual}</b></span>`;
+         <span style="color:var(--muted);font-size:12px;">Subtipo actual: <b style="color:var(--yellow);">${TIPO_LABELS_PREV[p.subTipo ?? ""] || p.subTipo || "Islas Slots"}</b></span>`;
 
     document.getElementById("modalEditarSubtipoPreventivo").classList.add("open");
 }
@@ -7835,8 +7802,8 @@ function guardarSubtipoPreventivo(){
 
     localStorage.setItem("incidencias", JSON.stringify(incidencias));
 
-    let labelAnterior = TIPO_LABELS_PREV[subtipoAnterior] || subtipoAnterior || "Sin subtipo";
-    let labelNuevo    = TIPO_LABELS_PREV[nuevoSubtipo]    || nuevoSubtipo    || "Sin subtipo";
+    let labelAnterior = TIPO_LABELS_PREV[subtipoAnterior] || subtipoAnterior || "Islas Slots";
+    let labelNuevo    = TIPO_LABELS_PREV[nuevoSubtipo]    || nuevoSubtipo    || "Islas Slots";
     auditRegistrar?.("preventivo","🏷️",`Subtipo editado`,`${labelAnterior} → ${labelNuevo}`);
 
     document.getElementById("modalEditarSubtipoPreventivo").classList.remove("open");
@@ -9737,47 +9704,46 @@ const PP_TECNICOS = ["TODOS",...getTecnicos()];
 
 // Tareas base extraídas del PDF del plan
 const PP_TAREAS_BASE = [
-    { id: 1,  nombre: "Otros - Mantenimiento de Chippers",                                                              meses: [0,2,4,6,8,10] },
-    { id: 2,  nombre: "Mantenimiento de Visualizadores de RA",                                                          meses: [0] },
-    { id: 3,  nombre: "Mantenimiento y Control de Cilindros RA",                                                        meses: [0,3,6] },
-    { id: 4,  nombre: "Rotación de Cilindros entre RA",                                                                 meses: [0,3,6] },
-    { id: 5,  nombre: "Limpieza de Fichas",                                                                             meses: [3,6] },
-    { id: 6,  nombre: "Mantenimiento General de Islas (Sopleteado, coolers, cerraduras, validadores, impresoras)",      meses: [0,1,2,3,4,5,6,7,8,9,10,11] },
-    { id: 7,  nombre: "Mantenimiento general - Limpieza Sala Semicubierta",                                             meses: [0,3,6,9] },
-    { id: 8,  nombre: "Otros - Limpieza General de Stackers",                                                           meses: [0,3,6,9] },
-    { id: 9,  nombre: "Otros - Purga y Limpieza Compresor",                                                             meses: [0,3,6,9] },
-    { id: 10, nombre: "Otros - Mantenimiento Peanas",                                                                   meses: [3,6,9] },
-    { id: 11, nombre: "IGT - Limpieza CPU",                                                                             meses: [3,9] },
-    { id: 12, nombre: "IGT - Limpieza Filtros AVP",                                                                     meses: [0,3,6,9] },
-    { id: 13, nombre: "IGT - Control Botones/Calcos OLED",                                                              meses: [0,1,3,4,6,7] },
-    { id: 14, nombre: "IGT - Control Botones PLAY",                                                                     meses: [0,1,3,4,6,7] },
-    { id: 15, nombre: "SG - Limpieza Placa Video y Coolers — Limpieza CPU",                                             meses: [3,9] },
-    { id: 16, nombre: "SG - Test Botones",                                                                              meses: [0,3,6] },
-    { id: 17, nombre: "L&W - Test Botones",                                                                             meses: [0,6] },
-    { id: 18, nombre: "ZITRO - Mantenimiento PCs Progresivos + Carteles",                                               meses: [0,3,6,9] },
-    { id: 19, nombre: "ZITRO - Control Botones",                                                                        meses: [0,3,6] },
-    { id: 20, nombre: "ZITRO - Control Audio",                                                                          meses: [0,3,6] },
-    { id: 21, nombre: "ZITRO - Revisión Conectores Fuente",                                                             meses: [0,3,6] },
-    { id: 22, nombre: "ZITRO - Control Coolers (Gabinete/CPU/Placas/Botonera)",                                         meses: [0,6] },
-    { id: 23, nombre: "ZITRO - Revisión Cerraduras Mariposa Stacker",                                                   meses: [0,6] },
-    { id: 24, nombre: "BALLY - Control Puertas Belly v22",                                                              meses: [0,3,6] },
-    { id: 25, nombre: "BALLY - Control Coolers CPU v22",                                                                meses: [0,3,6] },
-    { id: 26, nombre: "BALLY - Control Coolers CPU v32",                                                                meses: [0,3,6] },
-    { id: 27, nombre: "BALLY - Control Coolers Placa Video",                                                            meses: [0,3,6] },
-    { id: 28, nombre: "BALLY - Control Botones PLAY",                                                                   meses: [0,3,6] },
-    { id: 29, nombre: "WMS KC - Control Cooler Gabinete",                                                               meses: [0,3,6] },
-    { id: 30, nombre: "Aristocrat - Control Remaches Puertas Stacker Viridian",                                         meses: [0,3,6,9,11] },
-    { id: 31, nombre: "Aristocrat - Control Cooler Botoneras",                                                          meses: [0,3,6] },
-    { id: 32, nombre: "Aristocrat - Control Cooler Fuentes",                                                            meses: [3,6,9] },
-    { id: 33, nombre: "Aristocrat - Control Botones",                                                                   meses: [0,3,6] },
-    { id: 34, nombre: "Aristocrat - Control Cooler Placas Video y CPU",                                                 meses: [0,3,6] },
-    { id: 35, nombre: "Ainsworth - Control Botones PLAY",                                                               meses: [3,6,9] },
-    { id: 36, nombre: "INTERBLOCK - Mantenimiento Preventivo (limpieza cilindros, centros y pc de video)",               meses: [0,6] },
-    { id: 37, nombre: "BCM - Control Cooler Monitor",                                                                    meses: [0,3,6,9] },
-    { id: 38, nombre: "Mantenimiento Preventivo BCM (limpieza cilindros y control coolers)",                             meses: [0,3,6,9] },
-    { id: 39, nombre: "Mantenimiento Preventivo Kioscos EVA",                                                           meses: [0,1] },
-    { id: 40, nombre: "Mantenimiento Preventivo Contadoras",                                                            meses: [0,1] },
-    { id: 41, nombre: "Novomatic - Control botones",                                                                    meses: [] },
+    { id: 1,  nombre: "Mantenimiento de Chippers",                                    meses: [0,2,4,6,8,10] },
+    { id: 2,  nombre: "Mantenimiento de Visualizadores de RA",                         meses: [0] },
+    { id: 3,  nombre: "Mantenimiento y Control de Cilindros RA",                       meses: [0,3,6] },
+    { id: 4,  nombre: "Rotación de Cilindros entre RA",                               meses: [0,3,6] },
+    { id: 5,  nombre: "Limpieza de Fichas",                                            meses: [3,6] },
+    { id: 6,  nombre: "Mantenimiento General de Islas (Sopleteado, coolers, cerraduras, validadores, impresoras)", meses: [0,1,2,3,4,5,6,7,8,9,10,11] },
+    { id: 7,  nombre: "Limpieza Sala Semicubierta — Mantenimiento Islas Sector Semicubierto", meses: [0,3,6,9] },
+    { id: 8,  nombre: "Limpieza General de Stackers",                                  meses: [0,3,6,9] },
+    { id: 9,  nombre: "Purga y Limpieza Compresor",                                    meses: [0,3,6,9] },
+    { id: 10, nombre: "Mantenimiento Peanas",                                          meses: [3,6,9] },
+    { id: 11, nombre: "Limpieza CPU IGT",                                              meses: [3,9] },
+    { id: 12, nombre: "Limpieza Filtros AVP / Limpieza Filtros IGT AVP",               meses: [0,3,6,9] },
+    { id: 13, nombre: "Control Botones/Calcos OLED IGT",                               meses: [0,1,3,4,6,7] },
+    { id: 14, nombre: "Control Botones PLAY IGT",                                      meses: [0,1,3,4,6,7] },
+    { id: 15, nombre: "Limpieza Placa Video y Coolers — Limpieza CPU SG",              meses: [3,9] },
+    { id: 16, nombre: "Test Botones SG",                                               meses: [0,3,6] },
+    { id: 17, nombre: "Test Botones L&W",                                              meses: [0,6] },
+    { id: 18, nombre: "Mantenimiento PCs Progresivos + Carteles ZITRO",                meses: [0,3,6,9] },
+    { id: 19, nombre: "Control Botones ZITRO",                                         meses: [0,3,6] },
+    { id: 20, nombre: "Control Audio ZITRO",                                           meses: [0,3,6] },
+    { id: 21, nombre: "Revisión Conectores Fuente ZITRO",                              meses: [0,3,6] },
+    { id: 22, nombre: "ZITRO — Control Coolers (Gabinete/CPU/Placas/Botonera)",        meses: [0,6] },
+    { id: 23, nombre: "Revisión Cerraduras Mariposa Stacker",                          meses: [0,6] },
+    { id: 24, nombre: "Control Puertas Belly BALLY v22",                               meses: [0,3,6] },
+    { id: 25, nombre: "Control Coolers CPU BALLY v22",                                 meses: [0,3,6] },
+    { id: 26, nombre: "Control Coolers CPU BALLY v32",                                 meses: [0,3,6] },
+    { id: 27, nombre: "Control Coolers Placa Video BALLY",                             meses: [0,3,6] },
+    { id: 28, nombre: "Control Botones PLAY Bally",                                    meses: [0,3,6] },
+    { id: 29, nombre: "Control Cooler Gabinete WMS KC",                                meses: [0,3,6] },
+    { id: 30, nombre: "Control Remaches Puertas Stacker Viridian Aristocrat",          meses: [0,3,6,9,11] },
+    { id: 31, nombre: "Control Cooler Botoneras Aristocrat",                           meses: [0,3,6] },
+    { id: 32, nombre: "Control Cooler Fuentes Aristocrat",                             meses: [3,6,9] },
+    { id: 33, nombre: "Control Botones/Calcos Aristocrat",                             meses: [0,3,6] },
+    { id: 34, nombre: "Control Cooler Placas Video y CPU Aristocrat",                  meses: [0,3,6] },
+    { id: 35, nombre: "Control Botones PLAY Ainsworth",                                meses: [3,6,9] },
+    { id: 36, nombre: "Mantenimiento Preventivo INTERBLOCK",                           meses: [0,6] },
+    { id: 37, nombre: "Control Cooler Monitor BCM",                                    meses: [0,3,6,9] },
+    { id: 38, nombre: "Mantenimiento Preventivo BCM",                                  meses: [0,3,6,9] },
+    { id: 39, nombre: "Mantenimiento Preventivo Kioscos EVA",                          meses: [0,1] },
+    { id: 40, nombre: "Mantenimiento Preventivo Contadoras",                           meses: [0,1] },
 ];
 
 let ppTareas = JSON.parse(localStorage.getItem("ppTareas")) || JSON.parse(JSON.stringify(PP_TAREAS_BASE));
@@ -9786,9 +9752,6 @@ let ppTabActivo = "todos";
 
 function ppGuardarTareas(){
     localStorage.setItem("ppTareas", JSON.stringify(ppTareas));
-    // Reconstruir etiquetas para que nuevas tareas aparezcan en filtros y selects
-    _reconstruirTipoLabels();
-    _poblarSelectSubtipoPrev?.();
 }
 function ppGuardarPreventivos(){
     localStorage.setItem("ppPreventivos", JSON.stringify(ppPreventivos));
@@ -10338,11 +10301,11 @@ function ppRegistrarEnHistorial(t){
     if(!t._ppMesKey) return;
 
     let islasArr = [];
-    // Subtipo unificado: siempre pp-{tareaId}
-    let subTipo  = t._ppTareaId ? `pp-${t._ppTareaId}` : "pp-6";
+    let subTipo  = "plan";
 
     if(t._ppTareaId === 31){
         // Control Cooler Botonera: tomar islas completadas del ccbCronogramas
+        subTipo = "control-cooler-botonera";
         let ccbData = ccbCronogramas[t._ppMesKey];
         if(ccbData && ccbData.islas){
             islasArr = ccbData.islas.filter(x => x.hecho).map(x => String(x.id));
@@ -10352,6 +10315,7 @@ function ppRegistrarEnHistorial(t){
     } else if(PCHK_META && PCHK_META[t._ppTareaId]){
         // Preventivos con checklist genérico PCHK
         let meta = PCHK_META[t._ppTareaId];
+        subTipo = meta.subTipo;
         let pchkData = pchkGetData ? pchkGetData(t._ppTareaId, t._ppMesKey) : null;
         if(pchkData && pchkData.islas){
             islasArr = pchkData.islas.filter(x => x.hecho).map(x => String(x.id));
@@ -11089,7 +11053,7 @@ function ppMgiConfirmarCierre(){
 
     incidencias.push({
         tipo: "Preventivo",
-        subTipo: `pp-${tid}`,
+        subTipo: tid === 6 ? "mantenimiento-islas" : `mgi-${tid}`,
         fecha: d.fecha,
         islas: d.islas.map(String),
         tecnico: d.tecnico,
@@ -11468,7 +11432,7 @@ function mgiConfirmarCierre(){
     // Guardar en historial de incidencias (preventivos)
     incidencias.push({
         tipo: "Preventivo",
-        subTipo: "pp-6",
+        subTipo: "mantenimiento-islas",
         fecha: d.fecha,
         islas: d.islas.map(String),
         tecnico: d.tecnico,
@@ -11732,7 +11696,7 @@ function ccbCerrarControl(){
     let islasHechas = data.islas.filter(x=>x.hecho).map(x=>String(x.id));
     incidencias.push({
         tipo: "Preventivo",
-        subTipo: "pp-31",
+        subTipo: "control-cooler-botonera",
         fecha: new Date().toISOString().split("T")[0],
         islas: islasHechas,
         tecnico: usuarioActual?.nombre || "Técnico",
@@ -12188,12 +12152,12 @@ function pchkCerrarControl(){
     pchkGuardarStorage();
 
     let islasHechas = data.islas.filter(x=>x.hecho).map(x=>String(x.id));
-    let meta = PCHK_META[tid] || { label: "Preventivo", emoji: "🔧" };
+    let meta = PCHK_META[tid] || { label: "Preventivo", subTipo: `pchk-${tid}` };
     let tecPchkVal = document.getElementById("pchkChecklistTecnico")?.value || usuarioActual?.nombre || "Técnico";
     let tecPchkLabel = tecPchkVal === "__turno_MANANA__" ? "☀️ Turno mañana" : tecPchkVal;
     incidencias.push({
         tipo:    "Preventivo",
-        subTipo: `pp-${tid}`,
+        subTipo: meta.subTipo,
         fecha:   new Date().toISOString().split("T")[0],
         islas:   islasHechas,
         tecnico: tecPchkLabel,
@@ -16500,8 +16464,12 @@ function diRenderDetail(islaId) {
     registros.forEach((p, i) => {
         if (i > 0) html += `<hr style="border:none;border-top:1px solid #2e3350;margin:0;">`;
 
-        // Nombre del trabajo
-        const tipoLabel = p.nombre || TIPO_LABELS_PREV[p.subTipo ?? ""] || p.subTipo || "Preventivo";
+        // Nombre del trabajo — misma lógica que renderIncidenciasPreventivos
+        const tipoLabel = (p.subTipo === "plan" && p.nombre)
+            ? p.nombre
+            : (p.subTipo === "plan" && p.nota)
+                ? p.nota.replace(/^\[.*?\]\s*/, "").split("·")[0].trim()
+                : TIPO_LABELS_PREV[p.subTipo != null ? (p.subTipo || "") : ""] || p.subTipo || "Preventivo";
 
         // Técnicos
         const tecnicos = [p.tecnico, p.tecnico2].filter(Boolean).join(", ");
