@@ -6069,7 +6069,7 @@ function renderDashboard(){
                 ? t.realizadoPor.split(", ").map(s => s.trim())
                 : (t.asignado ? [t.asignado] : []);
             tecs.forEach(nombre => {
-                if(nombre && !nombre.startsWith("__")) conteoTareas[nombre] = (conteoTareas[nombre]||0) + 1;
+                if(nombre && !nombre.startsWith("__") && _usersConCuenta.has(nombre)) conteoTareas[nombre] = (conteoTareas[nombre]||0) + 1;
             });
         });
         let tareasCounts = Object.entries(conteoTareas)
@@ -6099,7 +6099,7 @@ function renderDashboard(){
                 ? t.realizadoPor.split(", ").map(s => s.trim())
                 : (t.asignado ? [t.asignado] : []);
             tecs.forEach(nombre => {
-                if(nombre && !nombre.startsWith("__")){
+                if(nombre && !nombre.startsWith("__") && _usersConCuenta.has(nombre)){
                     horasPorTec[nombre] = (horasPorTec[nombre]||0) + mins;
                     cantPorTec[nombre]  = (cantPorTec[nombre]||0) + 1;
                 }
@@ -6147,8 +6147,8 @@ function renderDashboard(){
         let prevPorTec = {};
         tecnicos.forEach(t => prevPorTec[t] = 0);
         preventivos.forEach(p => {
-            if(p.tecnico && !p.tecnico.startsWith("__")) prevPorTec[p.tecnico] = (prevPorTec[p.tecnico]||0) + 1;
-            if(p.tecnico2 && !p.tecnico2.startsWith("__")) prevPorTec[p.tecnico2] = (prevPorTec[p.tecnico2]||0) + 1;
+            if(p.tecnico && !p.tecnico.startsWith("__") && _usersConCuenta.has(p.tecnico)) prevPorTec[p.tecnico] = (prevPorTec[p.tecnico]||0) + 1;
+            if(p.tecnico2 && !p.tecnico2.startsWith("__") && _usersConCuenta.has(p.tecnico2)) prevPorTec[p.tecnico2] = (prevPorTec[p.tecnico2]||0) + 1;
         });
         let prevData = Object.entries(prevPorTec)
             .filter(([,n]) => n > 0)
