@@ -16463,13 +16463,12 @@ function diRenderDetail(islaId) {
     registros.forEach((p, i) => {
         if (i > 0) html += `<hr style="border:none;border-top:1px solid #2e3350;margin:0;">`;
 
-        // Nombre del trabajo
-        const TIPO_LABELS_PREV_DI = {
-            "": "Slots", "plan": p.nombre || "Plan preventivo",
-            "mantenimiento-islas": "Mantenimiento de islas",
-            "control-cooler-botonera": "Control Cooler/Botonera"
-        };
-        const tipoLabel = TIPO_LABELS_PREV_DI[p.subTipo ?? ""] || p.subTipo || "Preventivo";
+        // Nombre del trabajo — misma lógica que renderIncidenciasPreventivos
+        const tipoLabel = (p.subTipo === "plan" && p.nombre)
+            ? p.nombre
+            : (p.subTipo === "plan" && p.nota)
+                ? p.nota.replace(/^\[.*?\]\s*/, "").split("·")[0].trim()
+                : TIPO_LABELS_PREV[p.subTipo != null ? (p.subTipo || "") : ""] || p.subTipo || "Preventivo";
 
         // Técnicos
         const tecnicos = [p.tecnico, p.tecnico2].filter(Boolean).join(", ");
