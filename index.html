@@ -5035,6 +5035,7 @@ async function importHandleFile(file) {
         "Contadoras":          "contadoras",
         "Validadores":         "validadores",
         "Control_PPT":         "controlPPT",
+        "Partes_Criticas":     "partesCriticas",
     };
 
     _importDatos = {};
@@ -5097,6 +5098,7 @@ async function importHandleFile(file) {
         contadoras:       "🔢 Contadoras",
         validadores:      "💳 Validadores",
         controlPPT:       "📊 Control PPT",
+        partesCriticas:   "🚨 Partes Críticas",
     };
     let listEl = document.getElementById("importPreviewList");
     listEl.innerHTML = previewRows.map(r => `
@@ -5176,6 +5178,7 @@ async function importEjecutar() {
         contadoras:       "🔢 Contadoras",
         validadores:      "💳 Validadores",
         controlPPT:       "📊 Control PPT",
+        partesCriticas:   "🚨 Partes Críticas",
     };
     document.getElementById("importResultado").innerHTML = `
         <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:14px;">✅ Importación completada</div>
@@ -5197,6 +5200,7 @@ async function importEjecutar() {
     try { renderContadoras?.(); } catch(e){}
     try { renderValidadores?.(); } catch(e){}
     try { renderPpt?.(); } catch(e){}
+    try { renderPartesCriticas?.(); } catch(e){}
 
     let total_imp = resultados.reduce((s,r) => s + (r.importados||0), 0);
     toast.success("Importación exitosa ✅", `${total_imp} registros importados en ${resultados.filter(r=>r.ok).length} sección(es)`);
@@ -5462,6 +5466,35 @@ async function importProcesarHoja(clave, rows, modo) {
         pptData.push(...lotes);
         pptGuardar();
         _fbSet("pptData", pptData);
+
+    } else if (clave === "partesCriticas") {
+        let nuevos = [];
+        rows.forEach(r => {
+            if (!r.insumo) { omitidos++; return; }
+            let idNuevo = ahora + importados;
+            nuevos.push({
+                id:            idNuevo,
+                cantidad:      parseInt(r.cantidad) || 1,
+                insumo:        String(r.insumo).trim(),
+                fechaPedido:   _normFecha(r.fechaPedido) || new Date().toISOString().slice(0,10),
+                destino:       String(r.destino || "").trim(),
+                isla:          String(r.isla || "").trim(),
+                observaciones: String(r.observaciones || "").trim(),
+                estado:        r.estado || "Pendiente",
+                fechaRecibido: r.estado === "Recibido" ? (_normFecha(r.fechaRecibido) || "") : "",
+                creadoEn:      idNuevo
+            });
+            importados++;
+        });
+        if (modo === "reemplazar") partesCriticas = [];
+        // Dedup: no agregar si ya existe fechaPedido+insumo+destino igual
+        let keySetPC = new Set(partesCriticas.map(p=>`${p.fechaPedido}|${p.insumo}|${p.destino}`));
+        let sinDupPC = nuevos.filter(n => !keySetPC.has(`${n.fechaPedido}|${n.insumo}|${n.destino}`));
+        omitidos += (nuevos.length - sinDupPC.length);
+        importados -= (nuevos.length - sinDupPC.length);
+        partesCriticas.push(...sinDupPC);
+        _fbSet("partesCriticas", partesCriticas);
+        try { renderPartesCriticas?.(); } catch(e) {}
     }
 
     return { importados, omitidos };
@@ -15172,6 +15205,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <input type="checkbox" id="expChk_correctivos" checked style="accent-color:var(--accent);width:15px;height:15px;"> Correctivos Slots
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_preventivos" checked style="accent-color:var(--accent);width:15px;height:15px;"> Preventivos
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
                         <input type="checkbox" id="expChk_tareas" checked style="accent-color:var(--accent);width:15px;height:15px;"> Tareas
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
@@ -15449,6 +15485,20 @@ async function generarExcelCompleto(){
             ]);
             let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
             XLSX.utils.book_append_sheet(wb,ws,"🔴 Correctivos");
+        }
+
+        // ── PREVENTIVOS ───────────────────────────────────────
+        if(document.getElementById("expChk_preventivos")?.checked){
+            setStatus("Preventivos...");
+            let cabs=["Fecha","Técnico","SubTipo","Islas","Cant. Máquinas","Estado","Nota","Rating"];
+            let filas=prevFilt.map(i=>[
+                i.fecha||"—",i.tecnico||"—",i.subTipo||"—",
+                Array.isArray(i.islas)?i.islas.join(", "):(i.islas||"—"),
+                i.maquinasTotales||"—",i.estado||"Realizado",
+                i.nota||"—",i.rating?`${i.rating}★`:"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🔧 Preventivos");
         }
 
         // ── TAREAS ────────────────────────────────────────────
