@@ -2192,6 +2192,11 @@ body {
                         <div class="page-subtitle">Todos los registros de mantenimientos preventivos</div>
                     </div>
                     <div class="action-bar">
+                        <button id="btnDetalleIslas" onclick="abrirModalDetalleIslas()"
+                            style="background:#22c55e;color:#fff;border:none;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s;"
+                            onmouseover="this.style.background='#16a34a'" onmouseout="this.style.background='#22c55e'">
+                            🏝️ Detalle por Islas
+                        </button>
                         <button id="btnEditarIslasHistorial" class="btn-edit-islas" onclick="abrirModalEditarIslasDirecto()" style="display:none;">⚙️ Editar Islas</button>
                     </div>
                 </div>
@@ -3244,7 +3249,7 @@ body {
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.4.0</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.2.9</span>
         </div>
 
         </div><!-- /main -->
@@ -16219,6 +16224,283 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 10000);
 })();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODAL – DETALLE POR ISLAS
+══════════════════════════════════════════════════════════════ -->
+<div id="modalDetalleIslas" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9999;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;">
+  <div style="background:#1a1d27;border:1px solid #2e3350;border-radius:14px;width:100%;max-width:980px;min-height:80vh;display:flex;flex-direction:column;overflow:hidden;animation:diSlideIn .2s ease;margin:auto;">
+
+    <!-- Header -->
+    <div style="padding:15px 20px;border-bottom:1px solid #2e3350;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:1.1rem;font-weight:800;color:#e2e8f0;">🏝️ Detalle por Islas</div>
+      <button onclick="cerrarModalDetalleIslas()" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;line-height:1;padding:0 4px;" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">✕</button>
+    </div>
+
+    <!-- Filtros -->
+    <div style="padding:12px 20px;border-bottom:1px solid #2e3350;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:0.72rem;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Filtrar:</span>
+
+      <select id="diFilterAnio" onchange="diApplyFilter()" style="background:#22263a;border:1px solid #2e3350;color:#e2e8f0;padding:6px 12px;border-radius:7px;font-size:13px;cursor:pointer;outline:none;min-width:120px;">
+        <option value="todos">Todos los años</option>
+      </select>
+
+      <select id="diFilterMes" onchange="diApplyFilter()" style="background:#22263a;border:1px solid #2e3350;color:#e2e8f0;padding:6px 12px;border-radius:7px;font-size:13px;cursor:pointer;outline:none;min-width:140px;">
+        <option value="todos">Todos los meses</option>
+        <option value="01">Enero</option>
+        <option value="02">Febrero</option>
+        <option value="03">Marzo</option>
+        <option value="04">Abril</option>
+        <option value="05">Mayo</option>
+        <option value="06">Junio</option>
+        <option value="07">Julio</option>
+        <option value="08">Agosto</option>
+        <option value="09">Septiembre</option>
+        <option value="10">Octubre</option>
+        <option value="11">Noviembre</option>
+        <option value="12">Diciembre</option>
+      </select>
+
+      <span id="diFilterTag" style="background:#22263a;border:1px solid #2e3350;border-radius:20px;padding:4px 14px;font-size:0.75rem;color:#94a3b8;font-weight:600;"></span>
+    </div>
+
+    <!-- Body: dos paneles -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;flex:1;overflow:hidden;min-height:500px;">
+
+      <!-- IZQUIERDA: grilla de islas -->
+      <div style="border-right:1px solid #2e3350;padding:16px;overflow-y:auto;">
+        <div id="diYearLabel" style="font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          <span id="diYearText">AÑO —</span>
+          <span style="color:#94a3b8;font-weight:400;font-size:.78rem;">Hacé click en una isla</span>
+        </div>
+        <div id="diIslaGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:9px;">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- DERECHA: detalle -->
+      <div id="diDetailPanel" style="padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;gap:10px;font-size:0.88rem;text-align:center;padding:40px 0;">
+          <div style="font-size:2.5rem;opacity:.35;">🔍</div>
+          <div>Seleccioná una isla para ver<br>el historial de trabajos</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes diSlideIn { from{opacity:0;transform:translateY(-14px)} to{opacity:1;transform:translateY(0)} }
+</style>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   DETALLE POR ISLAS – lógica completa
+══════════════════════════════════════════════════════ */
+let diIslaSeleccionada = null;
+
+function abrirModalDetalleIslas() {
+    const modal = document.getElementById("modalDetalleIslas");
+    modal.style.display = "flex";
+    diIslaSeleccionada = null;
+    diCargarAnios();
+    diApplyFilter();
+}
+
+function cerrarModalDetalleIslas() {
+    document.getElementById("modalDetalleIslas").style.display = "none";
+    diIslaSeleccionada = null;
+}
+
+// Cerrar al hacer click en el fondo
+document.getElementById("modalDetalleIslas").addEventListener("click", function(e) {
+    if (e.target === this) cerrarModalDetalleIslas();
+});
+
+function diCargarAnios() {
+    const sel = document.getElementById("diFilterAnio");
+    const preventivos = incidencias.filter(i => i.tipo === "Preventivo" && i.fecha);
+    const anios = [...new Set(preventivos.map(i => i.fecha.slice(0,4)))].sort().reverse();
+    sel.innerHTML = '<option value="todos">Todos los años</option>' +
+        anios.map(a => `<option value="${a}">${a}</option>`).join("");
+    // Seleccionar el año más reciente por defecto
+    if (anios.length > 0) sel.value = anios[0];
+}
+
+function diGetFiltros() {
+    return {
+        anio: document.getElementById("diFilterAnio").value,
+        mes:  document.getElementById("diFilterMes").value
+    };
+}
+
+function diFilterRecords(lista) {
+    const { anio, mes } = diGetFiltros();
+    return lista.filter(r => {
+        if (!r.fecha) return false;
+        if (anio !== "todos" && r.fecha.slice(0,4) !== anio) return false;
+        if (mes  !== "todos" && r.fecha.slice(5,7) !== mes)  return false;
+        return true;
+    });
+}
+
+function diApplyFilter() {
+    diUpdateTag();
+    diRenderGrid();
+    if (diIslaSeleccionada !== null) diRenderDetail(diIslaSeleccionada);
+}
+
+function diUpdateTag() {
+    const { anio, mes } = diGetFiltros();
+    const meses = {"01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"Mayo","06":"Junio",
+                   "07":"Julio","08":"Agosto","09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"};
+    const anioTxt = anio === "todos" ? "Todos los años" : `AÑO ${anio}`;
+    const mesTxt  = mes  === "todos" ? "Todos los meses" : (meses[mes] || mes);
+    document.getElementById("diFilterTag").textContent = `${anioTxt} – ${mesTxt}`;
+    document.getElementById("diYearText").textContent  = anioTxt;
+}
+
+function diRenderGrid() {
+    const grid = document.getElementById("diIslaGrid");
+    grid.innerHTML = "";
+
+    // Obtener todas las islas activas del sistema
+    const todasIslas = [...islasActivas].sort((a,b) => a.id - b.id);
+
+    // Obtener todos los preventivos
+    const preventivos = incidencias.filter(i => i.tipo === "Preventivo");
+
+    todasIslas.forEach(isla => {
+        // Registros de esta isla en el período filtrado
+        const registrosIsla = preventivos.filter(p => {
+            if (!diFilterRecords([p]).length) return false;
+            // Verificar si la isla está en el registro
+            const islaId = isla.id;
+            if (p.islas && p.islas.length > 0) {
+                return p.islas.map(x => parseInt(x)).includes(islaId);
+            }
+            // Fallback: intentar extraer de la nota
+            if (p.nota) {
+                const match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
+                if (match) {
+                    const ids = match[1].split(",").map(s => parseInt(s.trim()));
+                    return ids.includes(islaId);
+                }
+            }
+            return false;
+        });
+
+        const hasRecords = registrosIsla.length > 0;
+        const isActive   = diIslaSeleccionada === isla.id;
+
+        const card = document.createElement("div");
+        card.style.cssText = `
+            background:${isActive ? "#1e3a5f" : "#22263a"};
+            border:1px solid ${isActive ? "#3b82f6" : (hasRecords ? "#2e3350" : "#1e2233")};
+            border-radius:8px;
+            padding:8px 4px 6px;
+            text-align:center;
+            cursor:pointer;
+            transition:all .15s;
+            display:flex;flex-direction:column;align-items:center;gap:3px;
+            opacity:${hasRecords ? "1" : "0.4"};
+            ${isActive ? "box-shadow:0 0 0 2px rgba(59,130,246,.4);" : ""}
+        `;
+        card.innerHTML = `
+            <div style="font-size:1rem;color:${hasRecords ? "#22c55e" : "#475569"};line-height:1;">${hasRecords ? "✔" : "–"}</div>
+            <div style="font-size:0.78rem;font-weight:700;color:${isActive ? "#93c5fd" : "#e2e8f0"};">${isla.id}</div>
+        `;
+        card.onmouseover = () => { if (!isActive) card.style.borderColor = "#3b82f6"; };
+        card.onmouseout  = () => { if (!isActive) card.style.borderColor = hasRecords ? "#2e3350" : "#1e2233"; };
+        card.onclick = () => { diIslaSeleccionada = isla.id; diRenderGrid(); diRenderDetail(isla.id); };
+        grid.appendChild(card);
+    });
+}
+
+function diRenderDetail(islaId) {
+    const panel = document.getElementById("diDetailPanel");
+    const preventivos = incidencias.filter(i => i.tipo === "Preventivo");
+
+    const registros = diFilterRecords(preventivos.filter(p => {
+        if (p.islas && p.islas.length > 0) {
+            return p.islas.map(x => parseInt(x)).includes(islaId);
+        }
+        if (p.nota) {
+            const match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
+            if (match) {
+                const ids = match[1].split(",").map(s => parseInt(s.trim()));
+                return ids.includes(islaId);
+            }
+        }
+        return false;
+    })).sort((a,b) => (b.fecha||"").localeCompare(a.fecha||""));
+
+    const islaObj = islasActivas.find(il => il.id === islaId);
+    const islaName = islaObj?.nombre ? ` · ${islaObj.nombre}` : "";
+
+    if (registros.length === 0) {
+        panel.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;gap:10px;font-size:.88rem;text-align:center;padding:40px 0;">
+                <div style="font-size:2rem;opacity:.35;">📋</div>
+                <div>No hay registros para<br><strong style="color:#e2e8f0;">Isla ${islaId}</strong><br>con el filtro seleccionado</div>
+            </div>`;
+        return;
+    }
+
+    const meses = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    function fmtFecha(f) {
+        if (!f) return "—";
+        const [y,m,d] = f.split("-");
+        return `${parseInt(d)}/${meses[parseInt(m)]}/${y}`;
+    }
+
+    let html = `<div style="font-size:.95rem;font-weight:700;color:#60a5fa;padding-bottom:10px;border-bottom:1px solid #2e3350;">
+        📍 Isla ${islaId}${islaName} — ${registros.length} registro${registros.length>1?"s":""}
+    </div>`;
+
+    registros.forEach((p, i) => {
+        if (i > 0) html += `<hr style="border:none;border-top:1px solid #2e3350;margin:0;">`;
+
+        // Nombre del trabajo
+        const TIPO_LABELS_PREV_DI = {
+            "": "Slots", "plan": p.nombre || "Plan preventivo",
+            "mantenimiento-islas": "Mantenimiento de islas",
+            "control-cooler-botonera": "Control Cooler/Botonera"
+        };
+        const tipoLabel = TIPO_LABELS_PREV_DI[p.subTipo ?? ""] || p.subTipo || "Preventivo";
+
+        // Técnicos
+        const tecnicos = [p.tecnico, p.tecnico2].filter(Boolean).join(", ");
+
+        // Turno
+        const turno = p.turno || "—";
+
+        // Nota limpia
+        const nota = (p.nota || "").replace(/^\[.*?\]\s*/, "").trim();
+
+        // Validado
+        const validado = p.validado;
+
+        html += `
+        <div style="background:#22263a;border:1px solid #2e3350;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s;"
+             onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='#2e3350'">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:.78rem;">
+                <span style="font-weight:700;color:#e2e8f0;">📅 Fecha: ${fmtFecha(p.fecha)}</span>
+                <span style="background:#1a1d27;border:1px solid #2e3350;border-radius:5px;padding:2px 8px;color:#94a3b8;font-size:.7rem;">Turno: ${turno}</span>
+                ${tecnicos ? `<span style="color:#f97316;font-weight:600;">👤 ${tecnicos}</span>` : ""}
+            </div>
+            <div style="font-size:.82rem;color:#cbd5e1;font-weight:600;">${tipoLabel}</div>
+            ${nota ? `<div style="font-size:.8rem;color:#94a3b8;line-height:1.5;">${nota}</div>` : ""}
+            <div style="font-size:.72rem;font-weight:700;${validado ? "color:#22c55e;" : "color:#f87171;"}">
+                ${validado ? "✔ Certificado por Jefe Técnico" : "✕ Sin validar"}
+            </div>
+        </div>`;
+    });
+
+    panel.innerHTML = html;
+}
 </script>
 </body>
 </html>
