@@ -2197,18 +2197,66 @@ body {
                 </div>
 
                 <div class="filters-row">
+                    <div class="filter-group" style="flex:1 1 220px;min-width:180px;">
+                        <label>Buscar</label>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <input type="text" id="filtroPrevTexto" placeholder="Nombre, técnico, nota…"
+                                style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;outline:none;"
+                                oninput="renderIncidenciasPreventivos()"
+                                onkeydown="if(event.key==='Enter')renderIncidenciasPreventivos()">
+                            <button onclick="renderIncidenciasPreventivos()"
+                                style="background:var(--accent,#6c63ff);border:none;border-radius:8px;padding:8px 14px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                                🔍 Buscar
+                            </button>
+                        </div>
+                    </div>
                     <div class="filter-group">
-                        <label>Tipo</label>
+                        <label>Subtipo</label>
                         <select id="filtroPrevTipo" onchange="renderIncidenciasPreventivos()">
                             <option value="todos">Todos</option>
                             <option value="">Islas Slots</option>
+                            <option value="plan">Mant. General de Islas</option>
+                            <option value="mantenimiento-islas">Mant. Islas</option>
+                            <option value="mgi-7">Limpieza Sala Semicubierta</option>
+                            <option value="control-cooler-botonera">Control Cooler Botonera</option>
+                            <option value="pchk-1">Mant. Chippers</option>
+                            <option value="pchk-2">Mant. Visualizadores RA</option>
+                            <option value="pchk-5">Limpieza de Fichas</option>
+                            <option value="pchk-8">Limpieza General Stackers</option>
+                            <option value="pchk-11">Limpieza CPU IGT</option>
+                            <option value="pchk-12">Limpieza Filtros AVP IGT</option>
+                            <option value="pchk-13">Control Botones/Calcos OLED IGT</option>
+                            <option value="pchk-14">Control Botones PLAY IGT</option>
+                            <option value="pchk-15">Limpieza Placa Video y Coolers SG</option>
+                            <option value="pchk-16">Test Botones SG</option>
+                            <option value="pchk-17">Test Botones L&amp;W</option>
+                            <option value="pchk-18">Mant. PCs Progresivos + Carteles ZITRO</option>
+                            <option value="pchk-19">Control Botones ZITRO</option>
+                            <option value="pchk-20">Control Audio ZITRO</option>
+                            <option value="pchk-21">Revisión Conectores Fuente ZITRO</option>
+                            <option value="pchk-22">Control Coolers ZITRO</option>
+                            <option value="pchk-23">Revisión Cerraduras Mariposa Stacker</option>
+                            <option value="pchk-24">Control Puertas Belly BALLY v22</option>
+                            <option value="pchk-25">Control Coolers CPU BALLY v22</option>
+                            <option value="pchk-26">Control Coolers CPU BALLY v32</option>
+                            <option value="pchk-27">Control Coolers Placa Video BALLY</option>
+                            <option value="pchk-28">Control Botones PLAY Bally</option>
+                            <option value="pchk-29">Control Cooler Gabinete WMS KC</option>
+                            <option value="pchk-30">Control Remaches Stacker Viridian</option>
+                            <option value="pchk-32">Control Cooler Fuentes Aristocrat</option>
+                            <option value="pchk-33">Control Botones/Calcos Aristocrat</option>
+                            <option value="pchk-34">Control Cooler Placas y CPU Aristocrat</option>
+                            <option value="pchk-35">Control Botones PLAY Ainsworth</option>
+                            <option value="pchk-36">Mant. Preventivo INTERBLOCK</option>
+                            <option value="pchk-37">Control Cooler Monitor BCM</option>
+                            <option value="pchk-38">Mant. Preventivo BCM</option>
                             <option value="avp">Filtros AVP</option>
                             <option value="stacker">Stackers</option>
                             <option value="chipper">Chipper</option>
                             <option value="pc">PC/Carteles</option>
                             <option value="cilindros">Cilindros RE</option>
                             <option value="ra">Visualizadores RA</option>
-                            <option value="plan">Plan Preventivo</option>
+                            <option value="eva">Kioscos EVA</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -7512,10 +7560,19 @@ function renderIncidenciasPreventivos(){
     let validF   = document.getElementById("filtroPrevValidado")?.value || "todos";
     let anioF    = document.getElementById("filtroPrevAnio")?.value || "todos";
     let mesF     = document.getElementById("filtroPrevMes")?.value || "todos";
+    let textoF   = (document.getElementById("filtroPrevTexto")?.value || "").trim().toLowerCase();
 
     let lista = incidencias.filter(i => i.tipo === "Preventivo");
 
     if(tipoF !== "todos") lista = lista.filter(i => (i.subTipo || "") === tipoF);
+    if(textoF) lista = lista.filter(i => {
+        const label = TIPO_LABELS_PREV[i.subTipo ?? ""] || i.subTipo || "";
+        return (i.nombre||"").toLowerCase().includes(textoF)
+            || (i.nota||"").toLowerCase().includes(textoF)
+            || (i.tecnico||"").toLowerCase().includes(textoF)
+            || (i.tecnico2||"").toLowerCase().includes(textoF)
+            || label.toLowerCase().includes(textoF);
+    });
     if(tecnicoF === "__turno_MANANA__"){
         let turnoLista = getTecnicosTurno();
         lista = lista.filter(i => turnoLista.includes(i.tecnico) || turnoLista.includes(i.tecnico2));
