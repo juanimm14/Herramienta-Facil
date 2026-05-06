@@ -4758,6 +4758,8 @@ function iniciarApp(){
     if(navImp) navImp.style.display = esAdminOSuperAdmin() ? "flex" : "none";
     let navExp = document.getElementById("nav-exportar-excel");
     if(navExp) navExp.style.display = esAdminOSuperAdmin() ? "flex" : "none";
+    let navPC = document.getElementById("nav-partes-criticas");
+    if(navPC) navPC.style.display = esAdminOSuperAdmin() ? "flex" : "none";
 
     // Badge especial para SuperAdmin en topbar
     if(esSuperAdmin()){
@@ -4862,6 +4864,13 @@ function aplicarSidebarConfig() {
         let visible = cfg[item.id] !== false; // default true
         btn.style.display = visible ? "" : "none";
     });
+    // Restricciones de rol — siempre tienen prioridad sobre la config del sidebar
+    if (!esAdminOSuperAdmin()) {
+        ["nav-gestionUsuarios","nav-importar","nav-exportar-excel","nav-partes-criticas"].forEach(id => {
+            let el = document.getElementById(id);
+            if (el) el.style.display = "none";
+        });
+    }
 }
 
 function toggleSidebarConfigPanel() {
@@ -5668,7 +5677,7 @@ function mostrar(sec){
     if(sec === 'control-ppt') initPpt();
     if(sec === 'carteles') renderCartelesAdmin();
     if(sec === 'plan-preventivo') ppIniciar();
-    if(sec === 'partes-criticas') renderPartesCriticas();
+    if(sec === 'partes-criticas'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderPartesCriticas(); }
     if(sec === 'cronograma-eventos') {
         let acciones = document.getElementById("cronogramaEventosAcciones");
         if(acciones) acciones.style.display = esAdminOSuperAdmin() ? "flex" : "none";
@@ -15432,7 +15441,7 @@ async function generarExcelCompleto(){
         let cntFilt  = _exportFiltrar(typeof contadorasData!=="undefined"?contadorasData:[], "fecha");
         let evaFilt  = _exportFiltrar(typeof evaIncidencias!=="undefined"?evaIncidencias:[], "fecha");
         let valFilt  = _exportFiltrar(typeof validadoresData!=="undefined"?validadoresData:[], "fecha");
-        let evUnicFilt = _exportFiltrar(typeof eventosUnicos!=="undefined"?eventosUnicos:[], "fecha");
+        let evUnicFilt = _exportFiltrar(window.eventosUnicos||[], "fecha");
 
         // ── HOJA RESUMEN ──────────────────────────────────────
         setStatus("Generando resumen...");
