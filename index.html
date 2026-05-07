@@ -7756,23 +7756,25 @@ function renderIncidenciasPreventivos(){
                     return '';
                 })()}
                 ${(p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones||(p.tipo==="Preventivo"&&p.estado?p.estado:""))?`<div style="font-size:13px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;"><b style="color:var(--white);">📝 Descripción:</b><br><span style="color:var(--muted);line-height:1.6;">${p.nota||p.notas||p.descripcion||p.detalle||p.observacion||p.observaciones||(p.tipo==="Preventivo"?p.estado:"")}</span></div>`:(esAdminOSuperAdmin()?`<div onclick="event.stopPropagation();abrirEditarPreventivoCompleto(${globalIdx})" style="font-size:12px;margin-bottom:12px;padding:8px 14px;background:rgba(255,201,71,.06);border:1px dashed rgba(255,201,71,.4);border-radius:8px;color:var(--yellow);cursor:pointer;">✏️ Sin descripción — tocá para agregar</div>`:"")}
-                <!-- Panel editar islas cargadas — solo Admin, solo tipo Islas Slots -->
-                ${(usuarioActual?.rol==="Admin" && !p.subTipo) ? `
+                <!-- Panel editar islas cargadas — Admin, todos los subtipos -->
+                ${(usuarioActual?.rol==="Admin") ? `
                 <div id="${cardId}-editpanel" style="display:none;margin-bottom:12px;padding:12px;background:var(--bg2);border:1px solid var(--accent2);border-radius:9px;">
                     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Modificar islas de este registro. Los cambios afectan el conteo de máquinas.</div>
                     <div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;">
                         <div>
-                            <label class="form-label" style="font-size:10px;">Agregar isla</label>
-                            <input type="number" id="${cardId}-addisla" placeholder="Ej: 112" style="width:90px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:white;font-size:13px;">
+                            <label class="form-label" style="font-size:10px;">Agregar isla (número o texto)</label>
+                            <input type="text" id="${cardId}-addisla" placeholder="Ej: 112" style="width:110px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:white;font-size:13px;"
+                                onkeydown="if(event.key==='Enter') agregarIslaAlRegistro(${globalIdx},'${cardId}')">
                         </div>
                         <button onclick="agregarIslaAlRegistro(${globalIdx},'${cardId}')" style="background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:7px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;">➕ Agregar</button>
                     </div>
-                    <div id="${cardId}-islalist" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                    <div id="${cardId}-islalist" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+                    <div id="${cardId}-total" style="font-size:12px;font-weight:700;color:var(--accent);"></div>
                 </div>
                 ` : ""}
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                ${(usuarioActual?.rol==="Admin" && !p.subTipo)
-                    ? `<button onclick="event.stopPropagation();toggleEditarIslasRegistro('${cardId}')" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">⚙️ Editar Islas Cargadas</button>`
+                ${(usuarioActual?.rol==="Admin")
+                    ? `<button onclick="event.stopPropagation();toggleEditarIslasRegistro('${cardId}')" style="background:rgba(79,142,255,.12);border:1px solid var(--accent2);color:var(--accent2);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">⚙️ Editar Islas</button>`
                     : ""}
                 ${usuarioActual?.rol==="Admin"
                     ? `<button onclick="event.stopPropagation();abrirEditarSubtipoPreventivo(${globalIdx})" style="background:rgba(255,201,71,.1);border:1px solid var(--yellow);color:var(--yellow);border-radius:7px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;">🏷️ Editar Subtipo</button>`
@@ -8228,22 +8230,46 @@ function renderIslaListRegistro(cardId){
     if(!p) return;
     let cont = document.getElementById(cardId + "-islalist");
     if(!cont) return;
+    let isIslaSubtipo = _esSubtipoDeIslas(p.subTipo);
+    let totalMaq = 0;
     cont.innerHTML = (p.islas||[]).map((islaId, i) => {
-        let isla = islasActivas.find(il => il.id === parseInt(islaId));
-        let slots = isla ? isla.slots : "?";
+        let slots = null;
+        let label = "";
+        if(isIslaSubtipo){
+            let isla = islasActivas.find(il => il.id === parseInt(islaId));
+            slots = isla ? isla.slots : (p.islasMaquinas ? p.islasMaquinas[String(islaId)] : null);
+            if(slots) totalMaq += Number(slots);
+            let maqTag = slots != null ? `<span style="font-size:10px;background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 5px;font-weight:700;">${slots} máq.</span>` : "";
+            label = `<span style="font-weight:600;color:var(--white);">Isla ${islaId}</span> ${maqTag}`;
+        } else {
+            label = `<span style="font-weight:600;color:var(--white);">${String(islaId).includes("|")?String(islaId).replace("|"," "):islaId}</span>`;
+            totalMaq++;
+        }
         return `<div style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:5px 10px;">
-            <span style="font-weight:600;color:var(--white);">Isla ${islaId}</span>
-            <span style="color:var(--muted);font-size:11px;">${slots} slots</span>
-            <button onclick="quitarIslaDeRegistro(${idx},${i},'${cardId}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;margin-left:4px;" title="Quitar">✖</button>
+            ${label}
+            <button onclick="quitarIslaDeRegistro(${idx},${i},'${cardId}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;margin-left:4px;" title="Quitar">✖</button>
         </div>`;
     }).join("");
+    // Actualizar total
+    let totalDiv = document.getElementById(cardId + "-total");
+    if(totalDiv){
+        let n = (p.islas||[]).length;
+        if(n === 0){
+            totalDiv.textContent = "";
+        } else if(isIslaSubtipo && totalMaq > 0){
+            totalDiv.textContent = `🔧 Total: ${totalMaq} máquinas en ${n} isla(s)`;
+        } else {
+            totalDiv.textContent = `📋 Total: ${n} isla(s)`;
+        }
+    }
 }
 
 function quitarIslaDeRegistro(idx, islaIdx, cardId){
     let p = incidencias[idx];
     if(!p || !p.islas) return;
     let islaId = p.islas[islaIdx];
-    if(!confirm(`¿Quitar Isla ${islaId} de este registro?`)) return;
+    let labelIsla = _esSubtipoDeIslas(incidencias[idx]?.subTipo) ? `Isla ${islaId}` : islaId;
+    if(!confirm(`¿Quitar "${labelIsla}" de este registro?`)) return;
     p.islas.splice(islaIdx, 1);
     localStorage.setItem("incidencias", JSON.stringify(incidencias));
     renderIslaListRegistro(cardId);
@@ -8256,13 +8282,21 @@ function agregarIslaAlRegistro(idx, cardId){
     let p = incidencias[idx];
     if(!p) return;
     let input = document.getElementById(cardId + "-addisla");
-    let idIsla = parseInt(input.value);
-    if(!idIsla){ toast.warning("Campo requerido","Ingresá un número de isla válido"); return; }
-    if(!islasActivas.find(il => il.id === idIsla)){ toast.warning("No encontrada","Esa isla no existe en el sistema"); return; }
+    let rawVal = (input.value || "").trim();
+    if(!rawVal){ toast.warning("Campo requerido","Ingresá un número o nombre de isla"); return; }
+    // Para subtipos de islas-slots: validar que sea número y exista en islasActivas
+    let isIslaSubtipo = _esSubtipoDeIslas(p.subTipo);
+    if(isIslaSubtipo){
+        let idIsla = parseInt(rawVal);
+        if(!idIsla){ toast.warning("Inválido","Para este subtipo ingresá el número de isla"); return; }
+        if(!islasActivas.find(il => il.id === idIsla)){ toast.warning("No encontrada","Esa isla no existe en el sistema"); return; }
+        rawVal = String(idIsla);
+    }
     if(!p.islas) p.islas = [];
-    if(p.islas.includes(String(idIsla))){ toast.warning("Duplicado","Esa isla ya está en el registro"); return; }
-    p.islas.push(String(idIsla));
+    if(p.islas.includes(rawVal)){ toast.warning("Duplicado","Esa isla ya está en el registro"); return; }
+    p.islas.push(rawVal);
     input.value = "";
+    input.focus();
     localStorage.setItem("incidencias", JSON.stringify(incidencias));
     renderIslaListRegistro(cardId);
     actualizarBadgeIslasCard(idx, cardId);
@@ -9806,8 +9840,6 @@ const PP_TAREAS_BASE = [
     { id: 39, nombre: "Mantenimiento Preventivo Kioscos EVA",                                                           meses: [0,1] },
     { id: 40, nombre: "Mantenimiento Preventivo Contadoras",                                                            meses: [0,1] },
     { id: 41, nombre: "Novomatic - Control botones",                                                                    meses: [] },
-    { id: 42, nombre: "Mantenimiento Preventivo General",                                                               meses: [] },
-    { id: 43, nombre: "Control PPT",                                                                                    meses: [] },
 ];
 
 let ppTareas = JSON.parse(localStorage.getItem("ppTareas")) || JSON.parse(JSON.stringify(PP_TAREAS_BASE));
