@@ -10428,7 +10428,9 @@ function ppEnviarATareas(){
         return;
     }
 
-    localStorage.setItem("tareas", JSON.stringify(tareas));
+    _cache["tareas"] = tareas;
+    _fbSet("tareas", tareas);
+    _localStorageOrig?.setItem("tareas", JSON.stringify(tareas));
     renderTareas();
     toast.success(
         `${nuevasCreadas} tarea${nuevasCreadas > 1 ? "s" : ""} creada${nuevasCreadas > 1 ? "s" : ""}`,
@@ -16162,7 +16164,9 @@ function ppConfirmarEnvioSeleccionado(){
         nuevasCreadas++;
     });
 
-    localStorage.setItem("tareas", JSON.stringify(tareas));
+    _cache["tareas"] = tareas;
+    _fbSet("tareas", tareas);
+    _localStorageOrig?.setItem("tareas", JSON.stringify(tareas));
     renderTareas();
     ppCerrarModalEnviar();
     toast.success(
