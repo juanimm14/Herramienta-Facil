@@ -6804,7 +6804,7 @@ function avanzarTarea(id){
                 });
                 toast.success("Incidencia creada ✅", "Se generó una incidencia correctiva resuelta");
             }
-        } else if(t.tipo === "preventivo"){
+        } else if(t.tipo === "preventivo" && !t._ppMesKey){
             let tecnico = t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||"");
             let idxExist = incidencias.findIndex(i =>
                 i._fromTareaId === t.id ||
@@ -10439,6 +10439,13 @@ function ppEnviarATareas(){
 // Hook: cuando una tarea de plan preventivo pasa a "realizado", registrar en historial
 function ppRegistrarEnHistorial(t){
     if(!t._ppMesKey) return;
+    // Guard: no duplicar si ya existe un registro para esta tarea en este mes
+    let yaExiste = incidencias.some(i =>
+        i._ppMesKey === t._ppMesKey &&
+        i._ppTareaId === t._ppTareaId &&
+        (i._fromTareaId === t.id || (t._ppDia && i._ppDia === t._ppDia))
+    );
+    if(yaExiste) return;
 
     let islasArr = [];
     // Subtipo unificado: siempre pp-{tareaId}
@@ -10488,9 +10495,15 @@ function ppRegistrarEnHistorial(t){
         validado: false,
         _ppMesKey: t._ppMesKey,
         _ppMesNombre: t._ppMesNombre || "",
-        _ppAnio: t._ppAnio || new Date().getFullYear()
+        _ppAnio: t._ppAnio || new Date().getFullYear(),
+        _ppTareaId: t._ppTareaId || null,
+        _ppDia: t._ppDia || null,
+        _fromTareaId: t.id
     });
-    localStorage.setItem("incidencias", JSON.stringify(incidencias));
+    // Guardar en Firebase (fuente de verdad) + localStorage como respaldo
+    _cache["incidencias"] = incidencias;
+    _fbSet("incidencias", incidencias);
+    _localStorageOrig?.setItem("incidencias", JSON.stringify(incidencias));
 }
 
 // ══════════════════════════════════════════════════════════
@@ -13143,7 +13156,7 @@ function confirmarQuienRealizoMulti(){
                 _fromTareaId: t.id
             });
         }
-    } else if(t.tipo === "preventivo"){
+    } else if(t.tipo === "preventivo" && !t._ppMesKey){
         let tecnico = t.realizadoPor || (t.asignado && !t.asignado.startsWith("__") ? t.asignado : (usuarioActual?.nombre||""));
         let idxExist = incidencias.findIndex(i =>
             i._fromTareaId === t.id ||
