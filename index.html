@@ -10287,11 +10287,35 @@ function ppAsignarTecnico(mesKey, idx, tecnico){
 
 function ppCambiarEstado(mesKey, idx, estado){
     if(!ppPreventivos[mesKey]?.[idx]) return;
-    ppPreventivos[mesKey][idx].estado = estado;
+    const p = ppPreventivos[mesKey][idx];
+    const estadoAnterior = p.estado;
+    p.estado = estado;
     if(estado === "realizado"){
-        ppPreventivos[mesKey][idx].fechaRealizado = new Date().toLocaleDateString("es-AR");
+        p.fechaRealizado = new Date().toLocaleDateString("es-AR");
+
+        // Registrar en Historial de Preventivos si no había registro previo para esta tarea+mes
+        const yaRegistrado = incidencias.some(i =>
+            i.tipo === "Preventivo" &&
+            i._ppMesKey === mesKey &&
+            i._ppTareaId === p.tareaId
+        );
+        if(!yaRegistrado && estadoAnterior !== "realizado"){
+            // Construir objeto tarea sintético para ppRegistrarEnHistorial
+            const tareaSintetica = {
+                _ppMesKey:    mesKey,
+                _ppTareaId:   p.tareaId,
+                _ppMesNombre: p.mesNombre || "",
+                _ppAnio:      parseInt(mesKey.split("-")[0]) || new Date().getFullYear(),
+                _ppIslas:     [],
+                asignado:     p.tecnico || (usuarioActual?.nombre || ""),
+                realizadoPor: p.tecnico || (usuarioActual?.nombre || ""),
+                desc:         p.nombre
+            };
+            ppRegistrarEnHistorial(tareaSintetica);
+            renderIncidenciasPreventivos?.();
+        }
     } else {
-        ppPreventivos[mesKey][idx].fechaRealizado = null;
+        p.fechaRealizado = null;
     }
     ppGuardarPreventivos();
     ppRenderMes(ppTabActivo);
