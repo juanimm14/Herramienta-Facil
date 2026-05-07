@@ -6774,6 +6774,11 @@ function avanzarTarea(id){
         t.estado = "realizado";
         t.finalizadoEn = ahora;
         t.done = true;
+        // Si la tarea no tiene _ppDia, intentar extraerlo del desc (ej: "Día 6 ·")
+        if(t._ppMesKey && !t._ppDia){
+            let m = (t.desc||"").match(/D[íi]a\s+(\d+)/i);
+            if(m) t._ppDia = parseInt(m[1]);
+        }
         ppRegistrarEnHistorial(t);
 
         // ── Crear/actualizar incidencia al cerrar la tarea ──
@@ -10441,11 +10446,14 @@ function ppEnviarATareas(){
 // Hook: cuando una tarea de plan preventivo pasa a "realizado", registrar en historial
 function ppRegistrarEnHistorial(t){
     if(!t._ppMesKey) return;
-    // Guard: no duplicar si ya existe un registro para esta tarea en este mes
+    // Guard: no duplicar si ya existe un registro exactamente de esta tarea
     let yaExiste = incidencias.some(i =>
-        i._ppMesKey === t._ppMesKey &&
-        i._ppTareaId === t._ppTareaId &&
-        (i._fromTareaId === t.id || (t._ppDia && i._ppDia === t._ppDia))
+        i._fromTareaId === t.id ||
+        (
+            i._ppMesKey === t._ppMesKey &&
+            i._ppTareaId === t._ppTareaId &&
+            t._ppDia && i._ppDia === t._ppDia
+        )
     );
     if(yaExiste) return;
 
@@ -10473,7 +10481,25 @@ function ppRegistrarEnHistorial(t){
         }
     } else {
         // Otros preventivos de plan: usar _ppIslas si existe
-        islasArr = t._ppIslas ? t._ppIslas.map(String) : [];
+        if(t._ppIslas && t._ppIslas.length > 0){
+            islasArr = t._ppIslas.map(String);
+        } else if(t._ppTareaId && t._ppMesKey){
+            // Tarea vieja sin _ppIslas: buscar en mgiCronogramas por día
+            let mgiKey = (typeof mgiGetKey === "function") ? mgiGetKey(t._ppTareaId, t._ppMesKey) : t._ppMesKey;
+            let cron = mgiCronogramas?.[mgiKey];
+            if(cron && cron.dias && t._ppDia){
+                let diaData = cron.dias.find(d => d.dia === t._ppDia);
+                if(diaData && diaData.islas && diaData.islas.length > 0){
+                    islasArr = diaData.islas.map(String);
+                }
+            }
+            // Si aun no tiene islas, tomar todas las del cronograma de ese mes
+            if(islasArr.length === 0 && cron && cron.dias){
+                let todasIslas = new Set();
+                cron.dias.forEach(d => (d.islas||[]).forEach(i => todasIslas.add(String(i))));
+                islasArr = [...todasIslas];
+            }
+        }
     }
 
     // Capturar cantidad de máquinas por isla al momento de registrar
@@ -13128,6 +13154,11 @@ function confirmarQuienRealizoMulti(){
         }
     }
 
+    // Si la tarea no tiene _ppDia, intentar extraerlo del desc (ej: "Día 6 ·")
+    if(t._ppMesKey && !t._ppDia){
+        let m = (t.desc||"").match(/D[íi]a\s+(\d+)/i);
+        if(m) t._ppDia = parseInt(m[1]);
+    }
     ppRegistrarEnHistorial?.(t);
 
     // ── Crear/actualizar incidencia al cerrar la tarea ──
@@ -16134,7 +16165,7 @@ function ppConfirmarEnvioSeleccionado(){
                 prioridad: "alta",
                 fecha: d.fecha || fechaHoy,
                 notas: `${label} — ${mesNombre} ${anio}. ${islasTexto}.`,
-                estado: "pendiente", done: false,
+                estado: "pendiente", done: false, tipo: "preventivo",
                 creadoEn: ahora + i * 100, iniciadoEn: null, finalizadoEn: null,
                 _ppMesKey: mesKey, _ppTareaId: p.tareaId,
                 _ppDia: d.dia, _ppIslas: d.islas, _ppMesNombre: mesNombre, _ppAnio: anio
@@ -16146,7 +16177,7 @@ function ppConfirmarEnvioSeleccionado(){
                 desc: `[Prev ${mesNombre}] ${label}`,
                 asignado: tecnico, prioridad: "alta", fecha: fechaHoy,
                 notas: `Preventivo de ${mesNombre} ${anio}. Programá el cronograma en Plan Preventivo.`,
-                estado: "pendiente", done: false,
+                estado: "pendiente", done: false, tipo: "preventivo",
                 creadoEn: ahora + i, iniciadoEn: null, finalizadoEn: null,
                 _ppMesKey: mesKey, _ppTareaId: p.tareaId, _ppMesNombre: mesNombre, _ppAnio: anio
             });
@@ -16156,7 +16187,7 @@ function ppConfirmarEnvioSeleccionado(){
                 desc: `[Prev ${mesNombre}] ${p.nombre}`,
                 asignado: tecnico, prioridad: "media", fecha: fechaHoy,
                 notas: `Preventivo de ${mesNombre} ${anio}. Generado desde Plan de Mantenimiento.`,
-                estado: "pendiente", done: false,
+                estado: "pendiente", done: false, tipo: "preventivo",
                 creadoEn: ahora + i, iniciadoEn: null, finalizadoEn: null,
                 _ppMesKey: mesKey, _ppTareaId: p.tareaId, _ppMesNombre: mesNombre, _ppAnio: anio
             });
