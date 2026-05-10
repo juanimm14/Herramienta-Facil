@@ -9679,29 +9679,43 @@ function estaCartelActivo(cartel){
 // Solo considera técnicos con cuenta activa (excluye Visita y AdminOSuperAdmin si se quiere).
 function getTecnicosInactivos(dias){
     let ahora = new Date();
+    ahora.setHours(0,0,0,0);
     let limite = new Date(ahora);
     limite.setDate(limite.getDate() - dias);
-    limite.setHours(0,0,0,0);
 
-    // Técnicos a monitorear: todos con cuenta (excluye Visita)
+    // Monitorear solo técnicos con rol "Tecnico" (excluye Admin, SuperAdmin y Visita)
     let db = getUsersDB();
-    let tecnicos = db
-        ? db.filter(u => u.rol !== "Visita").map(u => u.nombre)
-        : getTecnicos();
+    let tecnicos = [];
+    if(db && db.length > 0){
+        tecnicos = db.filter(u => u.rol === "Tecnico").map(u => u.nombre);
+    }
+    // Fallback: si no hay nadie con rol "Tecnico" exacto,
+    // derivar de quiénes cargaron correctivos en los últimos 60 días
+    if(tecnicos.length === 0){
+        let hace60 = new Date(ahora);
+        hace60.setDate(hace60.getDate() - 60);
+        let fecha60 = hace60.toISOString().split("T")[0];
+        let tecSet = new Set(
+            incidencias
+                .filter(i => i.tipo === "Correctivo" && i.fecha >= fecha60 && i.tecnico)
+                .map(i => i.tecnico)
+        );
+        tecnicos = [...tecSet];
+    }
 
     let inactivos = [];
     for(let tec of tecnicos){
-        // Buscar el correctivo más reciente del técnico
         let corrs = incidencias.filter(i => i.tipo === "Correctivo" && i.tecnico === tec && i.fecha);
         if(corrs.length === 0){
-            // Nunca cargó — se considera inactivo siempre
-            inactivos.push(tec);
+            inactivos.push({ nombre: tec, diasSinCargar: null });
             continue;
         }
         let masReciente = corrs.reduce((max, i) => i.fecha > max ? i.fecha : max, corrs[0].fecha);
         let fechaRec = new Date(masReciente + "T00:00:00");
         if(fechaRec < limite){
-            inactivos.push(tec);
+            let diffMs = ahora - fechaRec;
+            let diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            inactivos.push({ nombre: tec, diasSinCargar: diffDias });
         }
     }
     return inactivos;
@@ -9727,6 +9741,10 @@ function renderCartelesAdmin(){
                     ? `<span class="cartel-badge-activo" style="background:rgba(255,77,109,.15);color:var(--red);border-color:rgba(255,77,109,.3);">🔴 ${inactivos.length} alerta${inactivos.length>1?"s":""}</span>`
                     : `<span class="cartel-badge-activo">✅ Sin inactivos</span>`)
                 : `<span class="cartel-badge-vencido">⚪ Inactivo</span>`;
+            let listaInactivos = inactivos.map(t => {
+                let d = t.diasSinCargar !== null ? `${t.diasSinCargar}d` : "nunca cargó";
+                return `<span style="color:var(--red);font-weight:600;">${t.nombre}</span> <span style="color:var(--muted);font-size:11px;">(${d})</span>`;
+            }).join(", ");
             return `
             <div class="cartel-card ${c.activo ? 'yellow' : 'vencido'}">
                 <div class="cartel-titulo">
@@ -9734,7 +9752,7 @@ function renderCartelesAdmin(){
                     ${badge}
                 </div>
                 <div class="cartel-mensaje">Dispara alerta si un técnico no carga correctivos en <strong>${c.diasInactividad || 4} días</strong>.<br>
-                ${inactivos.length > 0 ? `Técnicos sin actividad: <strong style="color:var(--red);">${inactivos.join(", ")}</strong>` : "Todos los técnicos están al día."}</div>
+                ${inactivos.length > 0 ? `Sin actividad: ${listaInactivos}` : "Todos los técnicos están al día."}</div>
                 <div class="cartel-fechas"><span>📅 Configurado: ${c.fechaCreado || hoy}</span></div>
                 <div class="cartel-actions">
                     <button onclick="editarCartel(${c.id})">✏️ Editar días</button>
@@ -9784,8 +9802,7 @@ function renderCartelesDashboard(){
     let reglaInact = cartelesData.find(c => c.tipo === "inactividad" && c.activo);
     let bannerInactivos = [];
     if(reglaInact){
-        let inactivos = getTecnicosInactivos(reglaInact.diasInactividad || 4);
-        bannerInactivos = inactivos; // array de nombres
+        bannerInactivos = getTecnicosInactivos(reglaInact.diasInactividad || 4); // array de {nombre, diasSinCargar}
     }
 
     let totalVisible = manuales.length + bannerInactivos.length;
@@ -9812,14 +9829,20 @@ function renderCartelesDashboard(){
     }).join("");
 
     // Un banner por cada técnico inactivo
-    let htmlInactivos = bannerInactivos.map(tec => `
+    let htmlInactivos = bannerInactivos.map(t => {
+        let diasTexto = t.diasSinCargar !== null
+            ? `Hace <strong>${t.diasSinCargar} día${t.diasSinCargar !== 1 ? "s" : ""}</strong> que no registra correctivos.`
+            : `Nunca registró incidencias correctivas.`;
+        return `
         <div class="cartel-banner" style="border-left:3px solid var(--red);">
             <div class="cartel-banner-icon" style="background:rgba(255,77,109,.15);">⚠️</div>
             <div class="cartel-banner-content">
-                <div class="cartel-banner-title" style="color:var(--red);">Sin actividad: ${tec}</div>
-                <div class="cartel-banner-msg">El técnico <strong>${tec}</strong> no registró incidencias correctivas en los últimos ${reglaInact.diasInactividad || 4} días.</div>
+                <div class="cartel-banner-title" style="color:var(--red);">Sin actividad: ${t.nombre}</div>
+                <div class="cartel-banner-msg">${diasTexto}</div>
             </div>
-        </div>`).join("");
+            <div class="cartel-banner-date" style="color:var(--red);font-weight:700;font-size:13px;">${t.diasSinCargar !== null ? t.diasSinCargar + "d" : "—"}</div>
+        </div>`;
+    }).join("");
 
     let badgeTotal = manuales.length + bannerInactivos.length;
     cont.innerHTML = `
