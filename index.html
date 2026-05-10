@@ -9693,60 +9693,52 @@ function getTecnicosInactivos(dias){
     let limite = new Date(ahora);
     limite.setDate(limite.getDate() - dias);
 
-    // Nombres que NUNCA deben aparecer en el cartel (independiente del rol)
-    const EXCLUIR = ["sebastian", "visita"];
+    // Nombres que NUNCA aparecen en el cartel
+    const EXCLUIR_NOMBRES = ["sebastian", "visita"];
     function esExcluido(nombre){
         if(!nombre) return true;
         let n = nombre.toLowerCase();
-        return EXCLUIR.some(ex => n === ex || n.startsWith(ex + " ") || n.endsWith(" " + ex));
+        return EXCLUIR_NOMBRES.some(ex => n === ex || n.startsWith(ex + " ") || n.endsWith(" " + ex));
     }
 
-    // ── Paso 1: obtener lista canónica de técnicos a monitorear ──────────────
-    // Fuente primaria: usersDB de Firestore (_cache), filtrando por rol
-    // Fuente secundaria (fallback): técnicos que aparecen en correctivos históricos
-    //
-    // IMPORTANTE: nunca usar CONFIG_DEFAULTS (nombres cortos que no matchean con incidencias)
-
+    // ── Fuente de verdad: nombres de Admin y SuperAdmin desde usersDB ─────────
+    // Solo para EXCLUIR del cartel, no para construir la lista de técnicos.
+    // Así evitamos el problema de nombres distintos entre usersDB e incidencias.
     let usersReal = (_cache["usersDB"] && Array.isArray(_cache["usersDB"]) && _cache["usersDB"].length > 0)
-        ? _cache["usersDB"]
-        : null;
+        ? _cache["usersDB"] : [];
+    let sonDefaults = usersReal.length > 0 && usersReal.every(u => !u.email && CONFIG_DEFAULTS.tecnicos.includes(u.nombre));
+    if(sonDefaults) usersReal = [];
 
-    // Detectar si son los defaults hardcodeados (sin email, todos con nombres del CONFIG_DEFAULTS)
-    let sonDefaults = usersReal && usersReal.every(u => !u.email && CONFIG_DEFAULTS.tecnicos.includes(u.nombre));
-    if(sonDefaults) usersReal = null; // ignorar, usar fallback
+    // Nombres de Admin/SuperAdmin (para excluirlos del cartel)
+    let nombresAdmin = new Set(
+        usersReal
+            .filter(u => u.rol === "Admin" || u.rol === "SuperAdmin")
+            .map(u => u.nombre.toLowerCase())
+    );
 
-    let tecnicos = [];
+    // ── Lista de técnicos: SIEMPRE desde los correctivos reales (últimos 180 días) ──
+    // Esto garantiza que los nombres coincidan exactamente con i.tecnico
+    let hace180 = new Date(ahora);
+    hace180.setDate(hace180.getDate() - 180);
+    let fecha180 = hace180.toISOString().split("T")[0];
 
-    if(usersReal){
-        // Usar usersDB real: todos menos Visita y excluidos
-        tecnicos = usersReal
-            .filter(u => u.rol !== "Visita" && !esExcluido(u.nombre))
-            .map(u => u.nombre);
-    }
-
-    // Si usersDB no está disponible o no dio técnicos, derivar de correctivos (últimos 180 días)
-    if(tecnicos.length === 0){
-        let hace180 = new Date(ahora);
-        hace180.setDate(hace180.getDate() - 180);
-        let fecha180 = hace180.toISOString().split("T")[0];
-        let tecSet = new Set(
-            incidencias
-                .filter(i => i.tipo === "Correctivo" && i.fecha >= fecha180 && i.tecnico && !esExcluido(i.tecnico))
-                .map(i => i.tecnico)
-        );
-        tecnicos = [...tecSet];
-    }
+    let tecSet = new Set(
+        incidencias
+            .filter(i => i.tipo === "Correctivo" && i.fecha >= fecha180 && i.tecnico
+                && !esExcluido(i.tecnico)
+                && !nombresAdmin.has(i.tecnico.toLowerCase()))
+            .map(i => i.tecnico)
+    );
+    let tecnicos = [...tecSet];
 
     if(tecnicos.length === 0) return [];
 
-    // ── Paso 2: evaluar inactividad de cada técnico ───────────────────────────
+    // ── Evaluar inactividad de cada técnico ───────────────────────────────────
     let inactivos = [];
     for(let tec of tecnicos){
+        // Todos los correctivos del técnico (sin límite de fecha)
         let corrs = incidencias.filter(i => i.tipo === "Correctivo" && i.tecnico === tec && i.fecha);
-        if(corrs.length === 0){
-            inactivos.push({ nombre: tec, diasSinCargar: null });
-            continue;
-        }
+        // corrs.length siempre > 0 porque derivamos de correctivos reales
         let masReciente = corrs.reduce((max, i) => i.fecha > max ? i.fecha : max, corrs[0].fecha);
         let fechaRec = new Date(masReciente + "T00:00:00");
         if(fechaRec < limite){
