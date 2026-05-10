@@ -4605,25 +4605,35 @@ let islasActivas = cargarIslas();
 //  USUARIOS — contraseñas y emails
 // ──────────────────────────────────────────────
 function getUsersDB(){
-    let raw = localStorage.getItem("usersDB");
-    if(raw) return JSON.parse(raw);
-    // Si el cache de Firebase ya cargó pero no tiene usersDB, recién ahí usar defaults
-    // _fbCargaCompleta evita pisar Firestore mientras la carga inicial no terminó
-    if(!window._fbCargaCompleta) {
-        // Aún cargando desde Firestore — devolver defaults temporalmente SIN guardar
-        return CONFIG_DEFAULTS.tecnicos.map(n => ({
-            nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: "", turno: ""
-        }));
+    // 1) Primero intentar desde el cache de Firebase (fuente de verdad)
+    if(_cache["usersDB"] !== undefined && _cache["usersDB"] !== null && _cache["usersDB"].length > 0){
+        return _cache["usersDB"];
     }
-    // defaults: Juan = Admin, resto = Tecnico. Sin contraseña por defecto.
-    let defaults = CONFIG_DEFAULTS.tecnicos.map(n => ({
+    // 2) Fallback: localStorage (misma sesión, mismo dispositivo)
+    let raw = localStorage.getItem("usersDB");
+    if(raw){
+        let parsed = JSON.parse(raw);
+        if(Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    // 3) Firebase aún cargando — devolver defaults SOLO en memoria, NUNCA escribir en Firestore
+    //    Esto evita que un dispositivo sin caché pise los usuarios reales.
+    return CONFIG_DEFAULTS.tecnicos.map(n => ({
         nombre: n, rol: n === "Juan" ? "Admin" : "Tecnico", password: "", email: "", turno: ""
     }));
-    _fbSet("usersDB", defaults);
-    return defaults;
+    // IMPORTANTE: se eliminó el _fbSet(defaults) que destruía usuarios reales al abrir en un dispositivo nuevo
 }
 
-function saveUsersDB(db){ localStorage.setItem("usersDB", JSON.stringify(db)); }
+function saveUsersDB(db){
+    // ⚠️ GUARDA CRÍTICA: nunca persistir los defaults (nombres cortos sin email)
+    // Si todos los usuarios no tienen email y usan nombres del CONFIG_DEFAULTS, son defaults — no guardar
+    if(!db || db.length === 0) return;
+    let sonDefaults = db.every(u => !u.email && CONFIG_DEFAULTS.tecnicos.includes(u.nombre));
+    if(sonDefaults){
+        console.warn("[HF] saveUsersDB bloqueado — detectados defaults, no se escriben en Firestore");
+        return;
+    }
+    localStorage.setItem("usersDB", JSON.stringify(db));
+}
 
 function getUserRecord(nombre){
     return getUsersDB().find(u => u.nombre === nombre);
@@ -9683,26 +9693,53 @@ function getTecnicosInactivos(dias){
     let limite = new Date(ahora);
     limite.setDate(limite.getDate() - dias);
 
-    // Monitorear solo técnicos con rol "Tecnico" (excluye Admin, SuperAdmin y Visita)
-    let db = getUsersDB();
-    let tecnicos = [];
-    if(db && db.length > 0){
-        tecnicos = db.filter(u => u.rol === "Tecnico").map(u => u.nombre);
+    // Nombres que NUNCA deben aparecer en el cartel (independiente del rol)
+    const EXCLUIR = ["sebastian", "visita"];
+    function esExcluido(nombre){
+        if(!nombre) return true;
+        let n = nombre.toLowerCase();
+        return EXCLUIR.some(ex => n === ex || n.startsWith(ex + " ") || n.endsWith(" " + ex));
     }
-    // Fallback: si no hay nadie con rol "Tecnico" exacto,
-    // derivar de quiénes cargaron correctivos en los últimos 60 días
+
+    // ── Paso 1: obtener lista canónica de técnicos a monitorear ──────────────
+    // Fuente primaria: usersDB de Firestore (_cache), filtrando por rol
+    // Fuente secundaria (fallback): técnicos que aparecen en correctivos históricos
+    //
+    // IMPORTANTE: nunca usar CONFIG_DEFAULTS (nombres cortos que no matchean con incidencias)
+
+    let usersReal = (_cache["usersDB"] && Array.isArray(_cache["usersDB"]) && _cache["usersDB"].length > 0)
+        ? _cache["usersDB"]
+        : null;
+
+    // Detectar si son los defaults hardcodeados (sin email, todos con nombres del CONFIG_DEFAULTS)
+    let sonDefaults = usersReal && usersReal.every(u => !u.email && CONFIG_DEFAULTS.tecnicos.includes(u.nombre));
+    if(sonDefaults) usersReal = null; // ignorar, usar fallback
+
+    let tecnicos = [];
+
+    if(usersReal){
+        // Usar usersDB real: todos menos Visita y excluidos
+        tecnicos = usersReal
+            .filter(u => u.rol !== "Visita" && !esExcluido(u.nombre))
+            .map(u => u.nombre);
+    }
+
+    // Si usersDB no está disponible o no dio técnicos, derivar de correctivos (últimos 180 días)
     if(tecnicos.length === 0){
-        let hace60 = new Date(ahora);
-        hace60.setDate(hace60.getDate() - 60);
-        let fecha60 = hace60.toISOString().split("T")[0];
+        let hace180 = new Date(ahora);
+        hace180.setDate(hace180.getDate() - 180);
+        let fecha180 = hace180.toISOString().split("T")[0];
         let tecSet = new Set(
             incidencias
-                .filter(i => i.tipo === "Correctivo" && i.fecha >= fecha60 && i.tecnico)
+                .filter(i => i.tipo === "Correctivo" && i.fecha >= fecha180 && i.tecnico && !esExcluido(i.tecnico))
                 .map(i => i.tecnico)
         );
         tecnicos = [...tecSet];
     }
 
+    if(tecnicos.length === 0) return [];
+
+    // ── Paso 2: evaluar inactividad de cada técnico ───────────────────────────
     let inactivos = [];
     for(let tec of tecnicos){
         let corrs = incidencias.filter(i => i.tipo === "Correctivo" && i.tecnico === tec && i.fecha);
@@ -9713,8 +9750,7 @@ function getTecnicosInactivos(dias){
         let masReciente = corrs.reduce((max, i) => i.fecha > max ? i.fecha : max, corrs[0].fecha);
         let fechaRec = new Date(masReciente + "T00:00:00");
         if(fechaRec < limite){
-            let diffMs = ahora - fechaRec;
-            let diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            let diffDias = Math.floor((ahora - fechaRec) / (1000 * 60 * 60 * 24));
             inactivos.push({ nombre: tec, diasSinCargar: diffDias });
         }
     }
