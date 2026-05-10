@@ -3220,7 +3220,7 @@ setTimeout(function(){
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.2.9</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.3.0</span>
         </div>
 
         </div><!-- /main -->
@@ -3622,37 +3622,61 @@ setTimeout(function(){
 <div id="modalNuevoCartel" class="modal">
     <div class="modal-box">
         <div class="modal-title" id="tituloModalCartel">📌 Nuevo Cartel</div>
-        <div class="form-group">
-            <label class="form-label">Título del cartel</label>
-            <input type="text" id="cartelTitulo" class="form-input" placeholder="Ej: Limpiar Barajadora">
-        </div>
 
         <div class="form-group">
-            <label class="form-label">Mensaje / Descripción</label>
-            <textarea id="cartelMensaje" class="form-textarea" placeholder="Descripción detallada del recordatorio..."></textarea>
-        </div>
-
-        <div class="grid2">
-            <div class="form-group">
-                <label class="form-label">📅 Fecha de Inicio</label>
-                <input type="date" id="cartelFechaInicio" class="form-input">
-                <div style="font-size:11px;color:var(--muted);margin-top:4px;">Cuándo empezar a mostrar</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">📅 Fecha de Caducidad</label>
-                <input type="date" id="cartelFechaCaducidad" class="form-input">
-                <div style="font-size:11px;color:var(--muted);margin-top:4px;">Cuándo dejar de mostrar</div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Color del cartel</label>
-            <select id="cartelColor" class="form-select">
-                <option value="accent">🟢 Verde (Éxito)</option>
-                <option value="accent2">🔵 Azul (Info)</option>
-                <option value="yellow">🟡 Amarillo (Advertencia)</option>
-                <option value="red">🔴 Rojo (Urgente)</option>
+            <label class="form-label">Tipo de cartel</label>
+            <select id="cartelTipo" class="form-select" onchange="onCartelTipoChange()">
+                <option value="manual">📌 Recordatorio manual</option>
+                <option value="inactividad">⚠️ Alerta de inactividad de técnico</option>
             </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;" id="cartelTipoDesc">Se muestra durante las fechas configuradas.</div>
+        </div>
+
+        <div id="cartelCamposManual">
+            <div class="form-group">
+                <label class="form-label">Título del cartel</label>
+                <input type="text" id="cartelTitulo" class="form-input" placeholder="Ej: Limpiar Barajadora">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mensaje / Descripción</label>
+                <textarea id="cartelMensaje" class="form-textarea" placeholder="Descripción detallada del recordatorio..."></textarea>
+            </div>
+
+            <div class="grid2">
+                <div class="form-group">
+                    <label class="form-label">📅 Fecha de Inicio</label>
+                    <input type="date" id="cartelFechaInicio" class="form-input">
+                    <div style="font-size:11px;color:var(--muted);margin-top:4px;">Cuándo empezar a mostrar</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">📅 Fecha de Caducidad</label>
+                    <input type="date" id="cartelFechaCaducidad" class="form-input">
+                    <div style="font-size:11px;color:var(--muted);margin-top:4px;">Cuándo dejar de mostrar</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Color del cartel</label>
+                <select id="cartelColor" class="form-select">
+                    <option value="accent">🟢 Verde (Éxito)</option>
+                    <option value="accent2">🔵 Azul (Info)</option>
+                    <option value="yellow">🟡 Amarillo (Advertencia)</option>
+                    <option value="red">🔴 Rojo (Urgente)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="cartelCamposInactividad" style="display:none;">
+            <div style="background:rgba(255,201,71,.08);border:1px solid rgba(255,201,71,.25);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                <div style="color:var(--yellow);font-weight:600;font-size:13px;margin-bottom:6px;">⚠️ Cómo funciona</div>
+                <div style="color:var(--muted);font-size:12px;line-height:1.6;">El sistema revisa automáticamente las incidencias correctivas cargadas. Si un técnico no registró correctivos en los últimos N días, aparecerá una alerta en el dashboard visible para <strong>todos los usuarios</strong>. El cartel desaparece solo cuando el técnico vuelve a cargar correctivos.</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">⏱️ Días sin correctivos para activar la alerta</label>
+                <input type="number" id="cartelDiasInactividad" class="form-input" min="1" max="30" value="4" placeholder="4">
+                <div style="font-size:11px;color:var(--muted);margin-top:4px;">Si un técnico no carga correctivos en este período, se muestra la alerta.</div>
+            </div>
         </div>
 
         <div class="modal-footer">
@@ -9492,15 +9516,35 @@ function mostrarBotonCartelesAdmin(){
     if(btnImport) btnImport.style.display = esAdminOSuperAdmin() ? "flex" : "none";
 }
 
+// ── Cambio de tipo en el modal ────────────────
+function onCartelTipoChange(){
+    let tipo = document.getElementById("cartelTipo").value;
+    let manual = document.getElementById("cartelCamposManual");
+    let inact  = document.getElementById("cartelCamposInactividad");
+    let desc   = document.getElementById("cartelTipoDesc");
+    if(tipo === "inactividad"){
+        manual.style.display = "none";
+        inact.style.display  = "block";
+        desc.textContent = "Se activa automáticamente cuando un técnico no carga correctivos en N días y desaparece al retomar.";
+    } else {
+        manual.style.display = "block";
+        inact.style.display  = "none";
+        desc.textContent = "Se muestra durante las fechas configuradas.";
+    }
+}
+
 function abrirModalNuevoCartel(){
     if(esVisita()) return;
     cartelEditandoId = null;
     document.getElementById("tituloModalCartel").textContent = "📌 Nuevo Cartel";
+    document.getElementById("cartelTipo").value = "manual";
     document.getElementById("cartelTitulo").value = "";
     document.getElementById("cartelMensaje").value = "";
     document.getElementById("cartelFechaInicio").value = new Date().toISOString().split("T")[0];
     document.getElementById("cartelFechaCaducidad").value = "";
     document.getElementById("cartelColor").value = "accent";
+    document.getElementById("cartelDiasInactividad").value = "4";
+    onCartelTipoChange();
     document.getElementById("modalNuevoCartel").classList.add("open");
 }
 
@@ -9510,43 +9554,68 @@ function cerrarModalNuevoCartel(){
 }
 
 function guardarCartel(){
-    let titulo = document.getElementById("cartelTitulo").value.trim();
-    let mensaje = document.getElementById("cartelMensaje").value.trim();
-    let fechaInicio = document.getElementById("cartelFechaInicio").value;
-    let fechaCaducidad = document.getElementById("cartelFechaCaducidad").value;
-    let color = document.getElementById("cartelColor").value;
+    let tipo = document.getElementById("cartelTipo")?.value || "manual";
+    let hoy  = new Date().toISOString().split("T")[0];
+
+    if(tipo === "inactividad"){
+        let dias = parseInt(document.getElementById("cartelDiasInactividad").value) || 4;
+        if(dias < 1){ toast.warning("Valor inválido","Ingresá al menos 1 día"); return; }
+
+        // Solo puede haber una regla de inactividad activa a la vez
+        let yaExiste = cartelesData.find(c => c.tipo === "inactividad" && c.activo);
+        if(yaExiste && !cartelEditandoId){
+            toast.warning("Ya existe","Ya hay una regla de inactividad activa. Editala o eliminala primero.");
+            return;
+        }
+
+        if(cartelEditandoId){
+            let idx = cartelesData.findIndex(c => c.id === cartelEditandoId);
+            if(idx !== -1){
+                cartelesData[idx] = { ...cartelesData[idx], tipo:"inactividad", diasInactividad: dias, activo: true, fechaModificado: hoy };
+            }
+        } else {
+            cartelesData.push({
+                id: Date.now(),
+                tipo: "inactividad",
+                diasInactividad: dias,
+                activo: true,
+                creadoPor: usuarioActual?.nombre || "Admin",
+                fechaCreado: hoy
+            });
+        }
+
+        localStorage.setItem("cartelesData", JSON.stringify(cartelesData));
+        cerrarModalNuevoCartel();
+        renderCartelesAdmin();
+        renderCartelesDashboard();
+        toast.success("Regla guardada", `Se alertará si un técnico no carga correctivos en ${dias} días`);
+        return;
+    }
+
+    // ── Tipo manual (comportamiento original) ─────────────────
+    let titulo        = document.getElementById("cartelTitulo").value.trim();
+    let mensaje       = document.getElementById("cartelMensaje").value.trim();
+    let fechaInicio   = document.getElementById("cartelFechaInicio").value;
+    let fechaCaducidad= document.getElementById("cartelFechaCaducidad").value;
+    let color         = document.getElementById("cartelColor").value;
 
     if(!titulo){ toast.warning("Campo requerido","Ingresá el título del cartel"); return; }
-
-    let hoy = new Date().toISOString().split("T")[0];
     if(!fechaInicio) fechaInicio = hoy;
 
     if(cartelEditandoId){
         let idx = cartelesData.findIndex(c => c.id === cartelEditandoId);
         if(idx !== -1){
-            cartelesData[idx] = {
-                ...cartelesData[idx],
-                titulo,
-                mensaje,
-                fechaInicio,
-                fechaCaducidad,
-                color,
-                fechaModificado: hoy
-            };
+            cartelesData[idx] = { ...cartelesData[idx], titulo, mensaje, fechaInicio, fechaCaducidad, color, fechaModificado: hoy };
         }
     } else {
-        let nuevoCartel = {
+        cartelesData.push({
             id: Date.now(),
-            titulo,
-            mensaje,
-            fechaInicio,
-            fechaCaducidad,
-            color,
+            tipo: "manual",
+            titulo, mensaje, fechaInicio, fechaCaducidad, color,
             activo: true,
             creadoPor: usuarioActual?.nombre || "Admin",
             fechaCreado: hoy
-        };
-        cartelesData.push(nuevoCartel);
+        });
     }
 
     localStorage.setItem("cartelesData", JSON.stringify(cartelesData));
@@ -9562,11 +9631,19 @@ function editarCartel(id){
 
     cartelEditandoId = id;
     document.getElementById("tituloModalCartel").textContent = "✏️ Editar Cartel";
-    document.getElementById("cartelTitulo").value = cartel.titulo;
-    document.getElementById("cartelMensaje").value = cartel.mensaje || "";
-    document.getElementById("cartelFechaInicio").value = cartel.fechaInicio || "";
-    document.getElementById("cartelFechaCaducidad").value = cartel.fechaCaducidad || "";
-    document.getElementById("cartelColor").value = cartel.color || "accent";
+
+    if(cartel.tipo === "inactividad"){
+        document.getElementById("cartelTipo").value = "inactividad";
+        document.getElementById("cartelDiasInactividad").value = cartel.diasInactividad || 4;
+    } else {
+        document.getElementById("cartelTipo").value = "manual";
+        document.getElementById("cartelTitulo").value = cartel.titulo || "";
+        document.getElementById("cartelMensaje").value = cartel.mensaje || "";
+        document.getElementById("cartelFechaInicio").value = cartel.fechaInicio || "";
+        document.getElementById("cartelFechaCaducidad").value = cartel.fechaCaducidad || "";
+        document.getElementById("cartelColor").value = cartel.color || "accent";
+    }
+    onCartelTipoChange();
     document.getElementById("modalNuevoCartel").classList.add("open");
 }
 
@@ -9591,9 +9668,43 @@ function toggleActivoCartel(id){
 function estaCartelActivo(cartel){
     let hoy = new Date().toISOString().split("T")[0];
     if(!cartel.activo) return false;
+    if(cartel.tipo === "inactividad") return true; // la lógica de inactividad no depende de fechas
     if(cartel.fechaInicio && cartel.fechaInicio > hoy) return false;
     if(cartel.fechaCaducidad && cartel.fechaCaducidad < hoy) return false;
     return true;
+}
+
+// ── Lógica de inactividad de técnicos ────────────────────────
+// Devuelve array de técnicos que no cargaron correctivos en los últimos `dias` días.
+// Solo considera técnicos con cuenta activa (excluye Visita y AdminOSuperAdmin si se quiere).
+function getTecnicosInactivos(dias){
+    let ahora = new Date();
+    let limite = new Date(ahora);
+    limite.setDate(limite.getDate() - dias);
+    limite.setHours(0,0,0,0);
+
+    // Técnicos a monitorear: todos con cuenta (excluye Visita)
+    let db = getUsersDB();
+    let tecnicos = db
+        ? db.filter(u => u.rol !== "Visita").map(u => u.nombre)
+        : getTecnicos();
+
+    let inactivos = [];
+    for(let tec of tecnicos){
+        // Buscar el correctivo más reciente del técnico
+        let corrs = incidencias.filter(i => i.tipo === "Correctivo" && i.tecnico === tec && i.fecha);
+        if(corrs.length === 0){
+            // Nunca cargó — se considera inactivo siempre
+            inactivos.push(tec);
+            continue;
+        }
+        let masReciente = corrs.reduce((max, i) => i.fecha > max ? i.fecha : max, corrs[0].fecha);
+        let fechaRec = new Date(masReciente + "T00:00:00");
+        if(fechaRec < limite){
+            inactivos.push(tec);
+        }
+    }
+    return inactivos;
 }
 
 function renderCartelesAdmin(){
@@ -9608,6 +9719,32 @@ function renderCartelesAdmin(){
     let hoy = new Date().toISOString().split("T")[0];
 
     cont.innerHTML = cartelesData.map(c => {
+        // ── Tarjeta de inactividad ──
+        if(c.tipo === "inactividad"){
+            let inactivos = c.activo ? getTecnicosInactivos(c.diasInactividad || 4) : [];
+            let badge = c.activo
+                ? (inactivos.length > 0
+                    ? `<span class="cartel-badge-activo" style="background:rgba(255,77,109,.15);color:var(--red);border-color:rgba(255,77,109,.3);">🔴 ${inactivos.length} alerta${inactivos.length>1?"s":""}</span>`
+                    : `<span class="cartel-badge-activo">✅ Sin inactivos</span>`)
+                : `<span class="cartel-badge-vencido">⚪ Inactivo</span>`;
+            return `
+            <div class="cartel-card ${c.activo ? 'yellow' : 'vencido'}">
+                <div class="cartel-titulo">
+                    ⚠️ Alerta de Inactividad de Técnico
+                    ${badge}
+                </div>
+                <div class="cartel-mensaje">Dispara alerta si un técnico no carga correctivos en <strong>${c.diasInactividad || 4} días</strong>.<br>
+                ${inactivos.length > 0 ? `Técnicos sin actividad: <strong style="color:var(--red);">${inactivos.join(", ")}</strong>` : "Todos los técnicos están al día."}</div>
+                <div class="cartel-fechas"><span>📅 Configurado: ${c.fechaCreado || hoy}</span></div>
+                <div class="cartel-actions">
+                    <button onclick="editarCartel(${c.id})">✏️ Editar días</button>
+                    <button onclick="toggleActivoCartel(${c.id})">${c.activo ? "⏸️ Pausar" : "▶️ Activar"}</button>
+                    <button class="del" onclick="eliminarCartel(${c.id})">🗑️ Eliminar</button>
+                </div>
+            </div>`;
+        }
+
+        // ── Tarjeta manual (original) ──
         let isActivo = estaCartelActivo(c);
         let estadoClass = isActivo ? 'green' : (c.fechaCaducidad && c.fechaCaducidad < hoy ? 'vencido' : 'blue');
         let badge = isActivo ? '<span class="cartel-badge-activo">🟢 Activo</span>' :
@@ -9640,32 +9777,58 @@ function renderCartelesDashboard(){
     let cont = document.getElementById("dashCarteles");
     if(!cont) return;
 
-    let activos = cartelesData.filter(c => estaCartelActivo(c));
+    // Carteles manuales activos
+    let manuales = cartelesData.filter(c => c.tipo !== "inactividad" && estaCartelActivo(c));
 
-    if(activos.length === 0){
+    // Regla de inactividad activa
+    let reglaInact = cartelesData.find(c => c.tipo === "inactividad" && c.activo);
+    let bannerInactivos = [];
+    if(reglaInact){
+        let inactivos = getTecnicosInactivos(reglaInact.diasInactividad || 4);
+        bannerInactivos = inactivos; // array de nombres
+    }
+
+    let totalVisible = manuales.length + bannerInactivos.length;
+
+    if(totalVisible === 0){
         cont.style.display = "none";
         return;
     }
 
     cont.style.display = "block";
+
+    let htmlManuales = manuales.map(c => {
+        let colorVar = c.color === 'accent' ? 'var(--accent)' : c.color === 'accent2' ? 'var(--accent2)' : c.color === 'yellow' ? 'var(--yellow)' : 'var(--red)';
+        let bgVar    = c.color === 'accent' ? 'rgba(0,212,168,.15)' : c.color === 'accent2' ? 'rgba(79,142,255,.15)' : c.color === 'yellow' ? 'rgba(255,201,71,.15)' : 'rgba(255,77,109,.15)';
+        return `
+        <div class="cartel-banner" style="border-left:3px solid ${colorVar};">
+            <div class="cartel-banner-icon" style="background:${bgVar};">📌</div>
+            <div class="cartel-banner-content">
+                <div class="cartel-banner-title" style="color:${colorVar};">${c.titulo}</div>
+                <div class="cartel-banner-msg">${c.mensaje || ""}</div>
+            </div>
+            ${c.fechaCaducidad ? `<div class="cartel-banner-date">Vence: ${c.fechaCaducidad}</div>` : ""}
+        </div>`;
+    }).join("");
+
+    // Un banner por cada técnico inactivo
+    let htmlInactivos = bannerInactivos.map(tec => `
+        <div class="cartel-banner" style="border-left:3px solid var(--red);">
+            <div class="cartel-banner-icon" style="background:rgba(255,77,109,.15);">⚠️</div>
+            <div class="cartel-banner-content">
+                <div class="cartel-banner-title" style="color:var(--red);">Sin actividad: ${tec}</div>
+                <div class="cartel-banner-msg">El técnico <strong>${tec}</strong> no registró incidencias correctivas en los últimos ${reglaInact.diasInactividad || 4} días.</div>
+            </div>
+        </div>`).join("");
+
+    let badgeTotal = manuales.length + bannerInactivos.length;
     cont.innerHTML = `
         <div class="card-box-title" style="margin-bottom:12px;">
             <span>📌 Recordatorios</span>
-            <span class="badge-count">${activos.length}</span>
+            <span class="badge-count">${badgeTotal}</span>
         </div>
-        ${activos.map(c => {
-            let colorVar = c.color === 'accent' ? 'var(--accent)' : c.color === 'accent2' ? 'var(--accent2)' : c.color === 'yellow' ? 'var(--yellow)' : 'var(--red)';
-            let bgVar = c.color === 'accent' ? 'rgba(0,212,168,.15)' : c.color === 'accent2' ? 'rgba(79,142,255,.15)' : c.color === 'yellow' ? 'rgba(255,201,71,.15)' : 'rgba(255,77,109,.15)';
-            return `
-            <div class="cartel-banner" style="border-left:3px solid ${colorVar};">
-                <div class="cartel-banner-icon" style="background:${bgVar};">📌</div>
-                <div class="cartel-banner-content">
-                    <div class="cartel-banner-title" style="color:${colorVar};">${c.titulo}</div>
-                    <div class="cartel-banner-msg">${c.mensaje || ""}</div>
-                </div>
-                ${c.fechaCaducidad ? `<div class="cartel-banner-date">Vence: ${c.fechaCaducidad}</div>` : ""}
-            </div>`;
-        }).join("")}
+        ${htmlInactivos}
+        ${htmlManuales}
     `;
 }
 
