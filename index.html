@@ -118,11 +118,13 @@ const _FB_KEYS = new Set([
     "mgiCronogramas","mgiPlanes",
     "ppPreventivos","ppTareas",
     "evaIncidencias","evaDiarios",
-    "fdsData","contadorasData","cartelesData","listaContadoras",
+    "fdsData","contadorasData","cartelesData","listaContadoras","chippersData","listaChippers",
+    "barajadorasData","listaBarajadoras",
     "validadoresData","indicesAceptacion",
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
     "equiposCilindros","equiposRA","equiposEVA",
+    "bingueraData",
     "pptData","sidebarConfig",
     "eventosConfig","eventosGenerados",
     "eventosUnicos",
@@ -185,6 +187,10 @@ function _sincronizarVariables() {
         if (_cache["fdsData"]          !== undefined) fdsData          = _cache["fdsData"]          ?? [];
         if (_cache["contadorasData"]   !== undefined) contadorasData   = _cache["contadorasData"]   ?? [];
         if (_cache["listaContadoras"]  !== undefined) listaContadoras  = _cache["listaContadoras"]  ?? [..._CNT_DEFAULT];
+        if (_cache["chippersData"]     !== undefined) chippersData     = _cache["chippersData"]     ?? [];
+        if (_cache["listaChippers"]    !== undefined) listaChippers    = _cache["listaChippers"]    ?? [..._CHPR_DEFAULT];
+        if (_cache["barajadorasData"]  !== undefined) barajadorasData  = _cache["barajadorasData"]  ?? [];
+        if (_cache["listaBarajadoras"] !== undefined) listaBarajadoras = _cache["listaBarajadoras"] ?? [..._BRAJ_DEFAULT];
         if (_cache["equiposEVA"]       !== undefined) listaKioscosEva  = _cache["equiposEVA"]       ?? ["EVA1","EVA2","EVA3","EVA4"];
         if (_cache["cartelesData"]     !== undefined) cartelesData     = _cache["cartelesData"]     ?? [];
         if (_cache["auditLog"]         !== undefined) auditLog         = _cache["auditLog"]         ?? [];
@@ -193,6 +199,7 @@ function _sincronizarVariables() {
         if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
         if (_cache["eventosUnicos"]    !== undefined) eventosUnicos    = _cache["eventosUnicos"]    ?? [];
         if (_cache["partesCriticas"]   !== undefined) partesCriticas   = _cache["partesCriticas"]   ?? [];
+        if (_cache["bingueraData"]     !== undefined) bingueraData     = _cache["bingueraData"]     ?? [];
         if (_cache["sidebarConfig"]    !== undefined) {
             _sidebarConfig = _cache["sidebarConfig"];
             if (document.getElementById("app")?.style.display !== "none") {
@@ -250,6 +257,7 @@ function _activarListenersTiempoReal() {
             cargarAniosPrev?.();
             renderIncidenciasPreventivos?.();
             renderPartesCriticas?.();
+            renderBarajadoras?.();
         }
     };
 
@@ -1728,6 +1736,28 @@ tr.correctivo-row-active {
 /* ── SECTION TAREAS REALIZADAS ── */
 #tareasRealizadas { display: none; }
 #tareasRealizadas.active { display: block; }
+
+/* ── ESTADÍSTICAS ── */
+.est-tab {
+    background: transparent; border: none; border-radius: 7px;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    padding: 7px 14px; transition: all .18s;
+}
+.est-tab:hover { background: var(--bg3); color: var(--white); }
+.est-tab.active-tab { background: var(--bg3); color: var(--white); border: 1px solid var(--border); }
+.est-bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.est-bar-label { width: 60px; flex-shrink: 0; color: var(--muted); text-align: right; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.est-bar-bg { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; position: relative; }
+.est-bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.est-bar-val { width: 32px; flex-shrink: 0; color: var(--muted); font-size: 11px; font-weight: 700; text-align: right; }
+.est-kpi-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+.est-kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.est-kpi-val { font-family: 'Rajdhani', sans-serif; font-size: 24px; font-weight: 700; color: var(--white); }
+.est-kpi-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.est-risk-card { background: var(--bg2); border: 1px solid rgba(255,77,109,.35); border-radius: 9px; padding: 11px 13px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.est-month-col { min-width: 38px; text-align: center; font-size: 11px; }
+.est-heat-cell { width: 38px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -1974,10 +2004,22 @@ setTimeout(function(){
             <button class="menu-btn" id="nav-contadoras" onclick="mostrar('contadoras')">
                 <span class="icon">🔢</span> Contadoras
             </button>
+            <button class="menu-btn" id="nav-binguera" onclick="mostrar('binguera')">
+                <span class="icon">🎱</span> Binguera
+            </button>
+            <button class="menu-btn" id="nav-chippers" onclick="mostrar('chippers')">
+                <span class="icon">🎰</span> Chippers
+            </button>
+            <button class="menu-btn" id="nav-barajadoras" onclick="mostrar('barajadoras')">
+                <span class="icon">🃏</span> Barajadoras
+            </button>
 
             <div class="sidebar-section" style="margin-top:4px;">📌 Gestión</div>
             <button class="menu-btn" id="nav-partes-criticas" onclick="mostrar('partes-criticas')">
                 <span class="icon">🚨</span> Partes Críticas
+            </button>
+            <button class="menu-btn" id="nav-estadisticas" onclick="mostrar('estadisticas')" style="display:none;">
+                <span class="icon">📊</span> Estadísticas
             </button>
             <button class="menu-btn" id="nav-carteles" onclick="mostrar('carteles')" style="display:none;">
                 <span class="icon">📌</span> Carteles
@@ -2815,6 +2857,78 @@ setTimeout(function(){
                 </div>
             </div>
 
+
+            <!-- ═══ BINGUERA ═══ -->
+            <div id="binguera" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🎱 Binguera</div>
+                        <div class="page-subtitle">Correctivos, preventivos y seguimiento de la binguera</div>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn-primary" onclick="abrirModalBingueraNuevaIncidencia()">➕ Nueva Incidencia</button>
+                    </div>
+                </div>
+                <div class="card-box">
+                    <div class="card-box-title">
+                        <span>📋 Historial de Incidencias</span>
+                        <span class="badge-count" id="badgeBngTotal">0</span>
+                    </div>
+                    <div id="listaBingueraTodas">
+                        <div class="empty-state"><div class="empty-icon">🎱</div><p>Sin incidencias</p></div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ═══ CHIPPERS ═══ -->
+            <div id="chippers" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🎰 Chippers</div>
+                        <div class="page-subtitle">Correctivos, preventivos y seguimiento de chippers</div>
+                    </div>
+                    <div class="action-bar">
+                        <button id="btnEditarChippers" class="btn-secondary" onclick="abrirModalEditarListaChippers()" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:none;align-items:center;gap:6px;">✏️ Editar Chippers</button>
+                        <button class="btn-primary" onclick="abrirModalChipperNuevaIncidencia()">➕ Nueva Incidencia</button>
+                    </div>
+                </div>
+
+                <div class="card-box">
+                    <div class="card-box-title">
+                        <span>📋 Historial de Incidencias</span>
+                        <span class="badge-count" id="badgeChprTotal">0</span>
+                    </div>
+                    <div id="listaChippersTodas">
+                        <div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ BARAJADORAS ═══ -->
+            <div id="barajadoras" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🃏 Barajadoras</div>
+                        <div class="page-subtitle">Correctivos, preventivos y seguimiento de barajadoras</div>
+                    </div>
+                    <div class="action-bar">
+                        <button id="btnEditarBarajadoras" class="btn-secondary" onclick="abrirModalEditarListaBarajadoras()" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:none;align-items:center;gap:6px;">✏️ Editar Barajadoras</button>
+                        <button class="btn-primary" onclick="abrirModalBarajadoraNuevaIncidencia()">➕ Nueva Incidencia</button>
+                    </div>
+                </div>
+
+                <div class="card-box">
+                    <div class="card-box-title">
+                        <span>📋 Historial de Incidencias</span>
+                        <span class="badge-count" id="badgeBrajTotal">0</span>
+                    </div>
+                    <div id="listaBarajadorasTodas">
+                        <div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ═══ CARTELES DE RECORDATORIO (ADMIN) ═══ -->
             <div id="carteles" class="section">
                 <div class="page-header">
@@ -3067,6 +3181,128 @@ setTimeout(function(){
                         <span class="badge-count" id="cntRealTotal">0</span>
                     </div>
                     <div id="listaTareasRealizadasFull"></div>
+                </div>
+            </div>
+
+            <!-- ═══ ESTADÍSTICAS (ADMIN) ═══ -->
+            <div id="estadisticas" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📊 Estadísticas</div>
+                        <div class="page-subtitle">Análisis avanzado de incidencias, preventivos, partes críticas y desempeño del equipo</div>
+                    </div>
+                    <div class="action-bar">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <label style="font-size:12px;color:var(--muted);">Período:</label>
+                            <select id="estFiltroAnio" onchange="renderEstadisticas()" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);border-radius:8px;padding:6px 10px;font-size:13px;outline:none;cursor:pointer;">
+                                <option value="todos">Todos los años</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABS -->
+                <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;">
+                    <button id="estTab_islas" onclick="estCambiarTab('islas')" class="est-tab active-tab">🏝️ Islas</button>
+                    <button id="estTab_tecnicos" onclick="estCambiarTab('tecnicos')" class="est-tab">👤 Técnicos</button>
+                    <button id="estTab_partes" onclick="estCambiarTab('partes')" class="est-tab">📦 Partes Críticas</button>
+                </div>
+
+                <!-- PANEL ISLAS -->
+                <div id="estPanelIslas">
+                    <div class="grid2" style="gap:16px;margin-bottom:16px;">
+                        <!-- Correctivos por isla -->
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;">
+                                <span>🔴 Correctivos por Isla <span style="font-size:11px;color:var(--muted);font-weight:400;">(top 15)</span></span>
+                                <span class="badge-count" id="estTotalCorr">0</span>
+                            </div>
+                            <div id="estCorrIsla" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto;"></div>
+                        </div>
+                        <!-- Ratio prev/correctivo por isla -->
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;">
+                                <span>⚖️ Ratio Prev/Corr por Isla</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Verde = más preventivos que correctivos · Rojo = más correctivos que preventivos</div>
+                            <div id="estRatioIsla" style="display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tendencia mensual de correctivos -->
+                    <div class="card-box" style="padding:16px;margin-bottom:16px;">
+                        <div class="card-box-title" style="margin-bottom:14px;">
+                            <span>📈 Tendencia Mensual de Correctivos</span>
+                        </div>
+                        <div id="estTendenciaChart" style="overflow-x:auto;padding-bottom:4px;"></div>
+                    </div>
+
+                    <div class="grid2" style="gap:16px;margin-bottom:16px;">
+                        <!-- Score de salud por isla -->
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:6px;">
+                                <span>💚 Score de Salud por Isla</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">100 = perfecta · penaliza correctivos y días FDS · premia preventivos</div>
+                            <div id="estScoreSalud" style="display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto;"></div>
+                        </div>
+                        <!-- Islas en riesgo -->
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:6px;">
+                                <span>⚠️ Islas en Riesgo</span>
+                            </div>
+                            <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Islas con muchos correctivos y pocos preventivos — requieren atención</div>
+                            <div id="estIslaRiesgo" style="display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL TÉCNICOS -->
+                <div id="estPanelTecnicos" style="display:none;">
+                    <div class="grid2" style="gap:16px;margin-bottom:16px;">
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;"><span>🔧 Carga Total por Técnico</span></div>
+                            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Correctivos + Preventivos + Tareas realizadas</div>
+                            <div id="estCargaTec" style="display:flex;flex-direction:column;gap:6px;"></div>
+                        </div>
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;"><span>📊 Distribución por Técnico</span></div>
+                            <div id="estDistTec" style="display:flex;flex-direction:column;gap:10px;"></div>
+                        </div>
+                    </div>
+                    <div class="card-box" style="padding:16px;margin-bottom:16px;">
+                        <div class="card-box-title" style="margin-bottom:14px;"><span>📅 Actividad Mensual por Técnico</span></div>
+                        <div id="estActMensual" style="overflow-x:auto;"></div>
+                    </div>
+                </div>
+
+                <!-- PANEL PARTES CRÍTICAS -->
+                <div id="estPanelPartes" style="display:none;">
+                    <!-- KPIs -->
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="estPartesKpis"></div>
+
+                    <div class="grid2" style="gap:16px;margin-bottom:16px;">
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;"><span>📦 Insumos más pedidos</span></div>
+                            <div id="estInsumosMasPedidos" style="display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto;"></div>
+                        </div>
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;"><span>⏱️ Tiempo promedio Pedido → Recibido</span></div>
+                            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Solo incluye pedidos con estado Recibido</div>
+                            <div id="estTiempoPartes" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid2" style="gap:16px;margin-bottom:16px;">
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;"><span>📅 Pedidos por mes (pendiente vs recibido)</span></div>
+                            <div id="estPartesPorMes" style="overflow-x:auto;"></div>
+                        </div>
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;"><span>🏝️ Islas con más consumo de repuestos</span></div>
+                            <div id="estIslaPartes" style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -4485,6 +4721,214 @@ setTimeout(function(){
     </div>
 </div>
 
+
+<!-- ═══ MODAL CHIPPERS — NUEVA INCIDENCIA ═══ -->
+<div id="modalChipperNuevaIncidencia" class="modal">
+        <div class="modal-title">🎰 Nueva Incidencia — Chippers</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="chprFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="chprTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="chprTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="chprTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="chprEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Chippers Intervenidos</label>
+            <div id="chprIncChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada chipper?</label>
+            <div id="chprIncDetallesPorChipper" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="chprNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="guardarChipperIncidencia()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalChipperNuevaIncidencia()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL CHIPPERS — PREVENTIVO ═══ -->
+<div id="modalChipperPreventivo" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🔧 Nuevo Preventivo — Chippers</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="chprPrevFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="chprPrevTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="chprPrevTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="chprPrevTipo" class="form-select">
+                <option value="Preventivo">Preventivo</option>
+                <option value="Correctivo">Correctivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="chprPrevEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Chippers Intervenidos</label>
+            <div id="chprPrevChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada chipper?</label>
+            <div id="chprPrevDetallesPorChipper" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado / Observaciones generales</label>
+            <textarea id="chprPrevNota" class="form-textarea" placeholder="Observaciones generales..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarChipperPreventivo()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalChipperPreventivo()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BARAJADORAS — NUEVA INCIDENCIA ═══ -->
+<div id="modalBarajadoraNuevaIncidencia" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🃏 Nueva Incidencia — Barajadoras</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="brajFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="brajTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="brajTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="brajTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="brajEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Barajadoras Intervenidas</label>
+            <div id="brajIncChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada barajadora?</label>
+            <div id="brajIncDetallesPorBrajadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="brajNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="guardarBarajadoraIncidencia()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalBarajadoraNuevaIncidencia()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BARAJADORAS — PREVENTIVO ═══ -->
+<div id="modalBarajadoraPreventivo" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🔧 Nuevo Preventivo — Barajadoras</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="brajPrevFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="brajPrevTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="brajPrevTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="brajPrevTipo" class="form-select">
+                <option value="Preventivo">Preventivo</option>
+                <option value="Correctivo">Correctivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="brajPrevEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Barajadoras Intervenidas</label>
+            <div id="brajPrevChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada barajadora?</label>
+            <div id="brajPrevDetallesPorBrajadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado / Observaciones generales</label>
+            <textarea id="brajPrevNota" class="form-textarea" placeholder="Observaciones generales..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarBarajadoraPreventivo()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalBarajadoraPreventivo()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ MODAL FUERA DE SERVICIO ═══ -->
 <div id="modalFds" class="modal">
     <div class="modal-box wide">
@@ -4862,7 +5306,7 @@ function iniciarApp(){
 
     // Botones solo para Admin/SuperAdmin: Editar Kioscos EVA, Editar Contadoras, Enviar a Tareas, Regenerar
     const _adminDisplay = esAdminOSuperAdmin() ? "flex" : "none";
-    ["btnEditarKioscosEva","btnEditarContadoras","btnPpEnviarTareas","btnPpRegenerar"].forEach(id => {
+    ["btnEditarKioscosEva","btnEditarContadoras","btnEditarChippers","btnEditarBarajadoras","btnPpEnviarTareas","btnPpRegenerar"].forEach(id => {
         let el = document.getElementById(id);
         if(el) el.style.display = _adminDisplay;
     });
@@ -4952,6 +5396,9 @@ const SIDEBAR_ITEMS_CONFIG = [
     { id: "nav-control-ppt",      label: "📊 Control PPT",           group: "Slots" },
     { id: "nav-kioscos-eva",      label: "🎫 Kioscos EVA",           group: "Otros Equipos" },
     { id: "nav-contadoras",       label: "🔢 Contadoras",            group: "Otros Equipos" },
+    { id: "nav-binguera",         label: "🎱 Binguera",              group: "Otros Equipos" },
+    { id: "nav-chippers",          label: "🎰 Chippers",              group: "Otros Equipos" },
+    { id: "nav-barajadoras",       label: "🃏 Barajadoras",            group: "Otros Equipos" },
     { id: "nav-plan-preventivo",  label: "📅 Plan Preventivo",       group: "Gestión" },
     { id: "nav-partes-criticas",  label: "🚨 Partes Críticas",        group: "Gestión" },
 ];
@@ -5158,6 +5605,8 @@ async function importHandleFile(file) {
         "EVA_Incidencias":     "evaIncidencias",
         "EVA_EstadosSensor":   "evaDiarios",
         "Contadoras":          "contadoras",
+        "Chippers":            "chippers",
+        "Barajadoras":         "barajadoras",
         "Validadores":         "validadores",
         "Control_PPT":         "controlPPT",
         "Partes_Criticas":     "partesCriticas",
@@ -5221,6 +5670,8 @@ async function importHandleFile(file) {
         evaIncidencias:   "🎫 EVA — Incidencias",
         evaDiarios:       "📡 EVA — Estados Sensor",
         contadoras:       "🔢 Contadoras",
+        chippers:         "🎰 Chippers",
+        barajadoras:      "🃏 Barajadoras",
         validadores:      "💳 Validadores",
         controlPPT:       "📊 Control PPT",
         partesCriticas:   "🚨 Partes Críticas",
@@ -5301,6 +5752,8 @@ async function importEjecutar() {
         evaIncidencias:   "🎫 EVA Incidencias",
         evaDiarios:       "📡 EVA Estados Sensor",
         contadoras:       "🔢 Contadoras",
+        chippers:         "🎰 Chippers",
+        barajadoras:      "🃏 Barajadoras",
         validadores:      "💳 Validadores",
         controlPPT:       "📊 Control PPT",
         partesCriticas:   "🚨 Partes Críticas",
@@ -5323,6 +5776,9 @@ async function importEjecutar() {
     try { renderTareas?.(); } catch(e){}
     try { renderKioscosEva?.(); renderEstadosEva?.(); } catch(e){}
     try { renderContadoras?.(); } catch(e){}
+    try { renderBinguera?.(); } catch(e){}
+    try { renderChippers?.(); } catch(e){}
+    try { renderBarajadoras?.(); } catch(e){}
     try { renderValidadores?.(); } catch(e){}
     try { renderPpt?.(); } catch(e){}
     try { renderPartesCriticas?.(); } catch(e){}
@@ -5536,6 +5992,62 @@ async function importProcesarHoja(clave, rows, modo) {
         contadorasData.unshift(...sinDupCO);
         localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
         _fbSet("contadorasData", contadorasData);
+
+    } else if (clave === "chippers") {
+        let nuevos = [];
+        rows.forEach(r => {
+            if (!r.fecha || !r.tipo || !r.equipo) { omitidos++; return; }
+            nuevos.push({
+                id: ahora + importados,
+                tipo: r.tipo || "Correctivo",
+                fecha: _normFecha(r.fecha),
+                equipo: String(r.equipo),
+                tecnico: r.tecnicoCasino || r.tecnicoPQ || "—",
+                tecnicoCasino: r.tecnicoCasino || "",
+                tecnicoPQ: r.tecnicoPQ || "",
+                detallesPorChipper: {},
+                estado: r.estado || "Realizado",
+                nota: r.nota || "",
+                comentarios: []
+            });
+            importados++;
+        });
+        if (modo === "reemplazar") chippersData = [];
+        let keySetCHPR = new Set(chippersData.map(e=>`${e.fecha}|${e.equipo}|${e.tipo}`));
+        let sinDupCHPR = nuevos.filter(n => !keySetCHPR.has(`${n.fecha}|${n.equipo}|${n.tipo}`));
+        omitidos += (nuevos.length - sinDupCHPR.length);
+        importados -= (nuevos.length - sinDupCHPR.length);
+        chippersData.unshift(...sinDupCHPR);
+        localStorage.setItem("chippersData", JSON.stringify(chippersData));
+        _fbSet("chippersData", chippersData);
+
+    } else if (clave === "barajadoras") {
+        let nuevos = [];
+        rows.forEach(r => {
+            if (!r.fecha || !r.tipo || !r.equipo) { omitidos++; return; }
+            nuevos.push({
+                id: ahora + importados,
+                tipo: r.tipo || "Correctivo",
+                fecha: _normFecha(r.fecha),
+                equipo: String(r.equipo),
+                tecnico: r.tecnicoCasino || r.tecnicoPQ || "—",
+                tecnicoCasino: r.tecnicoCasino || "",
+                tecnicoPQ: r.tecnicoPQ || "",
+                detallesPorBrajadora: {},
+                estado: r.estado || "Realizado",
+                nota: r.nota || "",
+                comentarios: []
+            });
+            importados++;
+        });
+        if (modo === "reemplazar") barajadorasData = [];
+        let keySetBRAJ = new Set(barajadorasData.map(e=>`${e.fecha}|${e.equipo}|${e.tipo}`));
+        let sinDupBRAJ = nuevos.filter(n => !keySetBRAJ.has(`${n.fecha}|${n.equipo}|${n.tipo}`));
+        omitidos += (nuevos.length - sinDupBRAJ.length);
+        importados -= (nuevos.length - sinDupBRAJ.length);
+        barajadorasData.unshift(...sinDupBRAJ);
+        localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+        _fbSet("barajadorasData", barajadorasData);
 
     } else if (clave === "validadores") {
         // Agrupar por periodo
@@ -5788,6 +6300,9 @@ function mostrar(sec){
     if(sec === 'kioscos-eva') { volverVistaEva(); renderKioscosEva(); }
     if(sec === 'estados-eva') renderEstadosEva();
     if(sec === 'contadoras') renderContadoras();
+    if(sec === 'binguera') renderBinguera();
+    if(sec === 'chippers') renderChippers();
+    if(sec === 'barajadoras') renderBarajadoras();
     if(sec === 'fuera-servicio') renderFds();
     if(sec === 'validadores') renderValidadores();
     if(sec === 'control-ppt') initPpt();
@@ -5799,7 +6314,7 @@ function mostrar(sec){
         if(acciones) acciones.style.display = esAdminOSuperAdmin() ? "flex" : "none";
         renderCronogramaEventos?.();
     }
-    if(sec === 'gestionUsuarios'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderGestionUsuarios(); if(esSuperAdmin()) renderUbicaciones(); }
+    if(sec === 'estadisticas'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderEstadisticas(); }
     // Cerrar sidebar en mobile
     document.querySelector('.sidebar')?.classList.remove('open');
     document.getElementById('sidebarOverlay')?.classList.remove('open');
@@ -6246,12 +6761,14 @@ function renderDashboard(){
             : '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin tareas realizadas</p></div>';
 
         // ── HORAS TRABAJADAS Y PROMEDIO POR TÉCNICO ──
-        let tareasRealizadas = tareas.filter(t => t.estado === "realizado" && t.iniciadoEn && t.finalizadoEn);
+        let tareasRealizadas = tareas.filter(t => t.estado === "realizado" && (t.tiempoAcumuladoMs || (t.iniciadoEn && t.finalizadoEn)));
         // Acumular minutos y cantidad por técnico (considera realizadoPor con múltiples)
         let horasPorTec = {}, cantPorTec = {};
         tecnicos.forEach(t => { horasPorTec[t] = 0; cantPorTec[t] = 0; });
         tareasRealizadas.forEach(t => {
-            let mins = Math.round((t.finalizadoEn - t.iniciadoEn) / 60000);
+            let mins = t.tiempoAcumuladoMs
+                ? Math.round(t.tiempoAcumuladoMs / 60000)
+                : Math.round((t.finalizadoEn - t.iniciadoEn) / 60000);
             if(mins <= 0) return;
             let tecs = t.realizadoPor
                 ? t.realizadoPor.split(", ").map(s => s.trim())
@@ -6422,6 +6939,12 @@ function renderDashboard(){
         // Helper: obtener minutos de una tarea realizada
         function _getMins(t){
             if(t.tiempoManualMins) return t.tiempoManualMins;
+            // Nueva lógica: usar tiempo acumulado de sesiones si existe
+            if(t.tiempoAcumuladoMs){
+                let m = Math.round(t.tiempoAcumuladoMs / 60000);
+                return m > 0 ? m : 0;
+            }
+            // Compatibilidad hacia atrás
             if(t.iniciadoEn && t.finalizadoEn){
                 let m = Math.round((t.finalizadoEn - t.iniciadoEn) / 60000);
                 return m > 0 ? m : 0;
@@ -6939,12 +7462,23 @@ function avanzarTarea(id){
     let ahora = Date.now();
     if(t.estado === "pendiente"){
         t.estado = "en-curso";
-        t.iniciadoEn = ahora;
+        // Guardar el inicio del tramo actual (puede ser la primera toma o un retome)
+        // Se guarda SIN underscore para que se persista en Firebase/localStorage
+        t.tramoInicioMs = ahora;
+        // iniciadoEn guarda solo la primera vez que se tomó (para referencia)
+        if(!t.iniciadoEn) t.iniciadoEn = ahora;
         localStorage.setItem("tareas", JSON.stringify(tareas));
     } else if(t.estado === "en-curso"){
         t.estado = "realizado";
         t.finalizadoEn = ahora;
         t.done = true;
+        // Sumar el último tramo al acumulado
+        // Soporte para ambos nombres (tramoInicioMs nuevo, _tramoInicioMs legado en memoria)
+        let _tramoStart = t.tramoInicioMs || t._tramoInicioMs || null;
+        let _tramoMs = _tramoStart ? (ahora - _tramoStart) : 0;
+        t.tiempoAcumuladoMs = (t.tiempoAcumuladoMs || 0) + Math.max(0, _tramoMs);
+        delete t.tramoInicioMs;
+        delete t._tramoInicioMs;
         // Si la tarea no tiene _ppDia, intentar extraerlo del desc (ej: "Día 6 ·")
         if(t._ppMesKey && !t._ppDia){
             let m = (t.desc||"").match(/D[íi]a\s+(\d+)/i);
@@ -7038,11 +7572,23 @@ function volverTarea(id){
     if(!t) return;
     if(t.estado === "en-curso"){
         t.estado = "pendiente";
-        t.iniciadoEn = null;
+        // Acumular el tramo actual antes de pausar
+        // Soporte para tramoInicioMs (persistido) y _tramoInicioMs (legado en memoria)
+        let _tramoStart = t.tramoInicioMs || t._tramoInicioMs || null;
+        if(_tramoStart){
+            let _tramoMs = Date.now() - _tramoStart;
+            t.tiempoAcumuladoMs = (t.tiempoAcumuladoMs || 0) + Math.max(0, _tramoMs);
+            delete t.tramoInicioMs;
+            delete t._tramoInicioMs;
+        }
+        // No borramos iniciadoEn para conservar la referencia de primera toma
     } else if(t.estado === "realizado"){
         t.estado = "en-curso";
         t.finalizadoEn = null;
         t.done = false;
+        // Registrar inicio del nuevo tramo (el acumulado ya tiene el tiempo anterior)
+        // Se guarda SIN underscore para que persista en Firebase/localStorage
+        t.tramoInicioMs = Date.now();
     }
     localStorage.setItem("tareas", JSON.stringify(tareas));
     renderTareas();
@@ -7050,11 +7596,27 @@ function volverTarea(id){
 }
 
 function calcularDuracion(t){
-    if(!t.iniciadoEn || !t.finalizadoEn) return null;
-    let mins = Math.round((t.finalizadoEn - t.iniciadoEn) / 60000);
-    if(mins < 60) return `${mins} min`;
+    let totalMs = 0;
+    if(t.tiempoAcumuladoMs){
+        // Nueva lógica: usa el acumulado de sesiones
+        totalMs = t.tiempoAcumuladoMs;
+        // Si está en-curso ahora mismo, sumar el tramo activo
+        // Sumar tramo activo: soporte tramoInicioMs (persistido) y _tramoInicioMs (legado)
+        let _activoStart = t.tramoInicioMs || t._tramoInicioMs || null;
+        if(t.estado === "en-curso" && _activoStart){
+            totalMs += Date.now() - _activoStart;
+        }
+    } else if(t.iniciadoEn && t.finalizadoEn){
+        // Compatibilidad hacia atrás: tareas viejas sin tiempoAcumuladoMs
+        totalMs = t.finalizadoEn - t.iniciadoEn;
+    } else {
+        return null;
+    }
+    let mins = Math.round(totalMs / 60000);
+    if(mins < 1) return "< 1 min";
+    if(mins < 60) return mins + " min";
     let h = Math.floor(mins/60), m = mins%60;
-    return m > 0 ? `${h}h ${m}min` : `${h}h`;
+    return m > 0 ? h + "h " + m + "min" : h + "h";
 }
 
 // ──────────────────────────────────────────────
@@ -9365,6 +9927,911 @@ function eliminarContadoraItem(id){
     contadorasData = contadorasData.filter(c => String(c.id) !== String(id));
     localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
     renderContadoras();
+}
+
+
+// ──────────────────────────────────────────────
+//  BINGUERA
+// ──────────────────────────────────────────────
+let bingueraData = JSON.parse(localStorage.getItem("bingueraData")) || [];
+
+function _bngPoblarCasino(selectId){
+    let sel = document.getElementById(selectId);
+    if(!sel) return;
+    let tecnicos = getTecnicos();
+    sel.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+function abrirModalBingueraNuevaIncidencia(){
+    if(esVisita()) return;
+    document.getElementById("bngFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("bngNota").value = "";
+    document.getElementById("bngDetalle").value = "";
+    document.getElementById("bngTipo").value = "Correctivo";
+    document.getElementById("bngEstado").value = "Realizado";
+    document.getElementById("bngTecnicoPQ").value = "";
+    _bngPoblarCasino("bngTecnicoCasino");
+    let sel = document.getElementById("bngTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    document.getElementById("modalBingueraNuevaIncidencia").classList.add("open");
+}
+function cerrarModalBingueraNuevaIncidencia(){
+    document.getElementById("modalBingueraNuevaIncidencia").classList.remove("open");
+}
+function guardarBingueraIncidencia(){
+    if(esVisita()) return;
+    let tecPQ = document.getElementById("bngTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("bngTecnicoCasino").value;
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("bngTipo").value,
+        fecha: document.getElementById("bngFecha").value,
+        equipo: "Binguera",
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detalle: document.getElementById("bngDetalle").value.trim(),
+        estado: document.getElementById("bngEstado").value,
+        nota: document.getElementById("bngNota").value.trim(),
+        comentarios: []
+    };
+    bingueraData.unshift(obj);
+    localStorage.setItem("bingueraData", JSON.stringify(bingueraData));
+    cerrarModalBingueraNuevaIncidencia();
+    renderBinguera();
+    toast.success("Incidencia guardada ✅","");
+}
+
+function abrirEditarBinguera(id){
+    let e = bingueraData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    document.getElementById("bngEditId").value = e.id;
+    document.getElementById("bngEditFecha").value = e.fecha || "";
+    document.getElementById("bngEditTipo").value = e.tipo || "Correctivo";
+    document.getElementById("bngEditTecnicoPQ").value = e.tecnicoPQ || e.tecnico || "";
+    document.getElementById("bngEditEstado").value = e.estado || "Realizado";
+    document.getElementById("bngEditDetalle").value = e.detalle || "";
+    document.getElementById("bngEditNota").value = e.nota || "";
+    _bngPoblarCasino("bngEditTecnicoCasino");
+    let selC = document.getElementById("bngEditTecnicoCasino");
+    if(e.tecnicoCasino){ let op = [...selC.options].find(o=>o.value===e.tecnicoCasino); if(op) selC.value=e.tecnicoCasino; }
+    document.getElementById("modalBngDetalle").classList.remove("open");
+    document.getElementById("modalBngEditar").classList.add("open");
+}
+function guardarEdicionBinguera(){
+    let id = document.getElementById("bngEditId").value;
+    let idx = bingueraData.findIndex(c => String(c.id) === String(id));
+    if(idx === -1) return;
+    let tecPQ = document.getElementById("bngEditTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("bngEditTecnicoCasino").value;
+    bingueraData[idx] = {
+        ...bingueraData[idx],
+        tipo: document.getElementById("bngEditTipo").value,
+        fecha: document.getElementById("bngEditFecha").value,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detalle: document.getElementById("bngEditDetalle").value.trim(),
+        estado: document.getElementById("bngEditEstado").value,
+        nota: document.getElementById("bngEditNota").value.trim(),
+    };
+    localStorage.setItem("bingueraData", JSON.stringify(bingueraData));
+    document.getElementById("modalBngEditar").classList.remove("open");
+    renderBinguera();
+    toast.success("Incidencia actualizada ✅","");
+}
+
+function abrirDetalleBinguera(id){
+    let e = bingueraData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+    let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+    let tecInfo = "";
+    if(e.tecnicoPQ) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🔑 Técnico PQ: <strong style="color:var(--white);">${e.tecnicoPQ}</strong></div>`;
+    if(e.tecnicoCasino) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🏠 Técnico Casino: <strong style="color:var(--white);">${e.tecnicoCasino}</strong></div>`;
+    if(!e.tecnicoPQ && !e.tecnicoCasino && e.tecnico) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico: <strong style="color:var(--white);">${e.tecnico}</strong></div>`;
+    let adminBtns = usuarioActual?.rol==="Admin" ? `
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="abrirEditarBinguera('${e.id}')" style="flex:1;background:var(--accent2);border:none;color:var(--white);border-radius:8px;padding:8px 0;cursor:pointer;font-size:13px;font-weight:600;">✏️ Editar</button>
+            <button onclick="if(confirm('¿Eliminar?')){eliminarBingueraItem('${e.id}');cerrarDetalleBinguera();}" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;">🗑️</button>
+        </div>` : "";
+    document.getElementById("bngDetalleContenido").innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <span style="font-size:14px;">${tipoIcon} <strong>${e.tipo}</strong></span>
+            <span class="pill ${estadoCls}">${e.estado}</span>
+            <span style="font-size:12px;color:var(--muted);">📅 ${e.fecha}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;">🎱 Binguera</div>
+        ${tecInfo}
+        ${e.detalle ? `<div style="margin-top:8px;background:var(--bg3);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;"><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px;">Trabajo realizado:</div><div style="font-size:12px;color:var(--white);">${e.detalle}</div></div>` : ""}
+        ${e.nota ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:8px 10px;">${e.nota}</div>` : ""}
+        ${adminBtns}
+    `;
+    document.getElementById("modalBngDetalle").classList.add("open");
+}
+function cerrarDetalleBinguera(){
+    document.getElementById("modalBngDetalle").classList.remove("open");
+}
+
+function renderBinguera(){
+    let todos = [...bingueraData].sort((a,b) => (b.fecha || "").localeCompare(a.fecha || "") || b.id - a.id);
+    let badge = document.getElementById("badgeBngTotal");
+    if(badge) badge.textContent = todos.length;
+    function mkRow(e){
+        let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+        let tipoColor = e.tipo === "Preventivo" ? "var(--accent2)" : "#f87171";
+        let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+        return `<div onclick="abrirDetalleBinguera('${e.id}')" style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${tipoColor};border-radius:9px;margin-bottom:7px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg2)'">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:700;color:${tipoColor};">${tipoIcon} ${e.tipo}</span>
+                <span class="pill ${estadoCls}" style="font-size:10px;">${e.estado}</span>
+                <span style="font-size:11px;color:var(--muted);margin-left:auto;">📅 ${e.fecha}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">🎱 Binguera</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${e.tecnicoPQ ? '🔑 '+e.tecnicoPQ : ''}${e.tecnicoPQ && e.tecnicoCasino ? ' · ' : ''}${e.tecnicoCasino ? '🏠 '+e.tecnicoCasino : ''}</div>
+            ${e.detalle ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${e.detalle}</div>` : ""}
+        </div>`;
+    }
+    let cont = document.getElementById("listaBingueraTodas");
+    if(cont) cont.innerHTML = todos.length ? todos.map(mkRow).join("") : '<div class="empty-state"><div class="empty-icon">🎱</div><p>Sin incidencias</p></div>';
+}
+
+function eliminarBingueraItem(id){
+    if(esVisita()) return;
+    bingueraData = bingueraData.filter(c => String(c.id) !== String(id));
+    localStorage.setItem("bingueraData", JSON.stringify(bingueraData));
+    renderBinguera();
+}
+
+
+// ──────────────────────────────────────────────
+//  CHIPPERS
+// ──────────────────────────────────────────────
+let chippersData = JSON.parse(localStorage.getItem("chippersData")) || [];
+
+// ─── LISTA DINÁMICA DE CHIPPERS ────────────────
+const _CHPR_DEFAULT = [
+    "Chipper 1",
+    "Chipper 2",
+    "Chipper 3",
+    "Chipper 4",
+    "Chipper 5"
+];
+let listaChippers = (_cache["listaChippers"]) ? [..._cache["listaChippers"]] : [..._CHPR_DEFAULT];
+
+// Renderiza los checkboxes dinámicamente en un contenedor
+function _chprRenderChks(containerId, chkClass, onChangeCallback, preselected=[]) {
+    let cont = document.getElementById(containerId);
+    if(!cont) return;
+    if(!listaChippers.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Sin chippers configurados. Usá "Editar Chippers" para agregar.</span>';
+        return;
+    }
+    cont.innerHTML = listaChippers.map((nombre, i) => `
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+            <input type="checkbox" id="${chkClass}_${i}" value="${nombre.replace(/"/g,'&quot;')}" class="${chkClass}"
+                   style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;"
+                   ${preselected.includes(nombre) ? 'checked' : ''}>
+            <span>${nombre}</span>
+        </label>
+    `).join('<div style="height:1px;background:var(--border);margin:2px 0;"></div>');
+    document.querySelectorAll('.'+chkClass).forEach(chk => {
+        chk.onchange = onChangeCallback;
+    });
+}
+
+// ─── MODAL EDITAR LISTA DE CHIPPERS ────────────
+function abrirModalEditarListaChippers(){
+    _renderListaEditarChippers();
+    document.getElementById("nuevoChipperInput").value = "";
+    document.getElementById("modalEditarListaChippers").classList.add("open");
+}
+
+function _renderListaEditarChippers(){
+    let cont = document.getElementById("listaEditarChippers");
+    if(!listaChippers.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Lista vacía</span>';
+        return;
+    }
+    cont.innerHTML = listaChippers.map((nombre, i) => `
+        <div id="_chpr_row_${i}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
+            <span id="_chpr_label_${i}" style="flex:1;font-size:13px;color:var(--white);">${nombre}</span>
+            <input id="_chpr_input_${i}" type="text" value="${nombre.replace(/"/g,'&quot;')}" style="display:none;flex:1;background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:5px 8px;font-size:13px;color:var(--white);outline:none;">
+            <button id="_chpr_btn_edit_${i}" onclick="_editarChipperLista(${i})" style="background:rgba(0,200,150,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✏️</button>
+            <button id="_chpr_btn_save_${i}" onclick="_guardarNombreChipper(${i})" style="display:none;background:rgba(0,200,150,.2);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✔</button>
+            <button onclick="_eliminarChipperLista(${i})" style="background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕</button>
+        </div>
+    `).join('');
+}
+
+function _editarChipperLista(idx){
+    document.getElementById(`_chpr_label_${idx}`).style.display = 'none';
+    document.getElementById(`_chpr_input_${idx}`).style.display = 'block';
+    document.getElementById(`_chpr_btn_edit_${idx}`).style.display = 'none';
+    document.getElementById(`_chpr_btn_save_${idx}`).style.display = 'block';
+    document.getElementById(`_chpr_input_${idx}`).focus();
+}
+
+function _guardarNombreChipper(idx){
+    let nuevoNombre = document.getElementById(`_chpr_input_${idx}`).value.trim();
+    if(!nuevoNombre){ toast.warning("El nombre no puede estar vacío",""); return; }
+    if(listaChippers.some((n,i) => n === nuevoNombre && i !== idx)){ toast.warning("Ese nombre ya existe en la lista",""); return; }
+    listaChippers[idx] = nuevoNombre;
+    _renderListaEditarChippers();
+}
+
+function _eliminarChipperLista(idx){
+    listaChippers.splice(idx, 1);
+    _renderListaEditarChippers();
+}
+
+function agregarChipperLista(){
+    let input = document.getElementById("nuevoChipperInput");
+    let nombre = input.value.trim();
+    if(!nombre){ toast.warning("Ingresá un nombre para el chipper",""); return; }
+    if(listaChippers.includes(nombre)){ toast.warning("Ese chipper ya existe en la lista",""); return; }
+    listaChippers.push(nombre);
+    input.value = "";
+    _renderListaEditarChippers();
+}
+
+function guardarListaChippers(){
+    _fbSet("listaChippers", listaChippers);
+    _localStorageOrig.setItem("listaChippers", JSON.stringify(listaChippers));
+    document.getElementById("modalEditarListaChippers").classList.remove("open");
+    toast.success("Lista de chippers actualizada ✅","");
+}
+
+// ─── helpers para checkboxes + detalles ─────────
+function _chprActualizarDetalles(chkClass, contId){
+    let cont = document.getElementById(contId);
+    if(!cont) return;
+    let checks = document.querySelectorAll("."+chkClass);
+    let html = "";
+    checks.forEach(chk => {
+        if(chk.checked){
+            let label = chk.closest("label")?.querySelector("span")?.innerText || chk.value;
+            let safeId = contId + "_det_" + chk.id;
+            let existing = document.getElementById(safeId);
+            let prev = existing ? existing.value : "";
+            html += `<div style="background:var(--bg3);border:1px solid var(--accent);border-radius:9px;padding:10px 12px;">
+                <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">${label}</div>
+                <textarea id="${safeId}" class="form-textarea" style="min-height:60px;" placeholder="¿Qué se hizo en ${label.split('·')[0].trim()}?">${prev}</textarea>
+            </div>`;
+        }
+    });
+    cont.innerHTML = html || "";
+}
+
+function _chprRecogerDetalles(chkClass, contId){
+    let detalles = {};
+    document.querySelectorAll("."+chkClass).forEach(chk => {
+        if(chk.checked){
+            let ta = document.getElementById(contId + "_det_" + chk.id);
+            detalles[chk.value] = ta ? ta.value.trim() : "";
+        }
+    });
+    return detalles;
+}
+
+function _chprRecogerSeleccionadas(chkClass){
+    let sel = [];
+    document.querySelectorAll("."+chkClass).forEach(chk => { if(chk.checked) sel.push(chk.value); });
+    return sel;
+}
+
+function _chprPoblarCasino(selectId){
+    let sel = document.getElementById(selectId);
+    if(!sel) return;
+    let tecnicos = getTecnicos();
+    sel.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+// ─── NUEVA INCIDENCIA ────────────────────────────
+function abrirModalChipperNuevaIncidencia(){
+    if(esVisita()) return;
+    document.getElementById("chprFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("chprNota").value = "";
+    document.getElementById("chprTipo").value = "Correctivo";
+    document.getElementById("chprEstado").value = "Realizado";
+    document.getElementById("chprTecnicoPQ").value = "";
+    _chprPoblarCasino("chprTecnicoCasino");
+    let sel = document.getElementById("chprTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    _chprRenderChks("chprIncChkContainer","chprIncChk",()=>_chprActualizarDetalles("chprIncChk","chprIncDetallesPorChipper"));
+    document.getElementById("chprIncDetallesPorChipper").innerHTML = "";
+    document.getElementById("modalChipperNuevaIncidencia").classList.add("open");
+}
+function cerrarModalChipperNuevaIncidencia(){
+    document.getElementById("modalChipperNuevaIncidencia").classList.remove("open");
+}
+function guardarChipperIncidencia(){
+    if(esVisita()) return;
+    let seleccionadas = _chprRecogerSeleccionadas("chprIncChk");
+    let detalles = _chprRecogerDetalles("chprIncChk","chprIncDetallesPorChipper");
+    let tecPQ = document.getElementById("chprTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("chprTecnicoCasino").value;
+    let equipo = seleccionadas.length > 0 ? seleccionadas.join(", ") : "(sin especificar)";
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("chprTipo").value,
+        fecha: document.getElementById("chprFecha").value,
+        equipo,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorChipper: detalles,
+        estado: document.getElementById("chprEstado").value,
+        nota: document.getElementById("chprNota").value.trim(),
+        comentarios: []
+    };
+    chippersData.unshift(obj);
+    localStorage.setItem("chippersData", JSON.stringify(chippersData));
+    _fbSet("chippersData", chippersData);
+    cerrarModalChipperNuevaIncidencia();
+    renderChippers();
+    toast.success("Incidencia guardada ✅","");
+}
+
+// ─── PREVENTIVO ──────────────────────────────────
+function _chprPrevActualizarDetalles(){
+    _chprActualizarDetalles("chprPrevChk","chprPrevDetallesPorChipper");
+}
+
+function abrirModalChipperPreventivo(){
+    if(esVisita()) return;
+    document.getElementById("chprPrevFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("chprPrevNota").value = "";
+    document.getElementById("chprPrevTecnicoPQ").value = "";
+    document.getElementById("chprPrevTipo").value = "Preventivo";
+    document.getElementById("chprPrevEstado").value = "Realizado";
+    _chprPoblarCasino("chprPrevTecnicoCasino");
+    let sel = document.getElementById("chprPrevTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    _chprRenderChks("chprPrevChkContainer","chprPrevChk",_chprPrevActualizarDetalles);
+    document.getElementById("chprPrevDetallesPorChipper").innerHTML = "";
+    document.getElementById("modalChipperPreventivo").classList.add("open");
+}
+function cerrarModalChipperPreventivo(){
+    document.getElementById("modalChipperPreventivo").classList.remove("open");
+}
+function guardarChipperPreventivo(){
+    if(esVisita()) return;
+    let seleccionadas = _chprRecogerSeleccionadas("chprPrevChk");
+    let detalles = _chprRecogerDetalles("chprPrevChk","chprPrevDetallesPorChipper");
+    if(seleccionadas.length === 0){ toast.warning("Seleccioná al menos un chipper",""); return; }
+    let tecPQ = document.getElementById("chprPrevTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("chprPrevTecnicoCasino").value;
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("chprPrevTipo").value,
+        fecha: document.getElementById("chprPrevFecha").value,
+        equipo: seleccionadas.join(", "),
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorChipper: detalles,
+        estado: document.getElementById("chprPrevEstado").value,
+        nota: document.getElementById("chprPrevNota").value.trim(),
+        comentarios: []
+    };
+    chippersData.unshift(obj);
+    localStorage.setItem("chippersData", JSON.stringify(chippersData));
+    _fbSet("chippersData", chippersData);
+    cerrarModalChipperPreventivo();
+    renderChippers();
+    toast.success("Preventivo guardado ✅", `${seleccionadas.length} chipper(s) registrados`);
+}
+
+// ─── EDICIÓN (solo Admin) ─────────────────────────
+function abrirEditarChipper(id){
+    let e = chippersData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    document.getElementById("chprEditId").value = e.id;
+    document.getElementById("chprEditFecha").value = e.fecha || "";
+    document.getElementById("chprEditTipo").value = e.tipo || "Correctivo";
+    document.getElementById("chprEditTecnicoPQ").value = e.tecnicoPQ || e.tecnico || "";
+    document.getElementById("chprEditEstado").value = e.estado || "Realizado";
+    document.getElementById("chprEditNota").value = e.nota || "";
+    _chprPoblarCasino("chprEditTecnicoCasino");
+    let selC = document.getElementById("chprEditTecnicoCasino");
+    if(e.tecnicoCasino){ let op = [...selC.options].find(o=>o.value===e.tecnicoCasino); if(op) selC.value=e.tecnicoCasino; }
+    let equipoList = e.equipo ? e.equipo.split(", ") : [];
+    _chprRenderChks("chprEditChkContainer","chprEditChk",()=>_chprActualizarDetalles("chprEditChk","chprEditDetallesPorChipper"), equipoList);
+    document.getElementById("chprEditDetallesPorChipper").innerHTML = "";
+    _chprActualizarDetalles("chprEditChk","chprEditDetallesPorChipper");
+    if(e.detallesPorChipper){
+        setTimeout(()=>{
+            document.querySelectorAll(".chprEditChk").forEach(chk => {
+                if(chk.checked && e.detallesPorChipper[chk.value]){
+                    let ta = document.getElementById("chprEditDetallesPorChipper_det_"+chk.id);
+                    if(ta) ta.value = e.detallesPorChipper[chk.value];
+                }
+            });
+        }, 30);
+    }
+    document.getElementById("modalChprDetalle").classList.remove("open");
+    document.getElementById("modalChprEditar").classList.add("open");
+}
+
+function guardarEdicionChipper(){
+    let id = document.getElementById("chprEditId").value;
+    let idx = chippersData.findIndex(c => String(c.id) === String(id));
+    if(idx === -1) return;
+    let seleccionadas = _chprRecogerSeleccionadas("chprEditChk");
+    let detalles = _chprRecogerDetalles("chprEditChk","chprEditDetallesPorChipper");
+    let tecPQ = document.getElementById("chprEditTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("chprEditTecnicoCasino").value;
+    chippersData[idx] = {
+        ...chippersData[idx],
+        tipo: document.getElementById("chprEditTipo").value,
+        fecha: document.getElementById("chprEditFecha").value,
+        equipo: seleccionadas.length > 0 ? seleccionadas.join(", ") : chippersData[idx].equipo,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorChipper: detalles,
+        estado: document.getElementById("chprEditEstado").value,
+        nota: document.getElementById("chprEditNota").value.trim(),
+    };
+    localStorage.setItem("chippersData", JSON.stringify(chippersData));
+    _fbSet("chippersData", chippersData);
+    document.getElementById("modalChprEditar").classList.remove("open");
+    renderChippers();
+    toast.success("Incidencia actualizada ✅","");
+}
+
+// ─── DETALLE ──────────────────────────────────────
+function abrirDetalleChipper(id){
+    let e = chippersData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+    let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+    let tecInfo = "";
+    if(e.tecnicoPQ) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🔑 Técnico PQ: <strong style="color:var(--white);">${e.tecnicoPQ}</strong></div>`;
+    if(e.tecnicoCasino) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🏠 Técnico Casino: <strong style="color:var(--white);">${e.tecnicoCasino}</strong></div>`;
+    if(!e.tecnicoPQ && !e.tecnicoCasino && e.tecnico) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico: <strong style="color:var(--white);">${e.tecnico}</strong></div>`;
+    let detallesHtml = "";
+    if(e.detallesPorChipper && Object.keys(e.detallesPorChipper).some(k=>e.detallesPorChipper[k])){
+        detallesHtml = `<div style="margin-top:10px;"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">Detalle por chipper:</div>`;
+        for(let [k,v] of Object.entries(e.detallesPorChipper)){
+            if(v) detallesHtml += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:5px;">
+                <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:2px;">${k}</div>
+                <div style="font-size:12px;color:var(--white);">${v}</div>
+            </div>`;
+        }
+        detallesHtml += `</div>`;
+    }
+    let adminBtns = usuarioActual?.rol==="Admin" ? `
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="abrirEditarChipper('${e.id}')" style="flex:1;background:var(--accent2);border:none;color:var(--white);border-radius:8px;padding:8px 0;cursor:pointer;font-size:13px;font-weight:600;">✏️ Editar</button>
+            <button onclick="if(confirm('¿Eliminar?')){eliminarChipperItem('${e.id}');cerrarDetalleChipper();}" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;">🗑️</button>
+        </div>` : "";
+    document.getElementById("chprDetalleContenido").innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <span style="font-size:14px;">${tipoIcon} <strong>${e.tipo}</strong></span>
+            <span class="pill ${estadoCls}">${e.estado}</span>
+            <span style="font-size:12px;color:var(--muted);">📅 ${e.fecha}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;">${e.equipo}</div>
+        ${tecInfo}
+        ${e.nota ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:8px 10px;">${e.nota}</div>` : ""}
+        ${detallesHtml}
+        ${adminBtns}
+    `;
+    document.getElementById("modalChprDetalle").classList.add("open");
+}
+function cerrarDetalleChipper(){
+    document.getElementById("modalChprDetalle").classList.remove("open");
+}
+
+// ─── RENDER ───────────────────────────────────────
+function renderChippers(){
+    let todos = [...chippersData].sort((a,b) => (b.fecha || "").localeCompare(a.fecha || "") || b.id - a.id);
+    let badge = document.getElementById("badgeChprTotal");
+    if(badge) badge.textContent = todos.length;
+
+    function mkRow(e){
+        let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+        let tipoColor = e.tipo === "Preventivo" ? "var(--accent2)" : "#f87171";
+        let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+        return `<div onclick="abrirDetalleChipper('${e.id}')" style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${tipoColor};border-radius:9px;margin-bottom:7px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg2)'">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:700;color:${tipoColor};">${tipoIcon} ${e.tipo}</span>
+                <span class="pill ${estadoCls}" style="font-size:10px;">${e.estado}</span>
+                <span style="font-size:11px;color:var(--muted);margin-left:auto;">📅 ${e.fecha}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">${e.equipo}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${e.tecnicoPQ ? '🔑 '+e.tecnicoPQ : ''}${e.tecnicoPQ && e.tecnicoCasino ? ' · ' : ''}${e.tecnicoCasino ? '🏠 '+e.tecnicoCasino : ''}</div>
+            ${e.nota ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${e.nota}</div>` : ""}
+        </div>`;
+    }
+
+    let cont = document.getElementById("listaChippersTodas");
+    if(cont) cont.innerHTML = todos.length ? todos.map(mkRow).join("") : '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>';
+}
+
+function eliminarChipperItem(id){
+    if(esVisita()) return;
+    chippersData = chippersData.filter(c => String(c.id) !== String(id));
+    localStorage.setItem("chippersData", JSON.stringify(chippersData));
+    _fbSet("chippersData", chippersData);
+    renderChippers();
+}
+
+// ──────────────────────────────────────────────
+//  BARAJADORAS
+// ──────────────────────────────────────────────
+let barajadorasData = JSON.parse(localStorage.getItem("barajadorasData")) || [];
+
+// ─── LISTA DINÁMICA DE BARAJADORAS ────────────────
+const _BRAJ_DEFAULT = [
+    "Barajadora 1",
+    "Barajadora 2",
+    "Barajadora 3",
+    "Barajadora 4",
+    "Barajadora 5"
+];
+let listaBarajadoras = (_cache["listaBarajadoras"]) ? [..._cache["listaBarajadoras"]] : [..._BRAJ_DEFAULT];
+
+// Renderiza los checkboxes dinámicamente en un contenedor
+function _brajRenderChks(containerId, chkClass, onChangeCallback, preselected=[]) {
+    let cont = document.getElementById(containerId);
+    if(!cont) return;
+    if(!listaBarajadoras.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Sin barajadoras configuradas. Usá "Editar Barajadoras" para agregar.</span>';
+        return;
+    }
+    cont.innerHTML = listaBarajadoras.map((nombre, i) => `
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+            <input type="checkbox" id="${chkClass}_${i}" value="${nombre.replace(/"/g,'&quot;')}" class="${chkClass}"
+                   style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;"
+                   ${preselected.includes(nombre) ? 'checked' : ''}>
+            <span>${nombre}</span>
+        </label>
+    `).join('<div style="height:1px;background:var(--border);margin:2px 0;"></div>');
+    document.querySelectorAll('.'+chkClass).forEach(chk => {
+        chk.onchange = onChangeCallback;
+    });
+}
+
+// ─── MODAL EDITAR LISTA DE BARAJADORAS ────────────
+function abrirModalEditarListaBarajadoras(){
+    _renderListaEditarBarajadoras();
+    document.getElementById("nuevaBarajadoraInput").value = "";
+    document.getElementById("modalEditarListaBarajadoras").classList.add("open");
+}
+
+function _renderListaEditarBarajadoras(){
+    let cont = document.getElementById("listaEditarBarajadoras");
+    if(!listaBarajadoras.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Lista vacía</span>';
+        return;
+    }
+    cont.innerHTML = listaBarajadoras.map((nombre, i) => `
+        <div id="_braj_row_${i}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
+            <span id="_braj_label_${i}" style="flex:1;font-size:13px;color:var(--white);">${nombre}</span>
+            <input id="_braj_input_${i}" type="text" value="${nombre.replace(/"/g,'&quot;')}" style="display:none;flex:1;background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:5px 8px;font-size:13px;color:var(--white);outline:none;">
+            <button id="_braj_btn_edit_${i}" onclick="_editarBarajadoraLista(${i})" style="background:rgba(0,200,150,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✏️</button>
+            <button id="_braj_btn_save_${i}" onclick="_guardarNombreBarajadora(${i})" style="display:none;background:rgba(0,200,150,.2);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✔</button>
+            <button onclick="_eliminarBarajadoraLista(${i})" style="background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕</button>
+        </div>
+    `).join('');
+}
+
+function _editarBarajadoraLista(idx){
+    document.getElementById(`_braj_label_${idx}`).style.display = 'none';
+    document.getElementById(`_braj_input_${idx}`).style.display = 'block';
+    document.getElementById(`_braj_btn_edit_${idx}`).style.display = 'none';
+    document.getElementById(`_braj_btn_save_${idx}`).style.display = 'block';
+    document.getElementById(`_braj_input_${idx}`).focus();
+}
+
+function _guardarNombreBarajadora(idx){
+    let nuevoNombre = document.getElementById(`_braj_input_${idx}`).value.trim();
+    if(!nuevoNombre){ toast.warning("El nombre no puede estar vacío",""); return; }
+    if(listaBarajadoras.some((n,i) => n === nuevoNombre && i !== idx)){ toast.warning("Ese nombre ya existe en la lista",""); return; }
+    listaBarajadoras[idx] = nuevoNombre;
+    _renderListaEditarBarajadoras();
+}
+
+function _eliminarBarajadoraLista(idx){
+    listaBarajadoras.splice(idx, 1);
+    _renderListaEditarBarajadoras();
+}
+
+function agregarBarajadoraLista(){
+    let input = document.getElementById("nuevaBarajadoraInput");
+    let nombre = input.value.trim();
+    if(!nombre){ toast.warning("Ingresá un nombre para la barajadora",""); return; }
+    if(listaBarajadoras.includes(nombre)){ toast.warning("Esa barajadora ya existe en la lista",""); return; }
+    listaBarajadoras.push(nombre);
+    input.value = "";
+    _renderListaEditarBarajadoras();
+}
+
+function guardarListaBarajadoras(){
+    _fbSet("listaBarajadoras", listaBarajadoras);
+    _localStorageOrig.setItem("listaBarajadoras", JSON.stringify(listaBarajadoras));
+    document.getElementById("modalEditarListaBarajadoras").classList.remove("open");
+    toast.success("Lista de barajadoras actualizada ✅","");
+}
+
+// ─── helpers para checkboxes + detalles ─────────
+function _brajActualizarDetalles(chkClass, contId){
+    let cont = document.getElementById(contId);
+    if(!cont) return;
+    let checks = document.querySelectorAll("."+chkClass);
+    let html = "";
+    checks.forEach(chk => {
+        if(chk.checked){
+            let label = chk.closest("label")?.querySelector("span")?.innerText || chk.value;
+            let safeId = contId + "_det_" + chk.id;
+            let existing = document.getElementById(safeId);
+            let prev = existing ? existing.value : "";
+            html += `<div style="background:var(--bg3);border:1px solid var(--accent);border-radius:9px;padding:10px 12px;">
+                <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">${label}</div>
+                <textarea id="${safeId}" class="form-textarea" style="min-height:60px;" placeholder="¿Qué se hizo en ${label.split('·')[0].trim()}?">${prev}</textarea>
+            </div>`;
+        }
+    });
+    cont.innerHTML = html || "";
+}
+
+function _brajRecogerDetalles(chkClass, contId){
+    let detalles = {};
+    document.querySelectorAll("."+chkClass).forEach(chk => {
+        if(chk.checked){
+            let ta = document.getElementById(contId + "_det_" + chk.id);
+            detalles[chk.value] = ta ? ta.value.trim() : "";
+        }
+    });
+    return detalles;
+}
+
+function _brajRecogerSeleccionadas(chkClass){
+    let sel = [];
+    document.querySelectorAll("."+chkClass).forEach(chk => { if(chk.checked) sel.push(chk.value); });
+    return sel;
+}
+
+function _brajPoblarCasino(selectId){
+    let sel = document.getElementById(selectId);
+    if(!sel) return;
+    let tecnicos = getTecnicos();
+    sel.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+// ─── NUEVA INCIDENCIA ────────────────────────────
+function abrirModalBarajadoraNuevaIncidencia(){
+    if(esVisita()) return;
+    document.getElementById("brajFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("brajNota").value = "";
+    document.getElementById("brajTipo").value = "Correctivo";
+    document.getElementById("brajEstado").value = "Realizado";
+    document.getElementById("brajTecnicoPQ").value = "";
+    _brajPoblarCasino("brajTecnicoCasino");
+    let sel = document.getElementById("brajTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    _brajRenderChks("brajIncChkContainer","brajIncChk",()=>_brajActualizarDetalles("brajIncChk","brajIncDetallesPorBrajadora"));
+    document.getElementById("brajIncDetallesPorBrajadora").innerHTML = "";
+    document.getElementById("modalBarajadoraNuevaIncidencia").classList.add("open");
+}
+function cerrarModalBarajadoraNuevaIncidencia(){
+    document.getElementById("modalBarajadoraNuevaIncidencia").classList.remove("open");
+}
+function guardarBarajadoraIncidencia(){
+    if(esVisita()) return;
+    let seleccionadas = _brajRecogerSeleccionadas("brajIncChk");
+    let detalles = _brajRecogerDetalles("brajIncChk","brajIncDetallesPorBrajadora");
+    let tecPQ = document.getElementById("brajTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("brajTecnicoCasino").value;
+    let equipo = seleccionadas.length > 0 ? seleccionadas.join(", ") : "(sin especificar)";
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("brajTipo").value,
+        fecha: document.getElementById("brajFecha").value,
+        equipo,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorBrajadora: detalles,
+        estado: document.getElementById("brajEstado").value,
+        nota: document.getElementById("brajNota").value.trim(),
+        comentarios: []
+    };
+    barajadorasData.unshift(obj);
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    cerrarModalBarajadoraNuevaIncidencia();
+    renderBarajadoras();
+    toast.success("Incidencia guardada ✅","");
+}
+
+// ─── PREVENTIVO ──────────────────────────────────
+function _brajPrevActualizarDetalles(){
+    _brajActualizarDetalles("brajPrevChk","brajPrevDetallesPorBrajadora");
+}
+
+function abrirModalBarajadoraPreventivo(){
+    if(esVisita()) return;
+    document.getElementById("brajPrevFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("brajPrevNota").value = "";
+    document.getElementById("brajPrevTecnicoPQ").value = "";
+    document.getElementById("brajPrevTipo").value = "Preventivo";
+    document.getElementById("brajPrevEstado").value = "Realizado";
+    _brajPoblarCasino("brajPrevTecnicoCasino");
+    let sel = document.getElementById("brajPrevTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    _brajRenderChks("brajPrevChkContainer","brajPrevChk",_brajPrevActualizarDetalles);
+    document.getElementById("brajPrevDetallesPorBrajadora").innerHTML = "";
+    document.getElementById("modalBarajadoraPreventivo").classList.add("open");
+}
+function cerrarModalBarajadoraPreventivo(){
+    document.getElementById("modalBarajadoraPreventivo").classList.remove("open");
+}
+function guardarBarajadoraPreventivo(){
+    if(esVisita()) return;
+    let seleccionadas = _brajRecogerSeleccionadas("brajPrevChk");
+    let detalles = _brajRecogerDetalles("brajPrevChk","brajPrevDetallesPorBrajadora");
+    if(seleccionadas.length === 0){ toast.warning("Seleccioná al menos una barajadora",""); return; }
+    let tecPQ = document.getElementById("brajPrevTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("brajPrevTecnicoCasino").value;
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("brajPrevTipo").value,
+        fecha: document.getElementById("brajPrevFecha").value,
+        equipo: seleccionadas.join(", "),
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorBrajadora: detalles,
+        estado: document.getElementById("brajPrevEstado").value,
+        nota: document.getElementById("brajPrevNota").value.trim(),
+        comentarios: []
+    };
+    barajadorasData.unshift(obj);
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    cerrarModalBarajadoraPreventivo();
+    renderBarajadoras();
+    toast.success("Preventivo guardado ✅", `${seleccionadas.length} barajadora(s) registradas`);
+}
+
+// ─── EDICIÓN (solo Admin) ─────────────────────────
+function abrirEditarBarajadora(id){
+    let e = barajadorasData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    document.getElementById("brajEditId").value = e.id;
+    document.getElementById("brajEditFecha").value = e.fecha || "";
+    document.getElementById("brajEditTipo").value = e.tipo || "Correctivo";
+    document.getElementById("brajEditTecnicoPQ").value = e.tecnicoPQ || e.tecnico || "";
+    document.getElementById("brajEditEstado").value = e.estado || "Realizado";
+    document.getElementById("brajEditNota").value = e.nota || "";
+    _brajPoblarCasino("brajEditTecnicoCasino");
+    let selC = document.getElementById("brajEditTecnicoCasino");
+    if(e.tecnicoCasino){ let op = [...selC.options].find(o=>o.value===e.tecnicoCasino); if(op) selC.value=e.tecnicoCasino; }
+    let equipoList = e.equipo ? e.equipo.split(", ") : [];
+    _brajRenderChks("brajEditChkContainer","brajEditChk",()=>_brajActualizarDetalles("brajEditChk","brajEditDetallesPorBrajadora"), equipoList);
+    document.getElementById("brajEditDetallesPorBrajadora").innerHTML = "";
+    _brajActualizarDetalles("brajEditChk","brajEditDetallesPorBrajadora");
+    if(e.detallesPorBrajadora){
+        setTimeout(()=>{
+            document.querySelectorAll(".brajEditChk").forEach(chk => {
+                if(chk.checked && e.detallesPorBrajadora[chk.value]){
+                    let ta = document.getElementById("brajEditDetallesPorBrajadora_det_"+chk.id);
+                    if(ta) ta.value = e.detallesPorBrajadora[chk.value];
+                }
+            });
+        }, 30);
+    }
+    document.getElementById("modalBrajDetalle").classList.remove("open");
+    document.getElementById("modalBrajEditar").classList.add("open");
+}
+
+function guardarEdicionBarajadora(){
+    let id = document.getElementById("brajEditId").value;
+    let idx = barajadorasData.findIndex(c => String(c.id) === String(id));
+    if(idx === -1) return;
+    let seleccionadas = _brajRecogerSeleccionadas("brajEditChk");
+    let detalles = _brajRecogerDetalles("brajEditChk","brajEditDetallesPorBrajadora");
+    let tecPQ = document.getElementById("brajEditTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("brajEditTecnicoCasino").value;
+    barajadorasData[idx] = {
+        ...barajadorasData[idx],
+        tipo: document.getElementById("brajEditTipo").value,
+        fecha: document.getElementById("brajEditFecha").value,
+        equipo: seleccionadas.length > 0 ? seleccionadas.join(", ") : barajadorasData[idx].equipo,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorBrajadora: detalles,
+        estado: document.getElementById("brajEditEstado").value,
+        nota: document.getElementById("brajEditNota").value.trim(),
+    };
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    document.getElementById("modalBrajEditar").classList.remove("open");
+    renderBarajadoras();
+    toast.success("Incidencia actualizada ✅","");
+}
+
+// ─── DETALLE ──────────────────────────────────────
+function abrirDetalleBarajadora(id){
+    let e = barajadorasData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+    let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+    let tecInfo = "";
+    if(e.tecnicoPQ) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🔑 Técnico PQ: <strong style="color:var(--white);">${e.tecnicoPQ}</strong></div>`;
+    if(e.tecnicoCasino) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🏠 Técnico Casino: <strong style="color:var(--white);">${e.tecnicoCasino}</strong></div>`;
+    if(!e.tecnicoPQ && !e.tecnicoCasino && e.tecnico) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico: <strong style="color:var(--white);">${e.tecnico}</strong></div>`;
+    let detallesHtml = "";
+    if(e.detallesPorBrajadora && Object.keys(e.detallesPorBrajadora).some(k=>e.detallesPorBrajadora[k])){
+        detallesHtml = `<div style="margin-top:10px;"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">Detalle por barajadora:</div>`;
+        for(let [k,v] of Object.entries(e.detallesPorBrajadora)){
+            if(v) detallesHtml += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:5px;">
+                <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:2px;">${k}</div>
+                <div style="font-size:12px;color:var(--white);">${v}</div>
+            </div>`;
+        }
+        detallesHtml += `</div>`;
+    }
+    let adminBtns = usuarioActual?.rol==="Admin" ? `
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="abrirEditarBarajadora('${e.id}')" style="flex:1;background:var(--accent2);border:none;color:var(--white);border-radius:8px;padding:8px 0;cursor:pointer;font-size:13px;font-weight:600;">✏️ Editar</button>
+            <button onclick="if(confirm('¿Eliminar?')){eliminarBarajadoraItem('${e.id}');cerrarDetalleBarajadora();}" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;">🗑️</button>
+        </div>` : "";
+    document.getElementById("brajDetalleContenido").innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <span style="font-size:14px;">${tipoIcon} <strong>${e.tipo}</strong></span>
+            <span class="pill ${estadoCls}">${e.estado}</span>
+            <span style="font-size:12px;color:var(--muted);">📅 ${e.fecha}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;">${e.equipo}</div>
+        ${tecInfo}
+        ${e.nota ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:8px 10px;">${e.nota}</div>` : ""}
+        ${detallesHtml}
+        ${adminBtns}
+    `;
+    document.getElementById("modalBrajDetalle").classList.add("open");
+}
+function cerrarDetalleBarajadora(){
+    document.getElementById("modalBrajDetalle").classList.remove("open");
+}
+
+// ─── RENDER ───────────────────────────────────────
+function renderBarajadoras(){
+    let todos = [...barajadorasData].sort((a,b) => (b.fecha || "").localeCompare(a.fecha || "") || b.id - a.id);
+    let badge = document.getElementById("badgeBrajTotal");
+    if(badge) badge.textContent = todos.length;
+
+    function mkRow(e){
+        let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+        let tipoColor = e.tipo === "Preventivo" ? "var(--accent2)" : "#f87171";
+        let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+        return `<div onclick="abrirDetalleBarajadora('${e.id}')" style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${tipoColor};border-radius:9px;margin-bottom:7px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg2)'">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:700;color:${tipoColor};">${tipoIcon} ${e.tipo}</span>
+                <span class="pill ${estadoCls}" style="font-size:10px;">${e.estado}</span>
+                <span style="font-size:11px;color:var(--muted);margin-left:auto;">📅 ${e.fecha}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">${e.equipo}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${e.tecnicoPQ ? '🔑 '+e.tecnicoPQ : ''}${e.tecnicoPQ && e.tecnicoCasino ? ' · ' : ''}${e.tecnicoCasino ? '🏠 '+e.tecnicoCasino : ''}</div>
+            ${e.nota ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${e.nota}</div>` : ""}
+        </div>`;
+    }
+
+    let cont = document.getElementById("listaBarajadorasTodas");
+    if(cont) cont.innerHTML = todos.length ? todos.map(mkRow).join("") : '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>';
+}
+
+function eliminarBarajadoraItem(id){
+    if(esVisita()) return;
+    barajadorasData = barajadorasData.filter(c => String(c.id) !== String(id));
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    renderBarajadoras();
 }
 
 // ──────────────────────────────────────────────
@@ -13672,6 +15139,115 @@ function confirmarQuienRealizoMulti(){
         </div>
     </div>
 </div>
+
+<!-- ═══ MODAL BINGUERA — NUEVA INCIDENCIA ═══ -->
+<div id="modalBingueraNuevaIncidencia" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🎱 Nueva Incidencia — Binguera</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="bngFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="bngTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="bngTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="bngTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="bngEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en la binguera?</label>
+            <textarea id="bngDetalle" class="form-textarea" placeholder="Describí el trabajo realizado..."></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="bngNota" class="form-textarea" placeholder="Observaciones adicionales..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="guardarBingueraIncidencia()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalBingueraNuevaIncidencia()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BINGUERA — EDITAR ═══ -->
+<div id="modalBngEditar" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">✏️ Editar Incidencia — Binguera</div>
+        <input type="hidden" id="bngEditId">
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="bngEditFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="bngEditTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="bngEditTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="bngEditTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="bngEditEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en la binguera?</label>
+            <textarea id="bngEditDetalle" class="form-textarea" placeholder="Describí el trabajo realizado..."></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="bngEditNota" class="form-textarea" placeholder="Observaciones adicionales..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarEdicionBinguera()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalBngEditar').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BINGUERA — DETALLE ═══ -->
+<div id="modalBngDetalle" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🎱 Detalle de Incidencia — Binguera</div>
+        <div id="bngDetalleContenido"></div>
+        <div class="modal-footer" style="margin-top:14px;">
+            <button class="btn-modal-cancel" onclick="cerrarDetalleBinguera()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ MODAL DETALLE EVA INCIDENCIA ═══ -->
 <div id="modalEvaDetalle" class="modal">
     <div class="modal-box" style="max-width:480px;">
@@ -13682,6 +15258,190 @@ function confirmarQuienRealizoMulti(){
         </div>
     </div>
 </div>
+<!-- ═══ MODAL CHIPPER — EDITAR ═══ -->
+<div id="modalChprEditar" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">✏️ Editar Incidencia — Chippers</div>
+        <input type="hidden" id="chprEditId">
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="chprEditFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="chprEditTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="chprEditTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="chprEditTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="chprEditEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Chippers Intervenidos</label>
+            <div id="chprEditChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada chipper?</label>
+            <div id="chprEditDetallesPorChipper" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="chprEditNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarEdicionChipper()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalChprEditar').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL CHIPPER — DETALLE ═══ -->
+<div id="modalChprDetalle" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🎰 Detalle de Incidencia</div>
+        <div id="chprDetalleContenido"></div>
+        <div class="modal-footer" style="margin-top:14px;">
+            <button class="btn-modal-cancel" onclick="cerrarDetalleChipper()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL EDITAR LISTA DE CHIPPERS ═══ -->
+<div id="modalEditarListaChippers" class="modal">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="modal-title">✏️ Editar Lista de Chippers</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Agregá o quitá chippers de la lista. Los cambios aplican a todos los formularios.</p>
+
+        <!-- Lista actual -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Chippers actuales</div>
+            <div id="listaEditarChippers" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+
+        <!-- Agregar nueva -->
+        <div style="background:var(--bg3);border:1px solid var(--accent);border-radius:10px;padding:12px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;">➕ Agregar chipper</div>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="nuevoChipperInput" class="form-input" placeholder="Nombre / descripción del chipper..." style="flex:1;margin-bottom:0;">
+                <button onclick="agregarChipperLista()" style="background:var(--accent);color:var(--bg);border:none;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Agregar</button>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="margin-top:18px;">
+            <button class="btn-modal-save blue" onclick="guardarListaChippers()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarListaChippers').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BARAJADORA — EDITAR ═══ -->
+<div id="modalBrajEditar" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">✏️ Editar Incidencia — Barajadoras</div>
+        <input type="hidden" id="brajEditId">
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="brajEditFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="brajEditTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="brajEditTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="brajEditTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="brajEditEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Barajadoras Intervenidas</label>
+            <div id="brajEditChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada barajadora?</label>
+            <div id="brajEditDetallesPorBrajadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="brajEditNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarEdicionBarajadora()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalBrajEditar').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BARAJADORA — DETALLE ═══ -->
+<div id="modalBrajDetalle" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🃏 Detalle de Incidencia</div>
+        <div id="brajDetalleContenido"></div>
+        <div class="modal-footer" style="margin-top:14px;">
+            <button class="btn-modal-cancel" onclick="cerrarDetalleBarajadora()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL EDITAR LISTA DE BARAJADORAS ═══ -->
+<div id="modalEditarListaBarajadoras" class="modal">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="modal-title">✏️ Editar Lista de Barajadoras</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Agregá o quitá barajadoras de la lista. Los cambios aplican a todos los formularios.</p>
+
+        <!-- Lista actual -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Barajadoras actuales</div>
+            <div id="listaEditarBarajadoras" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+
+        <!-- Agregar nueva -->
+        <div style="background:var(--bg3);border:1px solid var(--accent);border-radius:10px;padding:12px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;">➕ Agregar barajadora</div>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="nuevaBarajadoraInput" class="form-input" placeholder="Nombre / descripción de la barajadora..." style="flex:1;margin-bottom:0;">
+                <button onclick="agregarBarajadoraLista()" style="background:var(--accent);color:var(--bg);border:none;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Agregar</button>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="margin-top:18px;">
+            <button class="btn-modal-save blue" onclick="guardarListaBarajadoras()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarListaBarajadoras').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ MODAL EDITAR LISTA DE CONTADORAS ═══ -->
 <div id="modalEditarListaContadoras" class="modal">
     <div class="modal-box" style="max-width:500px;">
@@ -15825,6 +17585,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         <input type="checkbox" id="expChk_contadoras" checked style="accent-color:var(--accent);width:15px;height:15px;"> Contadoras
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_binguera" checked style="accent-color:var(--accent);width:15px;height:15px;"> Binguera
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_chippers" checked style="accent-color:var(--accent);width:15px;height:15px;"> Chippers
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_barajadoras" checked style="accent-color:var(--accent);width:15px;height:15px;"> Barajadoras
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
                         <input type="checkbox" id="expChk_eva" checked style="accent-color:var(--accent);width:15px;height:15px;"> Kioscos EVA
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
@@ -16038,6 +17807,9 @@ async function generarExcelCompleto(){
         let tarFilt  = _exportFiltrar(typeof tareas!=="undefined"?tareas:[], "fecha");
         let fdsFilt  = _exportFiltrar(typeof fdsData!=="undefined"?fdsData:[], "fechaSalida");
         let cntFilt  = _exportFiltrar(typeof contadorasData!=="undefined"?contadorasData:[], "fecha");
+        let bngFilt  = _exportFiltrar(typeof bingueraData!=="undefined"?bingueraData:[], "fecha");
+        let chprFilt = _exportFiltrar(typeof chippersData!=="undefined"?chippersData:[], "fecha");
+        let brajFilt = _exportFiltrar(typeof barajadorasData!=="undefined"?barajadorasData:[], "fecha");
         let evaFilt  = _exportFiltrar(typeof evaIncidencias!=="undefined"?evaIncidencias:[], "fecha");
         let valFilt  = _exportFiltrar(typeof validadoresData!=="undefined"?validadoresData:[], "fecha");
         let evUnicFilt = _exportFiltrar(window.eventosUnicos||[], "fecha");
@@ -16064,6 +17836,9 @@ async function generarExcelCompleto(){
                 fdsFilt.filter(f=>f.estado!=="Habilitado").length,
                 fdsFilt.filter(f=>f.estado==="Habilitado").length],
             ["Contadoras", cntFilt.length, "—", cntFilt.length],
+            ["Binguera", bngFilt.length, "—", bngFilt.length],
+            ["Chippers", chprFilt.length, "—", chprFilt.length],
+            ["Barajadoras", brajFilt.length, "—", brajFilt.length],
             ["Kioscos EVA", evaFilt.length, "—", evaFilt.length],
             ["Validadores", valFilt.length, "—", valFilt.length],
             ["Eventos Únicos", evUnicFilt.length, "—", evUnicFilt.length],
@@ -16145,6 +17920,42 @@ async function generarExcelCompleto(){
             ]);
             let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
             XLSX.utils.book_append_sheet(wb,ws,"🔢 Contadoras");
+        }
+
+        // ── BINGUERA ──────────────────────────────────────────
+        if(document.getElementById("expChk_binguera")?.checked){
+            setStatus("Binguera...");
+            let cabs=["Fecha","Tipo","Técnico Casino","Técnico PQ","Estado","Trabajo realizado","Nota"];
+            let filas=bngFilt.map(c=>[
+                c.fecha||"—",c.tipo||"—",
+                c.tecnicoCasino||"—",c.tecnicoPQ||"—",c.estado||"—",c.detalle||"—",c.nota||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🎱 Binguera");
+        }
+
+        // ── CHIPPERS ──────────────────────────────────────────
+        if(document.getElementById("expChk_chippers")?.checked){
+            setStatus("Chippers...");
+            let cabs=["Fecha","Tipo","Equipo","Técnico Casino","Técnico PQ","Estado","Nota"];
+            let filas=chprFilt.map(c=>[
+                c.fecha||"—",c.tipo||"—",c.equipo||"—",
+                c.tecnicoCasino||"—",c.tecnicoPQ||"—",c.estado||"—",c.nota||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🎰 Chippers");
+        }
+
+        // ── BARAJADORAS ───────────────────────────────────────
+        if(document.getElementById("expChk_barajadoras")?.checked){
+            setStatus("Barajadoras...");
+            let cabs=["Fecha","Tipo","Equipo","Técnico Casino","Técnico PQ","Estado","Nota"];
+            let filas=brajFilt.map(c=>[
+                c.fecha||"—",c.tipo||"—",c.equipo||"—",
+                c.tecnicoCasino||"—",c.tecnicoPQ||"—",c.estado||"—",c.nota||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🃏 Barajadoras");
         }
 
         // ── EVA ───────────────────────────────────────────────
@@ -17035,6 +18846,572 @@ function diRenderDetail(islaId) {
 
     panel.innerHTML = html;
 }
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  MÓDULO ESTADÍSTICAS (Admin / SuperAdmin)
+// ══════════════════════════════════════════════════════════════
+
+let _estTabActivo = "islas";
+
+function estCambiarTab(tab) {
+    _estTabActivo = tab;
+    ["islas","tecnicos","partes"].forEach(t => {
+        document.getElementById("estTab_" + t)?.classList.toggle("active-tab", t === tab);
+        let panel = document.getElementById("estPanel" + t.charAt(0).toUpperCase() + t.slice(1));
+        if(panel) panel.style.display = t === tab ? "block" : "none";
+    });
+    renderEstadisticas();
+}
+
+function estPoblarAnios() {
+    let sel = document.getElementById("estFiltroAnio");
+    if(!sel) return;
+    let años = new Set();
+    incidencias.forEach(i => { if(i.fecha) años.add(i.fecha.slice(0,4)); });
+    partesCriticas.forEach(p => { if(p.fechaPedido) años.add(p.fechaPedido.slice(0,4)); });
+    let lista = [...años].sort().reverse();
+    let actual = sel.value;
+    sel.innerHTML = '<option value="todos">Todos los años</option>' +
+        lista.map(a => `<option value="${a}">${a}</option>`).join("");
+    if(lista.includes(actual)) sel.value = actual;
+    else if(lista.length > 0) sel.value = lista[0];
+}
+
+function estFiltrarPorAnio(arr, campo) {
+    let anio = document.getElementById("estFiltroAnio")?.value || "todos";
+    if(anio === "todos") return arr;
+    return arr.filter(x => (x[campo]||"").startsWith(anio));
+}
+
+function renderEstadisticas() {
+    if(!esAdminOSuperAdmin()) return;
+    estPoblarAnios();
+    if(_estTabActivo === "islas")    _estRenderIslas();
+    if(_estTabActivo === "tecnicos") _estRenderTecnicos();
+    if(_estTabActivo === "partes")   _estRenderPartes();
+}
+
+// ── Helpers de render ──────────────────────────────────────────
+function _estBarras(containerId, items, colorFn, maxVal) {
+    let cont = document.getElementById(containerId);
+    if(!cont) return;
+    if(!items.length) { cont.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>Sin datos</p></div>'; return; }
+    let max = maxVal || Math.max(...items.map(x => x.val), 1);
+    cont.innerHTML = items.map(x => `
+        <div class="est-bar-row">
+            <div class="est-bar-label" title="${x.label}">${x.label}</div>
+            <div class="est-bar-bg">
+                <div class="est-bar-fill" style="width:${Math.round(x.val/max*100)}%;background:${colorFn(x)};"></div>
+            </div>
+            <div class="est-bar-val" style="color:${colorFn(x)};">${x.val}</div>
+        </div>
+    `).join("");
+}
+
+// ── TAB ISLAS ─────────────────────────────────────────────────
+function _estRenderIslas() {
+    let corrFilt = estFiltrarPorAnio(incidencias.filter(i => i.tipo === "Correctivo"), "fecha");
+    let prevFilt = estFiltrarPorAnio(incidencias.filter(i => i.tipo === "Preventivo"), "fecha");
+    let fdsFilt  = estFiltrarPorAnio(fdsData || [], "fechaSalida");
+
+    // — Correctivos por isla —
+    let corrPorIsla = {};
+    corrFilt.forEach(i => {
+        let k = i.isla ? String(i.isla) : "Sin isla";
+        corrPorIsla[k] = (corrPorIsla[k] || 0) + 1;
+    });
+    document.getElementById("estTotalCorr").textContent = corrFilt.length;
+    let corrIslaItems = Object.entries(corrPorIsla)
+        .map(([label, val]) => ({label, val}))
+        .sort((a,b) => b.val - a.val).slice(0, 15);
+    _estBarras("estCorrIsla", corrIslaItems, x => {
+        let pct = x.val / (corrIslaItems[0]?.val || 1);
+        return pct > 0.7 ? "var(--red)" : pct > 0.4 ? "var(--yellow)" : "var(--accent2)";
+    });
+
+    // — Ratio prev/correctivo por isla —
+    let prevPorIsla = {};
+    prevFilt.forEach(p => {
+        let islas = (p.islas && p.islas.length > 0) ? p.islas : (p.isla ? [p.isla] : []);
+        islas.forEach(id => {
+            let k = String(id);
+            prevPorIsla[k] = (prevPorIsla[k] || 0) + 1;
+        });
+    });
+    let todasIslas = new Set([...Object.keys(corrPorIsla), ...Object.keys(prevPorIsla)]);
+
+    // Solo islas con al menos 1 correctivo — ordenadas de peor ratio (mas urgente) a mejor
+    let ratioItems = [...todasIslas]
+        .filter(k => k !== "Sin isla" && k !== "")
+        .map(k => {
+            let c = corrPorIsla[k] || 0;
+            let p = prevPorIsla[k] || 0;
+            return {label: k, corr: c, prev: p,
+                    ratio: c > 0 ? p / c : null};
+        })
+        .filter(x => x.corr > 0)
+        .sort((a,b) => a.ratio - b.ratio)
+        .slice(0, 20);
+
+    let ratioEl = document.getElementById("estRatioIsla");
+    if(!ratioEl) { /* skip */ }
+    else if(!ratioItems.length) {
+        ratioEl.innerHTML = '<div class="empty-state"><p>Sin correctivos registrados</p></div>';
+    } else {
+        let maxPrev = Math.max(...ratioItems.map(x => x.prev), 1);
+        ratioEl.innerHTML = ratioItems.map(x => {
+            let color = x.ratio >= 1 ? "var(--accent)" : x.ratio >= 0.5 ? "var(--yellow)" : "var(--red)";
+            let pct   = Math.max(Math.round((x.prev / maxPrev) * 100), x.prev > 0 ? 2 : 0);
+            let tag   = x.prev === 0
+                ? '<span style="font-size:10px;background:rgba(255,77,109,.15);border:1px solid rgba(255,77,109,.4);color:#ff6b8a;padding:1px 6px;border-radius:4px;font-weight:700;white-space:nowrap;">SIN PREV</span>'
+                : '<span style="font-size:11px;color:' + color + ';font-weight:700;white-space:nowrap;">' + x.ratio.toFixed(1) + 'x</span>';
+            return '<div class="est-bar-row">' +
+                '<div class="est-bar-label" title="Isla ' + x.label + '">I. ' + x.label + '</div>' +
+                '<div class="est-bar-bg"><div class="est-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+                tag +
+                '<div style="font-size:10px;color:var(--muted);white-space:nowrap;min-width:52px;text-align:right;">' + x.prev + 'P / ' + x.corr + 'C</div>' +
+                '</div>';
+        }).join("");
+    }
+
+    // — Tendencia mensual —
+    let mesesMap = {};
+    corrFilt.forEach(i => {
+        if(!i.fecha) return;
+        let m = i.fecha.slice(0,7);
+        mesesMap[m] = (mesesMap[m] || 0) + 1;
+    });
+    let mesesKeys = Object.keys(mesesMap).sort();
+    let tendEl = document.getElementById("estTendenciaChart");
+    if(tendEl) {
+        if(!mesesKeys.length) {
+            tendEl.innerHTML = '<div class="empty-state"><p>Sin datos de correctivos</p></div>';
+        } else {
+            let maxM = Math.max(...mesesKeys.map(k => mesesMap[k]), 1);
+            let BAR_W = 38, GAP = 6;
+            let totalW = mesesKeys.length * (BAR_W + GAP);
+            let MESES_CORTO = {
+                "01":"Ene","02":"Feb","03":"Mar","04":"Abr","05":"May","06":"Jun",
+                "07":"Jul","08":"Ago","09":"Sep","10":"Oct","11":"Nov","12":"Dic"
+            };
+            tendEl.innerHTML = `
+            <div style="display:flex;align-items:flex-end;gap:${GAP}px;min-width:${totalW}px;height:120px;padding:0 4px;">
+                ${mesesKeys.map(k => {
+                    let v = mesesMap[k];
+                    let h = Math.max(Math.round(v / maxM * 100), 4);
+                    let color = v === maxM ? "var(--red)" : v > maxM * 0.6 ? "var(--yellow)" : "var(--accent2)";
+                    let label = MESES_CORTO[k.slice(5)] || k.slice(5);
+                    return `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;width:${BAR_W}px;">
+                        <div style="font-size:10px;font-weight:700;color:${color};">${v}</div>
+                        <div style="width:${BAR_W}px;height:${h}px;background:${color};border-radius:4px 4px 0 0;opacity:.85;"></div>
+                        <div style="font-size:9px;color:var(--muted);white-space:nowrap;">${label} ${k.slice(0,4)}</div>
+                    </div>`;
+                }).join("")}
+            </div>`;
+        }
+    }
+
+    // — Score de salud por isla (top 20 islas activas) —
+    let diasFdsPorIsla = {};
+    fdsFilt.forEach(f => {
+        let k = String(f.isla || "");
+        if(!k) return;
+        let dias = 0;
+        if(f.fechaSalida) {
+            let hasta = f.fechaRetorno || new Date().toISOString().slice(0,10);
+            dias = Math.max(0, Math.round((new Date(hasta) - new Date(f.fechaSalida)) / 86400000));
+        }
+        diasFdsPorIsla[k] = (diasFdsPorIsla[k] || 0) + dias;
+    });
+
+    let allIslas = [...new Set([
+        ...Object.keys(corrPorIsla),
+        ...Object.keys(prevPorIsla),
+        ...Object.keys(diasFdsPorIsla)
+    ])].filter(k => k !== "Sin isla" && k !== "");
+
+    // Score de salud: penaliza correctivos y dias FDS, premia preventivos
+    // Puntos negativos: cada correctivo resta 4 pts, cada dia FDS resta 0.5 pts (cap 20)
+    // Puntos positivos: cada preventivo suma 2 pts (cap en +30 para no inflar)
+    // Base 100, minimo 0
+    let scoreRaw = allIslas.map(k => {
+        let c = corrPorIsla[k] || 0;
+        let p = prevPorIsla[k] || 0;
+        let f = diasFdsPorIsla[k] || 0;
+        let raw = 100 - (c * 4) + Math.min(p * 2, 30) - Math.min(f * 0.5, 20);
+        let val = Math.max(0, Math.min(100, Math.round(raw)));
+        return {label: k, val, corr: c, prev: p, fds: f};
+    }).filter(x => x.corr > 0 || x.prev > 0 || x.fds > 0);
+
+    // Ordenar DESCENDENTE: mejores al final de la lista (los peores arriba, scroll abajo para ver buenos)
+    // En una lista vertical los peores arriba = mas visible = mas accionable
+    let scoreItems = scoreRaw.sort((a,b) => a.val - b.val).slice(0, 20);
+
+    // Barra relativa al maximo para que siempre haya contraste visual
+    let scoreMax = Math.max(...scoreItems.map(x => x.val), 1);
+
+    let scoreEl = document.getElementById("estScoreSalud");
+    if(scoreEl) {
+        if(!scoreItems.length) {
+            scoreEl.innerHTML = '<div class="empty-state"><p>Sin datos</p></div>';
+        } else {
+            scoreEl.innerHTML = scoreItems.map(x => {
+                let color = x.val >= 70 ? "var(--accent)" : x.val >= 40 ? "var(--yellow)" : "var(--red)";
+                let pct   = Math.max(Math.round(x.val / scoreMax * 100), 2);
+                let etiq  = x.val >= 70 ? "Buena" : x.val >= 40 ? "Regular" : "Critica";
+                return '<div class="est-bar-row">' +
+                    '<div class="est-bar-label" title="Isla ' + x.label + '">I. ' + x.label + '</div>' +
+                    '<div class="est-bar-bg"><div class="est-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
+                    '<div class="est-bar-val" style="color:' + color + ';width:38px;">' + x.val + '</div>' +
+                    '<div style="font-size:10px;color:' + color + ';white-space:nowrap;opacity:.8;">' + etiq + '</div>' +
+                    '</div>';
+            }).join("");
+        }
+    }
+
+    // — Islas en riesgo —
+    // ALERTA: >= 10 correctivos en el periodo filtrado
+    // Medio: 5-9 correctivos con ratio prev/corr < 1
+    let riesgoItems = allIslas.map(k => {
+        let c = corrPorIsla[k] || 0;
+        let p = prevPorIsla[k] || 0;
+        return {label: k, corr: c, prev: p, ratio: c > 0 ? p / c : 0};
+    }).filter(x => x.corr >= 5 && x.ratio < 1)
+      .sort((a,b) => b.corr - a.corr || a.ratio - b.ratio)
+      .slice(0, 12);
+
+    let riesgoEl = document.getElementById("estIslaRiesgo");
+    if(riesgoEl) {
+        if(!riesgoItems.length) {
+            riesgoEl.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><p>Sin islas en riesgo en este período</p></div>';
+        } else {
+            // Resumen arriba
+            let criticas = riesgoItems.filter(x => x.corr >= 10).length;
+            let resumen = criticas > 0
+                ? '<div style="background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.4);border-radius:8px;padding:9px 12px;margin-bottom:10px;font-size:12px;color:#ff6b8a;font-weight:600;">🚨 ' + criticas + ' isla' + (criticas > 1 ? 's' : '') + ' superan los 10 correctivos en el período</div>'
+                : '';
+            riesgoEl.innerHTML = resumen + riesgoItems.map(x => {
+                let critica = x.corr >= 10;
+                let nivel = critica
+                    ? {label: "🚨 Alerta", color: "var(--red)", border: "rgba(255,77,109,.55)"}
+                    : {label: "⚠️ Atención", color: "var(--yellow)", border: "rgba(255,193,7,.35)"};
+                let defensa = x.ratio === 0
+                    ? '<span style="font-size:10px;background:rgba(255,77,109,.15);border:1px solid rgba(255,77,109,.4);color:#ff6b8a;padding:1px 6px;border-radius:4px;font-weight:700;">SIN PREV</span>'
+                    : '<span style="font-size:11px;color:var(--yellow);">ratio ' + x.ratio.toFixed(1) + 'x</span>';
+                return '<div class="est-risk-card" style="border-color:' + nivel.border + ';' + (critica ? 'background:rgba(255,77,109,.05);' : '') + '">' +
+                    '<div style="display:flex;flex-direction:column;gap:4px;">' +
+                        '<div style="font-weight:700;color:var(--white);font-size:13px;">Isla ' + x.label + '</div>' +
+                        '<div style="font-size:11px;color:var(--muted);">' + x.corr + ' correctivos · ' + x.prev + ' preventivos</div>' +
+                        '<div>' + defensa + '</div>' +
+                    '</div>' +
+                    '<div style="text-align:right;flex-shrink:0;">' +
+                        '<div style="font-size:12px;font-weight:700;color:' + nivel.color + ';">' + nivel.label + '</div>' +
+                        (critica ? '<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:600;">&gt;10 corr/período</div>' : '') +
+                    '</div>' +
+                    '</div>';
+            }).join("");
+        }
+    }
+}
+
+// ── TAB TÉCNICOS ──────────────────────────────────────────────
+function _estRenderTecnicos() {
+    let corrFilt = estFiltrarPorAnio(incidencias.filter(i => i.tipo === "Correctivo"), "fecha");
+    let prevFilt = estFiltrarPorAnio(incidencias.filter(i => i.tipo === "Preventivo"), "fecha");
+    let tarFilt  = estFiltrarPorAnio(tareas.filter(t => t.estado === "realizado"), "fecha");
+
+    let _usersConCuenta = new Set(getUsersDB().filter(u => u.email && u.email.trim() !== "").map(u => u.nombre));
+    let tecnicos = getTecnicos().filter(t => _usersConCuenta.has(t));
+    if(!tecnicos.length) tecnicos = getTecnicos();
+
+    // Carga total
+    let cargaMap = {};
+    tecnicos.forEach(t => cargaMap[t] = {corr:0, prev:0, tar:0});
+    corrFilt.forEach(i => { if(i.tecnico && cargaMap[i.tecnico] !== undefined) cargaMap[i.tecnico].corr++; });
+    prevFilt.forEach(p => {
+        let tecs = [p.tecnico, p.tecnico2].filter(Boolean);
+        tecs.forEach(t => { if(cargaMap[t] !== undefined) cargaMap[t].prev++; });
+    });
+    tarFilt.forEach(t => {
+        let tecs = t.realizadoPor ? t.realizadoPor.split(", ").map(s=>s.trim()) : (t.asignado ? [t.asignado] : []);
+        tecs.forEach(n => { if(n && cargaMap[n] !== undefined) cargaMap[n].tar++; });
+    });
+
+    let cargaItems = Object.entries(cargaMap)
+        .map(([t, v]) => ({label: t, val: v.corr + v.prev + v.tar, ...v}))
+        .filter(x => x.val > 0).sort((a,b) => b.val - a.val);
+
+    let maxCarga = cargaItems.length ? cargaItems[0].val : 1;
+    let cargaEl = document.getElementById("estCargaTec");
+    if(cargaEl) {
+        if(!cargaItems.length) {
+            cargaEl.innerHTML = '<div class="empty-state"><p>Sin datos</p></div>';
+        } else {
+            cargaEl.innerHTML = cargaItems.map(x => `
+                <div class="est-bar-row">
+                    <div class="est-bar-label" title="${x.label}" style="width:72px;">${x.label}</div>
+                    <div class="est-bar-bg">
+                        <div style="display:flex;height:100%;gap:1px;">
+                            <div style="width:${Math.round(x.corr/maxCarga*100)}%;background:var(--red);opacity:.8;"></div>
+                            <div style="width:${Math.round(x.prev/maxCarga*100)}%;background:var(--accent);opacity:.8;"></div>
+                            <div style="width:${Math.round(x.tar/maxCarga*100)}%;background:var(--accent2);opacity:.8;"></div>
+                        </div>
+                    </div>
+                    <div class="est-bar-val" style="color:var(--white);width:32px;">${x.val}</div>
+                    <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${x.corr}C ${x.prev}P ${x.tar}T</div>
+                </div>
+            `).join("");
+        }
+    }
+
+    // Leyenda
+    let distEl = document.getElementById("estDistTec");
+    if(distEl) {
+        let totC = corrFilt.length || 1;
+        let totP = prevFilt.length || 1;
+        let totT = tarFilt.length || 1;
+        if(!cargaItems.length) {
+            distEl.innerHTML = '<div class="empty-state"><p>Sin datos</p></div>';
+        } else {
+            distEl.innerHTML = `
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:11px;">
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block;"></span>Correctivos</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block;"></span>Preventivos</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent2);display:inline-block;"></span>Tareas</span>
+            </div>` +
+            cargaItems.map(x => `
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+                <div style="font-weight:700;font-size:13px;color:var(--white);margin-bottom:6px;">👤 ${x.label}</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <span style="font-size:11px;background:rgba(255,77,109,.12);border:1px solid rgba(255,77,109,.3);color:#ff6b8a;padding:2px 8px;border-radius:5px;font-weight:700;">${x.corr} Correctivos</span>
+                    <span style="font-size:11px;background:rgba(0,212,168,.12);border:1px solid rgba(0,212,168,.3);color:var(--accent);padding:2px 8px;border-radius:5px;font-weight:700;">${x.prev} Preventivos</span>
+                    <span style="font-size:11px;background:rgba(79,142,255,.12);border:1px solid rgba(79,142,255,.3);color:var(--accent2);padding:2px 8px;border-radius:5px;font-weight:700;">${x.tar} Tareas</span>
+                </div>
+                <div style="display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--muted);">
+                    <span>${totC > 0 ? Math.round(x.corr/totC*100) : 0}% del total correctivos</span>
+                    <span>${totP > 0 ? Math.round(x.prev/totP*100) : 0}% del total preventivos</span>
+                </div>
+            </div>`).join("");
+        }
+    }
+
+    // Actividad mensual por técnico (heatmap tabla)
+    let actEl = document.getElementById("estActMensual");
+    if(actEl && cargaItems.length > 0) {
+        let mesesSet = new Set();
+        corrFilt.forEach(i => { if(i.fecha) mesesSet.add(i.fecha.slice(0,7)); });
+        prevFilt.forEach(p => { if(p.fecha) mesesSet.add(p.fecha.slice(0,7)); });
+        let meses = [...mesesSet].sort().slice(-12);
+        let MESES_CORTO = {"01":"Ene","02":"Feb","03":"Mar","04":"Abr","05":"May","06":"Jun",
+                           "07":"Jul","08":"Ago","09":"Sep","10":"Oct","11":"Nov","12":"Dic"};
+        if(!meses.length) { actEl.innerHTML = '<div class="empty-state"><p>Sin datos</p></div>'; }
+        else {
+            let matrix = {};
+            cargaItems.slice(0,8).forEach(x => {
+                matrix[x.label] = {};
+                meses.forEach(m => matrix[x.label][m] = 0);
+            });
+            corrFilt.forEach(i => {
+                let m = i.fecha?.slice(0,7); if(!m) return;
+                if(i.tecnico && matrix[i.tecnico] && meses.includes(m)) matrix[i.tecnico][m]++;
+            });
+            prevFilt.forEach(p => {
+                let m = p.fecha?.slice(0,7); if(!m) return;
+                [p.tecnico, p.tecnico2].filter(Boolean).forEach(t => {
+                    if(matrix[t] && meses.includes(m)) matrix[t][m]++;
+                });
+            });
+
+            let maxAct = 1;
+            Object.values(matrix).forEach(row => Object.values(row).forEach(v => { if(v > maxAct) maxAct = v; }));
+
+            actEl.innerHTML = `<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:3px;font-size:11px;">
+            <thead><tr>
+                <th style="text-align:left;padding:3px 8px;color:var(--muted);font-weight:600;white-space:nowrap;min-width:80px;">Técnico</th>
+                ${meses.map(m => `<th style="text-align:center;color:var(--muted);font-weight:600;white-space:nowrap;min-width:38px;">${MESES_CORTO[m.slice(5)]||m.slice(5)}<br><span style="font-size:9px;opacity:.6;">${m.slice(0,4)}</span></th>`).join("")}
+            </tr></thead>
+            <tbody>
+            ${cargaItems.slice(0,8).map(x => `
+                <tr>
+                    <td style="padding:3px 8px;color:var(--white);font-weight:600;white-space:nowrap;">${x.label}</td>
+                    ${meses.map(m => {
+                        let v = matrix[x.label]?.[m] || 0;
+                        let intensity = maxAct > 0 ? v / maxAct : 0;
+                        let bg = v === 0
+                            ? "var(--bg3)"
+                            : `rgba(0,212,168,${(0.1 + intensity * 0.85).toFixed(2)})`;
+                        let color = intensity > 0.5 ? "var(--bg)" : "var(--white)";
+                        return `<td style="text-align:center;"><div class="est-heat-cell" style="background:${bg};color:${color};">${v || ""}</div></td>`;
+                    }).join("")}
+                </tr>`).join("")}
+            </tbody></table></div>`;
+        }
+    }
+}
+
+// ── TAB PARTES CRÍTICAS ────────────────────────────────────────
+function _estRenderPartes() {
+    if(_cache["partesCriticas"] !== undefined) partesCriticas = _cache["partesCriticas"] ?? [];
+    let anio = document.getElementById("estFiltroAnio")?.value || "todos";
+    let lista = anio === "todos" ? partesCriticas : partesCriticas.filter(p => (p.fechaPedido||"").startsWith(anio));
+
+    let pendientes = lista.filter(p => p.estado === "Pendiente");
+    let recibidos  = lista.filter(p => p.estado === "Recibido");
+
+    // KPIs
+    let kpiEl = document.getElementById("estPartesKpis");
+    if(kpiEl) {
+        let tiempos = recibidos
+            .filter(p => p.fechaPedido && p.fechaRecibido)
+            .map(p => Math.max(0, Math.round((new Date(p.fechaRecibido) - new Date(p.fechaPedido)) / 86400000)));
+        let promTiempo = tiempos.length ? Math.round(tiempos.reduce((s,x) => s+x, 0) / tiempos.length) : null;
+        let maxTiempo  = tiempos.length ? Math.max(...tiempos) : null;
+
+        kpiEl.innerHTML = [
+            {label:"Total pedidos", val: lista.length, sub:"en el período", color:"var(--accent2)"},
+            {label:"Pendientes",    val: pendientes.length, sub:"sin recibir", color:"var(--yellow)"},
+            {label:"Recibidos",     val: recibidos.length, sub:recibidos.length + " cerrados", color:"var(--accent)"},
+            {label:"Prom. entrega", val: promTiempo !== null ? promTiempo + "d" : "—", sub: maxTiempo !== null ? `máx ${maxTiempo}d` : "sin datos", color:"var(--muted)"},
+        ].map(k => `
+            <div class="est-kpi-card">
+                <div class="est-kpi-label">${k.label}</div>
+                <div class="est-kpi-val" style="color:${k.color};">${k.val}</div>
+                <div class="est-kpi-sub">${k.sub}</div>
+            </div>`).join("");
+    }
+
+    // Insumos más pedidos
+    let insumoMap = {};
+    lista.forEach(p => {
+        let k = (p.insumo || "—").trim();
+        insumoMap[k] = (insumoMap[k] || 0) + (p.cantidad || 1);
+    });
+    let insumoItems = Object.entries(insumoMap)
+        .map(([label, val]) => ({label, val}))
+        .sort((a,b) => b.val - a.val).slice(0, 15);
+    _estBarras("estInsumosMasPedidos", insumoItems, x => {
+        let pct = x.val / (insumoItems[0]?.val || 1);
+        return pct > 0.6 ? "var(--accent)" : "var(--accent2)";
+    });
+
+    // Tiempo promedio por insumo
+    let tiempoMap = {};
+    recibidos.filter(p => p.fechaPedido && p.fechaRecibido).forEach(p => {
+        let k = (p.insumo || "—").trim();
+        let dias = Math.max(0, Math.round((new Date(p.fechaRecibido) - new Date(p.fechaPedido)) / 86400000));
+        if(!tiempoMap[k]) tiempoMap[k] = {sum:0, cnt:0};
+        tiempoMap[k].sum += dias;
+        tiempoMap[k].cnt++;
+    });
+    let tiempoItems = Object.entries(tiempoMap)
+        .map(([label, v]) => ({label, val: Math.round(v.sum / v.cnt), cnt: v.cnt}))
+        .filter(x => x.cnt >= 1)
+        .sort((a,b) => b.val - a.val).slice(0, 15);
+
+    let tiempoEl = document.getElementById("estTiempoPartes");
+    if(tiempoEl) {
+        if(!tiempoItems.length) {
+            tiempoEl.innerHTML = '<div class="empty-state"><p>Sin pedidos recibidos con fechas</p></div>';
+        } else {
+            let maxT = Math.max(...tiempoItems.map(x => x.val), 1);
+            tiempoEl.innerHTML = tiempoItems.map(x => {
+                let color = x.val <= 7 ? "var(--accent)" : x.val <= 21 ? "var(--yellow)" : "var(--red)";
+                return `
+                <div class="est-bar-row">
+                    <div class="est-bar-label" title="${x.label}" style="width:100px;">${x.label}</div>
+                    <div class="est-bar-bg">
+                        <div class="est-bar-fill" style="width:${Math.round(x.val/maxT*100)}%;background:${color};"></div>
+                    </div>
+                    <div class="est-bar-val" style="color:${color};width:42px;">${x.val}d</div>
+                    <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${x.cnt} pedido${x.cnt>1?"s":""}</div>
+                </div>`;
+            }).join("");
+        }
+    }
+
+    // Pedidos por mes (pendiente vs recibido)
+    let mesesMap = {};
+    lista.forEach(p => {
+        let m = (p.fechaPedido || "").slice(0,7); if(!m) return;
+        if(!mesesMap[m]) mesesMap[m] = {pend:0, rec:0};
+        if(p.estado === "Recibido") mesesMap[m].rec++;
+        else mesesMap[m].pend++;
+    });
+    let mesesKeys = Object.keys(mesesMap).sort().slice(-12);
+    let porMesEl = document.getElementById("estPartesPorMes");
+    let MESES_CORTO = {"01":"Ene","02":"Feb","03":"Mar","04":"Abr","05":"May","06":"Jun",
+                       "07":"Jul","08":"Ago","09":"Sep","10":"Oct","11":"Nov","12":"Dic"};
+    if(porMesEl) {
+        if(!mesesKeys.length) {
+            porMesEl.innerHTML = '<div class="empty-state"><p>Sin pedidos registrados</p></div>';
+        } else {
+            let maxPM = Math.max(...mesesKeys.map(k => mesesMap[k].pend + mesesMap[k].rec), 1);
+            porMesEl.innerHTML = `
+            <div style="display:flex;align-items:flex-end;gap:6px;min-width:${mesesKeys.length*52}px;height:100px;padding:0 4px;">
+                ${mesesKeys.map(k => {
+                    let d = mesesMap[k];
+                    let hRec  = Math.max(Math.round(d.rec  / maxPM * 80), d.rec  > 0 ? 3 : 0);
+                    let hPend = Math.max(Math.round(d.pend / maxPM * 80), d.pend > 0 ? 3 : 0);
+                    let label = MESES_CORTO[k.slice(5)] || k.slice(5);
+                    return `
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;width:46px;">
+                        <div style="font-size:9px;color:var(--muted);">${d.pend+d.rec}</div>
+                        <div style="width:20px;display:flex;flex-direction:column;align-items:center;gap:1px;">
+                            <div style="width:100%;height:${hPend}px;background:var(--yellow);border-radius:2px;opacity:.85;"></div>
+                            <div style="width:100%;height:${hRec}px;background:var(--accent);border-radius:2px;opacity:.85;"></div>
+                        </div>
+                        <div style="font-size:9px;color:var(--muted);white-space:nowrap;">${label}<br><span style="opacity:.6">${k.slice(0,4)}</span></div>
+                    </div>`;
+                }).join("")}
+            </div>
+            <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;">
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--yellow);display:inline-block;"></span>Pendiente</span>
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block;"></span>Recibido</span>
+            </div>`;
+        }
+    }
+
+    // Islas con más consumo de repuestos
+    let islaPartesMap = {};
+    lista.forEach(p => {
+        let k = (p.isla || p.destino || "Sin isla/destino").trim();
+        islaPartesMap[k] = (islaPartesMap[k] || 0) + (p.cantidad || 1);
+    });
+    let islaPartesItems = Object.entries(islaPartesMap)
+        .map(([label, val]) => ({label, val}))
+        .sort((a,b) => b.val - a.val).slice(0, 15);
+    _estBarras("estIslaPartes", islaPartesItems, x => "var(--accent2)");
+}
+
+// ── Mostrar botón en sidebar para admins al iniciar ──────────
+(function _estInicializar() {
+    let _orig = window.iniciarApp;
+    function _mostrarBtnEstadisticas() {
+        let btn = document.getElementById("nav-estadisticas");
+        if(btn && typeof esAdminOSuperAdmin === "function" && esAdminOSuperAdmin()) {
+            btn.style.display = "flex";
+        }
+    }
+    // Intentar cada vez que el rol esté disponible
+    let _tryShow = setInterval(() => {
+        if(typeof esAdminOSuperAdmin === "function" && window.usuarioActual?.rol) {
+            _mostrarBtnEstadisticas();
+            clearInterval(_tryShow);
+        }
+    }, 500);
+    // También llamar al renderEstadisticas para poblar año al entrar
+    document.addEventListener("DOMContentLoaded", () => {
+        let t = setInterval(() => {
+            if(window._fbCargaCompleta) {
+                clearInterval(t);
+                _mostrarBtnEstadisticas();
+            }
+        }, 600);
+    });
+})();
 </script>
 </body>
 </html>
