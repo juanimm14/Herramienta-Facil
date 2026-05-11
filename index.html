@@ -860,6 +860,64 @@ body {
 }
 .detail-panel b { color: var(--white); }
 
+/* ── Correctivo expand row ── */
+.correctivo-expand-row td {
+    padding: 0 !important;
+    border-bottom: 2px solid var(--accent) !important;
+}
+.correctivo-expand-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 24px;
+    padding: 18px 20px;
+    background: var(--bg3);
+    animation: expandFade .18s ease;
+}
+@keyframes expandFade {
+    from { opacity:0; transform:translateY(-6px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+.correctivo-expand-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.correctivo-expand-field label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+.correctivo-expand-field span {
+    font-size: 13px;
+    color: var(--white);
+    line-height: 1.5;
+}
+.correctivo-expand-field.full {
+    grid-column: 1 / -1;
+}
+.correctivo-expand-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.correctivo-expand-actions button {
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+tr.correctivo-row-active {
+    background: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+    border-left: 3px solid var(--accent);
+}
+
 /* PREVENTIVOS GRID */
 .prev-grid {
     display: grid;
@@ -2195,7 +2253,7 @@ setTimeout(function(){
                         </table>
                     </div>
                 </div>
-                <div id="detalleCorrectivo" class="detail-panel" style="display:none;"></div>
+                <!-- detail panel reemplazado por expand inline en cada fila -->
             </div>
 
             <!-- ═══ INCIDENCIAS PREVENTIVOS ═══ -->
@@ -6621,22 +6679,101 @@ function eliminarIncidencia(index){
     renderDashboard();
 }
 
+// índice de la fila expandida actualmente (-1 = ninguna)
+let _correctivoExpandido = -1;
+
 function verDetalleCorrectivo(index){
+    // Si ya estaba abierto, lo cerramos
+    if(_correctivoExpandido === index){
+        _cerrarExpandCorrectivo();
+        return;
+    }
+    _cerrarExpandCorrectivo();   // cierra cualquier otro abierto
+    _correctivoExpandido = index;
+
     let i = incidencias[index];
-    let panel = document.getElementById("detalleCorrectivo");
-    panel.style.display = "block";
-    panel.innerHTML = `
-        <b>Máquina:</b> ${i.maquina||"—"} &nbsp;|&nbsp;
-        <b>Isla:</b> ${i.isla||"—"} &nbsp;|&nbsp;
-        <b>Técnico:</b> ${i.tecnico||"—"} &nbsp;|&nbsp;
-        <b>Fecha:</b> ${i.fecha||"—"} &nbsp;|&nbsp;
-        <b>Estado:</b> <span class="pill ${(i.estado||"pendiente").toLowerCase().replace(" ","-")}">${i.estado||"Pendiente"}</span>
-        <br><br><b>Descripción:</b><br>${i.nota||"Sin detalle"}
-        ${i.resolucion ? `<br><br><b style="color:var(--accent);">✔ Resolución:</b><br>${i.resolucion}` : ""}
-    `;
+
+    // Marcar la fila principal como activa
+    let fila = document.getElementById(`corr-row-${index}`);
+    if(fila) fila.classList.add("correctivo-row-active");
+
+    // Crear la fila de detalle
+    let estadoClass = (i.estado||"pendiente").toLowerCase().replace(" ","-");
+    let starsHtml = renderStars(i.rating||0, false);
+    let isAdmin = usuarioActual?.rol === "Admin";
+
+    let tr = document.createElement("tr");
+    tr.className = "correctivo-expand-row";
+    tr.id = `corr-expand-${index}`;
+    tr.innerHTML = `
+      <td colspan="8">
+        <div class="correctivo-expand-inner">
+          <div class="correctivo-expand-field">
+            <label>Máquina</label>
+            <span>${i.maquina||"—"}</span>
+          </div>
+          <div class="correctivo-expand-field">
+            <label>Isla</label>
+            <span>${i.isla||"—"}</span>
+          </div>
+          <div class="correctivo-expand-field">
+            <label>Técnico</label>
+            <span>${i.tecnico||"—"}</span>
+          </div>
+          <div class="correctivo-expand-field">
+            <label>Fecha</label>
+            <span>${i.fecha||"—"}</span>
+          </div>
+          <div class="correctivo-expand-field">
+            <label>Estado</label>
+            <span><span class="pill ${estadoClass}">${i.estado||"Pendiente"}</span></span>
+          </div>
+          <div class="correctivo-expand-field">
+            <label>Calificación</label>
+            <span>${starsHtml || "Sin calificar"}</span>
+          </div>
+          ${i.nota ? `
+          <div class="correctivo-expand-field full">
+            <label>Descripción / Falla</label>
+            <span>${i.nota}</span>
+          </div>` : ""}
+          ${i.resolucion ? `
+          <div class="correctivo-expand-field full">
+            <label>✔ Resolución</label>
+            <span style="color:var(--accent);">${i.resolucion}</span>
+          </div>` : ""}
+          ${i.repuesto ? `
+          <div class="correctivo-expand-field full">
+            <label>🔧 Repuesto utilizado</label>
+            <span>${i.repuesto}</span>
+          </div>` : ""}
+          <div class="correctivo-expand-actions">
+            <button onclick="editarIncidencia(${index})" style="background:var(--accent);color:#000;">✏️ Editar</button>
+            ${isAdmin ? `<button onclick="_confirmarEliminarCorrectivo(${index})" style="background:#ef4444;color:#fff;">🗑️ Eliminar</button>` : ""}
+            <button onclick="_cerrarExpandCorrectivo()" style="background:var(--bg2);color:var(--muted);">✕ Cerrar</button>
+          </div>
+        </div>
+      </td>`;
+
+    if(fila) fila.insertAdjacentElement("afterend", tr);
+}
+
+function _cerrarExpandCorrectivo(){
+    if(_correctivoExpandido >= 0){
+        let filaActiva = document.getElementById(`corr-row-${_correctivoExpandido}`);
+        if(filaActiva) filaActiva.classList.remove("correctivo-row-active");
+        let expandRow = document.getElementById(`corr-expand-${_correctivoExpandido}`);
+        if(expandRow) expandRow.remove();
+        _correctivoExpandido = -1;
+    }
+}
+
+function _confirmarEliminarCorrectivo(idx){
+    if(confirm("¿Eliminar esta incidencia?")) eliminarIncidencia(idx);
 }
 
 function renderCorrectivos(){
+    _correctivoExpandido = -1;   // reset expand al filtrar/re-renderizar
     let anio = document.getElementById("filtroAnio")?.value || "todos";
     let mes  = document.getElementById("filtroMes")?.value  || "todos";
     let est  = document.getElementById("filtroEstado")?.value || "todos";
@@ -6671,7 +6808,7 @@ function renderCorrectivos(){
             ? `<span style="color:var(--accent);font-size:12px;" title="${i.resolucion}">✔ ${i.resolucion.slice(0,30)}${i.resolucion.length>30?"…":""}</span>`
             : `<span style="color:var(--muted);font-size:12px;">—</span>`;
         return `
-        <tr onclick="verDetalleCorrectivo(${idx})">
+        <tr id="corr-row-${idx}" class="correctivo-row" onclick="verDetalleCorrectivo(${idx})" style="cursor:pointer;">
             <td>${i.maquina||"—"}</td>
             <td>${i.isla||"—"}</td>
             <td>${i.tecnico||"—"}</td>
@@ -9594,7 +9731,7 @@ function guardarCartel(){
             });
         }
 
-        localStorage.setItem("cartelesData", JSON.stringify(cartelesData));
+        _save("cartelesData", cartelesData);
         cerrarModalNuevoCartel();
         renderCartelesAdmin();
         renderCartelesDashboard();
@@ -9628,7 +9765,7 @@ function guardarCartel(){
         });
     }
 
-    localStorage.setItem("cartelesData", JSON.stringify(cartelesData));
+    _save("cartelesData", cartelesData);
     cerrarModalNuevoCartel();
     renderCartelesAdmin();
     renderCartelesDashboard();
@@ -9661,7 +9798,7 @@ function eliminarCartel(id){
     if(esVisita()) return;
     if(!confirm("¿Eliminar este cartel? Esta acción no se puede deshacer.")) return;
     cartelesData = cartelesData.filter(c => c.id !== id);
-    localStorage.setItem("cartelesData", JSON.stringify(cartelesData));
+    _save("cartelesData", cartelesData);
     renderCartelesAdmin();
     renderCartelesDashboard();
 }
@@ -9670,7 +9807,7 @@ function toggleActivoCartel(id){
     let cartel = cartelesData.find(c => c.id === id);
     if(!cartel) return;
     cartel.activo = !cartel.activo;
-    localStorage.setItem("cartelesData", JSON.stringify(cartelesData));
+    _save("cartelesData", cartelesData);
     renderCartelesAdmin();
     renderCartelesDashboard();
 }
@@ -9905,7 +10042,7 @@ function crearCartelBarajadora(){
         fechaCreado: hoy
     };
     cartelesData.push(nuevoCartel);
-    localStorage.setItem("cartelesData", JSON.stringify(cartelesData));
+    _save("cartelesData", cartelesData);
     renderCartelesAdmin();
     renderCartelesDashboard();
     toast.success("Cartel creado", "🃏 Limpiar Barajadora fue agregado como recordatorio activo");
