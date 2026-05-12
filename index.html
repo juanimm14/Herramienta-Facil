@@ -3177,7 +3177,6 @@ setTimeout(function(){
                     <button id="estTab_islas" onclick="estCambiarTab('islas')" class="est-tab active-tab">🏝️ Islas</button>
                     <button id="estTab_tecnicos" onclick="estCambiarTab('tecnicos')" class="est-tab">👤 Técnicos</button>
                     <button id="estTab_partes" onclick="estCambiarTab('partes')" class="est-tab">📦 Partes Críticas</button>
-                    <button id="estTab_desempeno" onclick="estCambiarTab('desempeno')" class="est-tab">📊 Desempeño</button>
                     <button id="estTab_tiempos" onclick="estCambiarTab('tiempos')" class="est-tab">⏱️ Tiempos</button>
                 </div>
 
@@ -3256,12 +3255,8 @@ setTimeout(function(){
                         <div class="card-box-title" style="margin-bottom:14px;"><span>📅 Actividad Mensual por Técnico</span></div>
                         <div id="estActMensual" style="overflow-x:auto;"></div>
                     </div>
-                </div>
 
-                <!-- PANEL DESEMPEÑO -->
-                <div id="estPanelDesempeno" style="display:none;">
-
-                    <!-- Fila 1: Correctivos y Tareas por técnico -->
+                    <!-- Correctivos y Tareas por técnico -->
                     <div class="grid2" style="gap:16px;margin-bottom:16px;">
                         <div class="card-box" style="padding:16px;">
                             <div class="card-box-title" style="margin-bottom:14px;">
@@ -3277,7 +3272,7 @@ setTimeout(function(){
                         </div>
                     </div>
 
-                    <!-- Fila 2: Horas, Promedio, Preventivos -->
+                    <!-- Horas, Promedio, Preventivos por técnico -->
                     <div class="grid3" style="gap:16px;margin-bottom:16px;">
                         <div class="card-box" style="padding:16px;">
                             <div class="card-box-title" style="margin-bottom:14px;">
@@ -3299,7 +3294,7 @@ setTimeout(function(){
                         </div>
                     </div>
 
-                    <!-- Fila 4: Calificaciones -->
+                    <!-- Calificaciones -->
                     <div class="grid2" style="gap:16px;margin-bottom:16px;">
                         <div class="card-box" style="padding:16px;">
                             <div class="card-box-title" style="margin-bottom:14px;">
@@ -3316,6 +3311,7 @@ setTimeout(function(){
                     </div>
 
                 </div>
+
 
                 <!-- PANEL PARTES CRÍTICAS -->
                 <div id="estPanelPartes" style="display:none;">
@@ -18823,7 +18819,7 @@ let _estTabActivo = "islas";
 
 function estCambiarTab(tab) {
     _estTabActivo = tab;
-    ["islas","tecnicos","partes","desempeno","tiempos"].forEach(t => {
+    ["islas","tecnicos","partes","tiempos"].forEach(t => {
         document.getElementById("estTab_" + t)?.classList.toggle("active-tab", t === tab);
         let panel = document.getElementById("estPanel" + t.charAt(0).toUpperCase() + t.slice(1));
         if(panel) panel.style.display = t === tab ? "block" : "none";
@@ -18857,9 +18853,8 @@ function renderEstadisticas() {
     if(typeof _sincronizarVariables === "function") _sincronizarVariables();
     estPoblarAnios();
     if(_estTabActivo === "islas")      _estRenderIslas();
-    if(_estTabActivo === "tecnicos")   _estRenderTecnicos();
+    if(_estTabActivo === "tecnicos")   { _estRenderTecnicos(); _estRenderDesempeno(); }
     if(_estTabActivo === "partes")     _estRenderPartes();
-    if(_estTabActivo === "desempeno")  _estRenderDesempeno();
     if(_estTabActivo === "tiempos")    _estRenderTiempos();
 }
 
