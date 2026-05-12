@@ -3124,6 +3124,7 @@ setTimeout(function(){
                     <button id="estTab_tecnicos" onclick="estCambiarTab('tecnicos')" class="est-tab">👤 Técnicos</button>
                     <button id="estTab_partes" onclick="estCambiarTab('partes')" class="est-tab">📦 Partes Críticas</button>
                     <button id="estTab_desempeno" onclick="estCambiarTab('desempeno')" class="est-tab">📊 Desempeño</button>
+                    <button id="estTab_tiempos" onclick="estCambiarTab('tiempos')" class="est-tab">⏱️ Tiempos</button>
                 </div>
 
                 <!-- PANEL ISLAS -->
@@ -3172,6 +3173,15 @@ setTimeout(function(){
                             <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Islas con muchos correctivos y pocos preventivos — requieren atención</div>
                             <div id="estIslaRiesgo" style="display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto;"></div>
                         </div>
+                    </div>
+
+                    <!-- Correctivos vs Preventivos por Año -->
+                    <div class="card-box" style="padding:16px;margin-bottom:16px;">
+                        <div class="card-box-title" style="margin-bottom:14px;">
+                            📅 Correctivos vs Preventivos por Año
+                            <span class="badge-count" id="estDesempenoAniosBadge">—</span>
+                        </div>
+                        <div id="estDesempenoAniosChart"></div>
                     </div>
                 </div>
 
@@ -3235,7 +3245,7 @@ setTimeout(function(){
                         </div>
                     </div>
 
-                    <!-- Fila 3: Calificaciones -->
+                    <!-- Fila 4: Calificaciones -->
                     <div class="grid2" style="gap:16px;margin-bottom:16px;">
                         <div class="card-box" style="padding:16px;">
                             <div class="card-box-title" style="margin-bottom:14px;">
@@ -3248,31 +3258,6 @@ setTimeout(function(){
                                 <span>⭐ Calificaciones — Preventivos</span>
                             </div>
                             <div id="estDesempenoRatingPrev"></div>
-                        </div>
-                    </div>
-
-                    <!-- Fila 4: Correctivos vs Preventivos por año -->
-                    <div class="card-box" style="padding:16px;margin-bottom:16px;">
-                        <div class="card-box-title" style="margin-bottom:14px;">
-                            📅 Correctivos vs Preventivos por Año
-                            <span class="badge-count" id="estDesempenoAniosBadge">—</span>
-                        </div>
-                        <div id="estDesempenoAniosChart"></div>
-                    </div>
-
-                    <!-- Fila 5: Tiempo Eventos y Sistemas -->
-                    <div class="grid2" style="gap:16px;margin-bottom:16px;">
-                        <div class="card-box" style="padding:16px;">
-                            <div class="card-box-title" style="margin-bottom:14px;color:var(--yellow);">
-                                🎰 Tiempo en Tareas de Eventos — Mes Actual
-                            </div>
-                            <div id="estDesempenoTiempoEventos"></div>
-                        </div>
-                        <div class="card-box" style="padding:16px;">
-                            <div class="card-box-title" style="margin-bottom:14px;color:#b47aff;">
-                                💻 Tiempo en Tareas de Sistemas — Mes Actual
-                            </div>
-                            <div id="estDesempenoTiempoSistemas"></div>
                         </div>
                     </div>
 
@@ -3306,6 +3291,26 @@ setTimeout(function(){
                         </div>
                     </div>
                 </div>
+
+                <!-- PANEL TIEMPOS -->
+                <div id="estPanelTiempos" style="display:none;">
+                    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Tareas realizadas del mes actual, agrupadas por tipo. Excluye «Nivelar RA» y excepciones.</div>
+                    <div class="grid2" style="gap:16px;margin-bottom:16px;">
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;color:var(--yellow);">
+                                🎰 Tiempo en Tareas de Eventos — Mes Actual
+                            </div>
+                            <div id="estTiempoEventos"></div>
+                        </div>
+                        <div class="card-box" style="padding:16px;">
+                            <div class="card-box-title" style="margin-bottom:14px;color:#b47aff;">
+                                💻 Tiempo en Tareas de Sistemas — Mes Actual
+                            </div>
+                            <div id="estTiempoSistemas"></div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- ═══ HISTORIAL DE CAMBIOS (ADMIN) ═══ -->
@@ -6829,6 +6834,8 @@ function _estRenderDesempeno() {
         return arr.filter(x => (x[campo]||"").startsWith(anioFiltro));
     }
 
+    let correctivos = incidencias.filter(i => i.tipo === "Correctivo");
+    let preventivos = incidencias.filter(i => i.tipo === "Preventivo");
     let corrFilt = filtAnio(correctivos, "fecha");
     let prevFilt = filtAnio(incidencias.filter(i=>i.tipo==="Preventivo"), "fecha");
     let tareasFilt = filtAnio(tareas.filter(t=>t.estado==="realizado"), "fecha");
@@ -6904,64 +6911,25 @@ function _estRenderDesempeno() {
     renderRatingsDash("estDesempenoRatingCorr", corrFilt, "correctivo");
     renderRatingsDash("estDesempenoRatingPrev", prevFilt, "preventivo");
 
-    // ── Correctivos vs Preventivos por año ──────────
-    let elAnioChart = document.getElementById("estDesempenoAniosChart");
-    let badge = document.getElementById("estDesempenoAniosBadge");
-    let aniosSet = new Set();
-    incidencias.forEach(i=>{ if(i.fecha){ let a=i.fecha.split("-")[0]; if(a&&a.length===4) aniosSet.add(a); }});
-    let anios = [...aniosSet].sort();
-    if(badge) badge.textContent = anios.length ? anios[0]+" – "+anios[anios.length-1] : "—";
-    if(elAnioChart){
-        if(!anios.length){ elAnioChart.innerHTML='<div class="empty-state"><div class="empty-icon">📅</div><p>Sin datos por año</p></div>'; }
-        else {
-            let datosAnios = anios.map(a=>{
-                let corrA = incidencias.filter(i=>i.tipo==="Correctivo"&&i.fecha&&i.fecha.startsWith(a));
-                let prevA = incidencias.filter(i=>i.tipo==="Preventivo"&&i.fecha&&i.fecha.startsWith(a));
-                let maqPrev = prevA.reduce((sum,p)=>sum+calcMaq(getIslasEfectivas(p)),0);
-                return { anio:a, corr:corrA.length, prevReg:prevA.length, maqPrev };
-            });
-            let maxV = Math.max(...datosAnios.map(d=>Math.max(d.corr,d.maqPrev)),1);
-            let totalMaq = datosAnios.reduce((s,d)=>s+d.maqPrev,0);
-            let barH = 120;
-            elAnioChart.innerHTML = `
-            <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-                <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-                    <div style="width:12px;height:12px;border-radius:3px;background:var(--red);flex-shrink:0;"></div>
-                    <span style="color:var(--muted);">Correctivos</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
-                    <div style="width:12px;height:12px;border-radius:3px;background:var(--accent);flex-shrink:0;"></div>
-                    <span style="color:var(--muted);">Preventivos (máq. intervenidas)</span>
-                </div>
-            </div>
-            <div style="display:flex;align-items:flex-end;gap:${anios.length>5?8:16}px;padding-bottom:8px;overflow-x:auto;">
-                ${datosAnios.map(d=>{
-                    let pctC=Math.round(d.corr/maxV*100), pctP=Math.round(d.maqPrev/maxV*100);
-                    return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:${anios.length>5?52:64}px;flex:1;">
-                        <div style="display:flex;align-items:flex-end;gap:3px;height:${barH}px;">
-                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-                                <span style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:2px;">${d.corr}</span>
-                                <div style="width:${anios.length>5?18:22}px;height:${pctC>0?Math.max(Math.round(pctC/100*barH),4):0}px;background:var(--red);border-radius:4px 4px 0 0;opacity:.85;"></div>
-                            </div>
-                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-                                <span style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:2px;">${d.maqPrev}</span>
-                                <div style="width:${anios.length>5?18:22}px;height:${pctP>0?Math.max(Math.round(pctP/100*barH),4):0}px;background:var(--accent);border-radius:4px 4px 0 0;opacity:.85;"></div>
-                            </div>
-                        </div>
-                        <div style="font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--muted);margin-top:2px;text-align:center;">${d.prevReg} reg.</div>
-                        <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;width:100%;text-align:center;">${d.anio}</div>
-                    </div>`;
-                }).join("")}
-            </div>
-            <div style="display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap;">
-                <div style="font-size:12px;color:var(--muted);">Total correctivos: <span style="color:var(--red);font-weight:700;">${correctivos.length}</span></div>
-                <div style="font-size:12px;color:var(--muted);">Máq. preventivadas: <span style="color:var(--accent);font-weight:700;">${totalMaq}</span></div>
-                <div style="font-size:12px;color:var(--muted);">Registros prev.: <span style="color:var(--white);font-weight:700;">${preventivos.length}</span></div>
-            </div>`;
+    // ── Helpers islas para gráfico anual ────────────
+    function getIslasEfectivas(p){
+        let islas = (p.islas && p.islas.length > 0) ? p.islas : [];
+        if(islas.length === 0 && _esSubtipoDeIslas(p.subTipo) && p.nota){
+            let match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
+            if(match) islas = match[1].split(",").map(s => s.trim()).filter(Boolean);
         }
+        return islas;
+    }
+    function calcMaq(islasArr){
+        return islasArr.reduce((s, islaId) => {
+            let isla = islasActivas.find(il => il.id === parseInt(islaId));
+            return s + (isla ? isla.slots : 1);
+        }, 0);
     }
 
-    // ── Tiempo Eventos y Sistemas ────────────────────
+}
+
+function _estRenderTiempos() {
     let _ahora = new Date();
     let _mesActual = String(_ahora.getMonth()+1).padStart(2,"0");
     let _anioActual = String(_ahora.getFullYear());
@@ -6980,7 +6948,6 @@ function _estRenderDesempeno() {
             return fRef.startsWith(_mesKey);
         });
     }
-    // Reusar _renderTiempoStats inline
     function _renderTiempoEst(elId, tipo, color){
         let el=document.getElementById(elId); if(!el) return;
         let lista=_tareasDelMesEst(tipo);
@@ -7020,8 +6987,8 @@ function _estRenderDesempeno() {
                     </div>`).join("")}
             </div>`:""}`;
     }
-    _renderTiempoEst("estDesempenoTiempoEventos","evento","var(--yellow)");
-    _renderTiempoEst("estDesempenoTiempoSistemas","sistema","#b47aff");
+    _renderTiempoEst("estTiempoEventos","evento","var(--yellow)");
+    _renderTiempoEst("estTiempoSistemas","sistema","#b47aff");
 }
 
 function renderRatingsDash(elId, lista, tipo){
@@ -18493,7 +18460,7 @@ let _estTabActivo = "islas";
 
 function estCambiarTab(tab) {
     _estTabActivo = tab;
-    ["islas","tecnicos","partes","desempeno"].forEach(t => {
+    ["islas","tecnicos","partes","desempeno","tiempos"].forEach(t => {
         document.getElementById("estTab_" + t)?.classList.toggle("active-tab", t === tab);
         let panel = document.getElementById("estPanel" + t.charAt(0).toUpperCase() + t.slice(1));
         if(panel) panel.style.display = t === tab ? "block" : "none";
@@ -18528,6 +18495,7 @@ function renderEstadisticas() {
     if(_estTabActivo === "tecnicos")   _estRenderTecnicos();
     if(_estTabActivo === "partes")     _estRenderPartes();
     if(_estTabActivo === "desempeno")  _estRenderDesempeno();
+    if(_estTabActivo === "tiempos")    _estRenderTiempos();
 }
 
 // ── Helpers de render ──────────────────────────────────────────
@@ -18752,7 +18720,81 @@ function _estRenderIslas() {
             }).join("");
         }
     }
+
+    // — Correctivos vs Preventivos por Año —
+    _estRenderAniosChart();
 }
+
+function _estRenderAniosChart() {
+    let elAnioChart = document.getElementById("estDesempenoAniosChart");
+    let badge = document.getElementById("estDesempenoAniosBadge");
+    function getIslasEfectivas(p){
+        let islas = (p.islas && p.islas.length > 0) ? p.islas : [];
+        if(islas.length === 0 && _esSubtipoDeIslas(p.subTipo) && p.nota){
+            let match = p.nota.match(/Islas?:\s*([\d,\s]+)/i);
+            if(match) islas = match[1].split(",").map(s => s.trim()).filter(Boolean);
+        }
+        return islas;
+    }
+    function calcMaq(islasArr){
+        return islasArr.reduce((s, islaId) => {
+            let isla = islasActivas.find(il => il.id === parseInt(islaId));
+            return s + (isla ? isla.slots : 1);
+        }, 0);
+    }
+    let correctivos = incidencias.filter(i => i.tipo === "Correctivo");
+    let preventivos = incidencias.filter(i => i.tipo === "Preventivo");
+    let aniosSet = new Set();
+    incidencias.forEach(i=>{ if(i.fecha){ let a=i.fecha.split("-")[0]; if(a&&a.length===4) aniosSet.add(a); }});
+    let anios = [...aniosSet].sort();
+    if(badge) badge.textContent = anios.length ? anios[0]+" – "+anios[anios.length-1] : "—";
+    if(elAnioChart){
+        if(!anios.length){ elAnioChart.innerHTML='<div class="empty-state"><div class="empty-icon">📅</div><p>Sin datos por año</p></div>'; return; }
+        let datosAnios = anios.map(a=>{
+            let corrA = incidencias.filter(i=>i.tipo==="Correctivo"&&i.fecha&&i.fecha.startsWith(a));
+            let prevA = incidencias.filter(i=>i.tipo==="Preventivo"&&i.fecha&&i.fecha.startsWith(a));
+            let maqPrev = prevA.reduce((sum,p)=>sum+calcMaq(getIslasEfectivas(p)),0);
+            return { anio:a, corr:corrA.length, prevReg:prevA.length, maqPrev };
+        });
+        let maxV = Math.max(...datosAnios.map(d=>Math.max(d.corr,d.maqPrev)),1);
+        let totalMaq = datosAnios.reduce((s,d)=>s+d.maqPrev,0);
+        let barH = 120;
+        elAnioChart.innerHTML = `
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--red);flex-shrink:0;"></div>
+                <span style="color:var(--muted);">Correctivos</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+                <div style="width:12px;height:12px;border-radius:3px;background:var(--accent);flex-shrink:0;"></div>
+                <span style="color:var(--muted);">Preventivos (máq. intervenidas)</span>
+            </div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:${anios.length>5?8:16}px;padding-bottom:8px;overflow-x:auto;">
+            ${datosAnios.map(d=>{
+                let pctC=Math.round(d.corr/maxV*100), pctP=Math.round(d.maqPrev/maxV*100);
+                return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:${anios.length>5?52:64}px;flex:1;">
+                    <div style="display:flex;align-items:flex-end;gap:3px;height:${barH}px;">
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+                            <span style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:2px;">${d.corr}</span>
+                            <div style="width:${anios.length>5?18:22}px;height:${pctC>0?Math.max(Math.round(pctC/100*barH),4):0}px;background:var(--red);border-radius:4px 4px 0 0;opacity:.85;"></div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+                            <span style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:2px;">${d.maqPrev}</span>
+                            <div style="width:${anios.length>5?18:22}px;height:${pctP>0?Math.max(Math.round(pctP/100*barH),4):0}px;background:var(--accent);border-radius:4px 4px 0 0;opacity:.85;"></div>
+                        </div>
+                    </div>
+                    <div style="font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--muted);margin-top:2px;text-align:center;">${d.prevReg} reg.</div>
+                    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--muted);border-top:1px solid var(--border);padding-top:6px;width:100%;text-align:center;">${d.anio}</div>
+                </div>`;
+            }).join("")}
+        </div>
+        <div style="display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap;">
+            <div style="font-size:12px;color:var(--muted);">Total correctivos: <span style="color:var(--red);font-weight:700;">${correctivos.length}</span></div>
+            <div style="font-size:12px;color:var(--muted);">Máq. preventivadas: <span style="color:var(--accent);font-weight:700;">${totalMaq}</span></div>
+            <div style="font-size:12px;color:var(--muted);">Registros prev.: <span style="color:var(--white);font-weight:700;">${preventivos.length}</span></div>
+        </div>`;
+    }
 
 // ── TAB TÉCNICOS ──────────────────────────────────────────────
 function _estRenderTecnicos() {
