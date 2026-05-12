@@ -6149,6 +6149,7 @@ function mostrar(sec){
         renderCronogramaEventos?.();
     }
     if(sec === 'estadisticas'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderEstadisticas(); }
+    if(sec === 'gestionUsuarios'){ renderGestionUsuarios(); }
     // Cerrar sidebar en mobile
     document.querySelector('.sidebar')?.classList.remove('open');
     document.getElementById('sidebarOverlay')?.classList.remove('open');
@@ -13562,7 +13563,18 @@ async function eliminarUbicacion(idx) {
     renderUbicaciones();
 }
 
-function renderGestionUsuarios(){
+async function renderGestionUsuarios(){
+    // Si el cache de usersDB está vacío, intentar recargar desde Firestore
+    if(!_cache["usersDB"] || !Array.isArray(_cache["usersDB"]) || _cache["usersDB"].length === 0){
+        try {
+            let snap = await _colRef().doc("usersDB").get();
+            if(snap.exists && snap.data().data && Array.isArray(snap.data().data) && snap.data().data.length > 0){
+                _cache["usersDB"] = snap.data().data;
+                _localStorageOrig.setItem("usersDB", JSON.stringify(snap.data().data));
+                console.log("[HF] usersDB recargado desde Firestore:", snap.data().data.length, "usuarios");
+            }
+        } catch(e){ console.warn("[HF] No se pudo recargar usersDB:", e); }
+    }
     // SuperAdmin ve indicador de empresa activa
     let subtitleEl = document.querySelector("#gestionUsuarios .page-subtitle");
     if(subtitleEl){
