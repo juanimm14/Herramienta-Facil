@@ -5514,6 +5514,7 @@ const SIDEBAR_ITEMS_CONFIG = [
     { id: "nav-barajadoras",       label: "🃏 Barajadoras",            group: "Otros Equipos" },
     { id: "nav-plan-preventivo",  label: "📅 Plan Preventivo",       group: "Gestión" },
     { id: "nav-partes-criticas",  label: "🚨 Partes Críticas",        group: "Gestión" },
+    { id: "nav-estadisticas",     label: "📊 Estadísticas",           group: "Gestión" },
 ];
 
 let _sidebarConfig = null; // { [navId]: true/false }
@@ -5542,7 +5543,7 @@ function aplicarSidebarConfig() {
     });
     // Restricciones de rol — siempre tienen prioridad sobre la config del sidebar
     if (!esAdminOSuperAdmin()) {
-        ["nav-gestionUsuarios","nav-importar","nav-exportar-excel","nav-partes-criticas"].forEach(id => {
+        ["nav-gestionUsuarios","nav-importar","nav-exportar-excel","nav-partes-criticas","nav-estadisticas"].forEach(id => {
             let el = document.getElementById(id);
             if (el) el.style.display = "none";
         });
