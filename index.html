@@ -123,6 +123,7 @@ const _FB_KEYS = new Set([
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
     "equiposCilindros","equiposRA","equiposEVA",
+    "bingueraData",
     "pptData","sidebarConfig",
     "eventosConfig","eventosGenerados",
     "eventosUnicos",
@@ -197,6 +198,7 @@ function _sincronizarVariables() {
         if (_cache["eventosGenerados"] !== undefined) eventosGenerados = _cache["eventosGenerados"] ?? {};
         if (_cache["eventosUnicos"]    !== undefined) eventosUnicos    = _cache["eventosUnicos"]    ?? [];
         if (_cache["partesCriticas"]   !== undefined) partesCriticas   = _cache["partesCriticas"]   ?? [];
+        if (_cache["bingueraData"]     !== undefined) bingueraData     = _cache["bingueraData"]     ?? [];
         if (_cache["sidebarConfig"]    !== undefined) {
             _sidebarConfig = _cache["sidebarConfig"];
             if (document.getElementById("app")?.style.display !== "none") {
@@ -2018,6 +2020,9 @@ setTimeout(function(){
             <button class="menu-btn" id="nav-contadoras" onclick="mostrar('contadoras')">
                 <span class="icon">🔢</span> Contadoras
             </button>
+            <button class="menu-btn" id="nav-binguera" onclick="mostrar('binguera')">
+                <span class="icon">🎱</span> Binguera
+            </button>
             <button class="menu-btn" id="nav-chippers" onclick="mostrar('chippers')">
                 <span class="icon">🎰</span> Chippers
             </button>
@@ -2802,6 +2807,29 @@ setTimeout(function(){
             </div>
 
 
+            <!-- ═══ BINGUERA ═══ -->
+            <div id="binguera" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🎱 Binguera</div>
+                        <div class="page-subtitle">Correctivos, preventivos y seguimiento de la binguera</div>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn-primary" onclick="abrirModalBingueraNuevaIncidencia()">➕ Nueva Incidencia</button>
+                    </div>
+                </div>
+                <div class="card-box">
+                    <div class="card-box-title">
+                        <span>📋 Historial de Incidencias</span>
+                        <span class="badge-count" id="badgeBngTotal">0</span>
+                    </div>
+                    <div id="listaBingueraTodas">
+                        <div class="empty-state"><div class="empty-icon">🎱</div><p>Sin incidencias</p></div>
+                    </div>
+                </div>
+            </div>
+
+
             <!-- ═══ CHIPPERS ═══ -->
             <div id="chippers" class="section">
                 <div class="page-header">
@@ -3525,7 +3553,7 @@ setTimeout(function(){
             </div>
 
         <div id="copyright-footer">
-            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.3.0</span>
+            © 2026 Juan Mucci — Herramienta Fácil &nbsp;·&nbsp; <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;">v1.4.0</span>
         </div>
 
         </div><!-- /main -->
@@ -5514,6 +5542,7 @@ const SIDEBAR_ITEMS_CONFIG = [
     { id: "nav-control-ppt",      label: "📊 Control PPT",           group: "Slots" },
     { id: "nav-kioscos-eva",      label: "🎫 Kioscos EVA",           group: "Otros Equipos" },
     { id: "nav-contadoras",       label: "🔢 Contadoras",            group: "Otros Equipos" },
+    { id: "nav-binguera",         label: "🎱 Binguera",              group: "Otros Equipos" },
     { id: "nav-chippers",          label: "🎰 Chippers",              group: "Otros Equipos" },
     { id: "nav-barajadoras",       label: "🃏 Barajadoras",            group: "Otros Equipos" },
     { id: "nav-plan-preventivo",  label: "📅 Plan Preventivo",       group: "Gestión" },
@@ -5894,6 +5923,7 @@ async function importEjecutar() {
     try { renderTareas?.(); } catch(e){}
     try { renderKioscosEva?.(); renderEstadosEva?.(); } catch(e){}
     try { renderContadoras?.(); } catch(e){}
+    try { renderBinguera?.(); } catch(e){}
     try { renderChippers?.(); } catch(e){}
     try { renderValidadores?.(); } catch(e){}
     try { renderPpt?.(); } catch(e){}
@@ -6416,6 +6446,7 @@ function mostrar(sec){
     if(sec === 'kioscos-eva') { volverVistaEva(); renderKioscosEva(); }
     if(sec === 'estados-eva') renderEstadosEva();
     if(sec === 'contadoras') renderContadoras();
+    if(sec === 'binguera') renderBinguera();
     if(sec === 'chippers') renderChippers();
     if(sec === 'barajadoras') renderBarajadoras();
     if(sec === 'fuera-servicio') renderFds();
@@ -9929,6 +9960,160 @@ function eliminarContadoraItem(id){
     contadorasData = contadorasData.filter(c => String(c.id) !== String(id));
     localStorage.setItem("contadorasData", JSON.stringify(contadorasData));
     renderContadoras();
+}
+
+
+// ──────────────────────────────────────────────
+//  BINGUERA
+// ──────────────────────────────────────────────
+let bingueraData = JSON.parse(localStorage.getItem("bingueraData")) || [];
+
+function _bngPoblarCasino(selectId){
+    let sel = document.getElementById(selectId);
+    if(!sel) return;
+    let tecnicos = getTecnicos();
+    sel.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+function abrirModalBingueraNuevaIncidencia(){
+    if(esVisita()) return;
+    document.getElementById("bngFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("bngNota").value = "";
+    document.getElementById("bngDetalle").value = "";
+    document.getElementById("bngTipo").value = "Correctivo";
+    document.getElementById("bngEstado").value = "Realizado";
+    document.getElementById("bngTecnicoPQ").value = "";
+    _bngPoblarCasino("bngTecnicoCasino");
+    let sel = document.getElementById("bngTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    document.getElementById("modalBingueraNuevaIncidencia").classList.add("open");
+}
+function cerrarModalBingueraNuevaIncidencia(){
+    document.getElementById("modalBingueraNuevaIncidencia").classList.remove("open");
+}
+function guardarBingueraIncidencia(){
+    if(esVisita()) return;
+    let tecPQ = document.getElementById("bngTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("bngTecnicoCasino").value;
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("bngTipo").value,
+        fecha: document.getElementById("bngFecha").value,
+        equipo: "Binguera",
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detalle: document.getElementById("bngDetalle").value.trim(),
+        estado: document.getElementById("bngEstado").value,
+        nota: document.getElementById("bngNota").value.trim(),
+        comentarios: []
+    };
+    bingueraData.unshift(obj);
+    localStorage.setItem("bingueraData", JSON.stringify(bingueraData));
+    cerrarModalBingueraNuevaIncidencia();
+    renderBinguera();
+    toast.success("Incidencia guardada ✅","");
+}
+
+function abrirEditarBinguera(id){
+    let e = bingueraData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    document.getElementById("bngEditId").value = e.id;
+    document.getElementById("bngEditFecha").value = e.fecha || "";
+    document.getElementById("bngEditTipo").value = e.tipo || "Correctivo";
+    document.getElementById("bngEditTecnicoPQ").value = e.tecnicoPQ || e.tecnico || "";
+    document.getElementById("bngEditEstado").value = e.estado || "Realizado";
+    document.getElementById("bngEditDetalle").value = e.detalle || "";
+    document.getElementById("bngEditNota").value = e.nota || "";
+    _bngPoblarCasino("bngEditTecnicoCasino");
+    let selC = document.getElementById("bngEditTecnicoCasino");
+    if(e.tecnicoCasino){ let op = [...selC.options].find(o=>o.value===e.tecnicoCasino); if(op) selC.value=e.tecnicoCasino; }
+    document.getElementById("modalBngDetalle").classList.remove("open");
+    document.getElementById("modalBngEditar").classList.add("open");
+}
+function guardarEdicionBinguera(){
+    let id = document.getElementById("bngEditId").value;
+    let idx = bingueraData.findIndex(c => String(c.id) === String(id));
+    if(idx === -1) return;
+    let tecPQ = document.getElementById("bngEditTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("bngEditTecnicoCasino").value;
+    bingueraData[idx] = {
+        ...bingueraData[idx],
+        tipo: document.getElementById("bngEditTipo").value,
+        fecha: document.getElementById("bngEditFecha").value,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detalle: document.getElementById("bngEditDetalle").value.trim(),
+        estado: document.getElementById("bngEditEstado").value,
+        nota: document.getElementById("bngEditNota").value.trim(),
+    };
+    localStorage.setItem("bingueraData", JSON.stringify(bingueraData));
+    document.getElementById("modalBngEditar").classList.remove("open");
+    renderBinguera();
+    toast.success("Incidencia actualizada ✅","");
+}
+
+function abrirDetalleBinguera(id){
+    let e = bingueraData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+    let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+    let tecInfo = "";
+    if(e.tecnicoPQ) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🔑 Técnico PQ: <strong style="color:var(--white);">${e.tecnicoPQ}</strong></div>`;
+    if(e.tecnicoCasino) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🏠 Técnico Casino: <strong style="color:var(--white);">${e.tecnicoCasino}</strong></div>`;
+    if(!e.tecnicoPQ && !e.tecnicoCasino && e.tecnico) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico: <strong style="color:var(--white);">${e.tecnico}</strong></div>`;
+    let adminBtns = usuarioActual?.rol==="Admin" ? `
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="abrirEditarBinguera('${e.id}')" style="flex:1;background:var(--accent2);border:none;color:var(--white);border-radius:8px;padding:8px 0;cursor:pointer;font-size:13px;font-weight:600;">✏️ Editar</button>
+            <button onclick="if(confirm('¿Eliminar?')){eliminarBingueraItem('${e.id}');cerrarDetalleBinguera();}" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;">🗑️</button>
+        </div>` : "";
+    document.getElementById("bngDetalleContenido").innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <span style="font-size:14px;">${tipoIcon} <strong>${e.tipo}</strong></span>
+            <span class="pill ${estadoCls}">${e.estado}</span>
+            <span style="font-size:12px;color:var(--muted);">📅 ${e.fecha}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;">🎱 Binguera</div>
+        ${tecInfo}
+        ${e.detalle ? `<div style="margin-top:8px;background:var(--bg3);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;"><div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px;">Trabajo realizado:</div><div style="font-size:12px;color:var(--white);">${e.detalle}</div></div>` : ""}
+        ${e.nota ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:8px 10px;">${e.nota}</div>` : ""}
+        ${adminBtns}
+    `;
+    document.getElementById("modalBngDetalle").classList.add("open");
+}
+function cerrarDetalleBinguera(){
+    document.getElementById("modalBngDetalle").classList.remove("open");
+}
+
+function renderBinguera(){
+    let todos = [...bingueraData].sort((a,b) => (b.fecha || "").localeCompare(a.fecha || "") || b.id - a.id);
+    let badge = document.getElementById("badgeBngTotal");
+    if(badge) badge.textContent = todos.length;
+    function mkRow(e){
+        let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+        let tipoColor = e.tipo === "Preventivo" ? "var(--accent2)" : "#f87171";
+        let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+        return `<div onclick="abrirDetalleBinguera('${e.id}')" style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${tipoColor};border-radius:9px;margin-bottom:7px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg2)'">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:700;color:${tipoColor};">${tipoIcon} ${e.tipo}</span>
+                <span class="pill ${estadoCls}" style="font-size:10px;">${e.estado}</span>
+                <span style="font-size:11px;color:var(--muted);margin-left:auto;">📅 ${e.fecha}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">🎱 Binguera</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${e.tecnicoPQ ? '🔑 '+e.tecnicoPQ : ''}${e.tecnicoPQ && e.tecnicoCasino ? ' · ' : ''}${e.tecnicoCasino ? '🏠 '+e.tecnicoCasino : ''}</div>
+            ${e.detalle ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${e.detalle}</div>` : ""}
+        </div>`;
+    }
+    let cont = document.getElementById("listaBingueraTodas");
+    if(cont) cont.innerHTML = todos.length ? todos.map(mkRow).join("") : '<div class="empty-state"><div class="empty-icon">🎱</div><p>Sin incidencias</p></div>';
+}
+
+function eliminarBingueraItem(id){
+    if(esVisita()) return;
+    bingueraData = bingueraData.filter(c => String(c.id) !== String(id));
+    localStorage.setItem("bingueraData", JSON.stringify(bingueraData));
+    renderBinguera();
 }
 
 
@@ -15007,6 +15192,115 @@ function confirmarQuienRealizoMulti(){
         </div>
     </div>
 </div>
+
+<!-- ═══ MODAL BINGUERA — NUEVA INCIDENCIA ═══ -->
+<div id="modalBingueraNuevaIncidencia" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🎱 Nueva Incidencia — Binguera</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="bngFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="bngTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="bngTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="bngTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="bngEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en la binguera?</label>
+            <textarea id="bngDetalle" class="form-textarea" placeholder="Describí el trabajo realizado..."></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="bngNota" class="form-textarea" placeholder="Observaciones adicionales..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="guardarBingueraIncidencia()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalBingueraNuevaIncidencia()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BINGUERA — EDITAR ═══ -->
+<div id="modalBngEditar" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">✏️ Editar Incidencia — Binguera</div>
+        <input type="hidden" id="bngEditId">
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="bngEditFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="bngEditTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="bngEditTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="bngEditTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="bngEditEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en la binguera?</label>
+            <textarea id="bngEditDetalle" class="form-textarea" placeholder="Describí el trabajo realizado..."></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="bngEditNota" class="form-textarea" placeholder="Observaciones adicionales..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarEdicionBinguera()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalBngEditar').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BINGUERA — DETALLE ═══ -->
+<div id="modalBngDetalle" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🎱 Detalle de Incidencia — Binguera</div>
+        <div id="bngDetalleContenido"></div>
+        <div class="modal-footer" style="margin-top:14px;">
+            <button class="btn-modal-cancel" onclick="cerrarDetalleBinguera()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ MODAL DETALLE EVA INCIDENCIA ═══ -->
 <div id="modalEvaDetalle" class="modal">
     <div class="modal-box" style="max-width:480px;">
@@ -17252,6 +17546,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <input type="checkbox" id="expChk_contadoras" checked style="accent-color:var(--accent);width:15px;height:15px;"> Contadoras
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
+                        <input type="checkbox" id="expChk_binguera" checked style="accent-color:var(--accent);width:15px;height:15px;"> Binguera
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
                         <input type="checkbox" id="expChk_chippers" checked style="accent-color:var(--accent);width:15px;height:15px;"> Chippers
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--white);">
@@ -17468,6 +17765,7 @@ async function generarExcelCompleto(){
         let tarFilt  = _exportFiltrar(typeof tareas!=="undefined"?tareas:[], "fecha");
         let fdsFilt  = _exportFiltrar(typeof fdsData!=="undefined"?fdsData:[], "fechaSalida");
         let cntFilt  = _exportFiltrar(typeof contadorasData!=="undefined"?contadorasData:[], "fecha");
+        let bngFilt  = _exportFiltrar(typeof bingueraData!=="undefined"?bingueraData:[], "fecha");
         let chprFilt = _exportFiltrar(typeof chippersData!=="undefined"?chippersData:[], "fecha");
         let evaFilt  = _exportFiltrar(typeof evaIncidencias!=="undefined"?evaIncidencias:[], "fecha");
         let valFilt  = _exportFiltrar(typeof validadoresData!=="undefined"?validadoresData:[], "fecha");
@@ -17495,6 +17793,7 @@ async function generarExcelCompleto(){
                 fdsFilt.filter(f=>f.estado!=="Habilitado").length,
                 fdsFilt.filter(f=>f.estado==="Habilitado").length],
             ["Contadoras", cntFilt.length, "—", cntFilt.length],
+            ["Binguera", bngFilt.length, "—", bngFilt.length],
             ["Chippers", chprFilt.length, "—", chprFilt.length],
             ["Kioscos EVA", evaFilt.length, "—", evaFilt.length],
             ["Validadores", valFilt.length, "—", valFilt.length],
@@ -17577,6 +17876,18 @@ async function generarExcelCompleto(){
             ]);
             let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
             XLSX.utils.book_append_sheet(wb,ws,"🔢 Contadoras");
+        }
+
+        // ── BINGUERA ──────────────────────────────────────────
+        if(document.getElementById("expChk_binguera")?.checked){
+            setStatus("Binguera...");
+            let cabs=["Fecha","Tipo","Técnico Casino","Técnico PQ","Estado","Trabajo realizado","Nota"];
+            let filas=bngFilt.map(c=>[
+                c.fecha||"—",c.tipo||"—",
+                c.tecnicoCasino||"—",c.tecnicoPQ||"—",c.estado||"—",c.detalle||"—",c.nota||"—"
+            ]);
+            let ws=_construirHoja(cabs,filas); _autoWidth(ws,cabs,filas);
+            XLSX.utils.book_append_sheet(wb,ws,"🎱 Binguera");
         }
 
         // ── CHIPPERS ──────────────────────────────────────────
