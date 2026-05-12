@@ -6868,16 +6868,21 @@ function _estRenderDesempeno() {
     _estBarras("estDesempenoCorr", corrCounts, ()=>"#f87171");
 
     // ── Tareas realizadas por técnico ────────────────
-    let tareasCounts = tecnicos.map(t => ({ label: t, val: tareasFilt.filter(x=>x.tecnico===t).length }))
-        .filter(x=>x.val>0).sort((a,b)=>b.val-a.val);
+    let tareasCounts = tecnicos.map(t => ({
+        label: t,
+        val: tareasFilt.filter(x => {
+            let r = x.realizadoPor || x.asignado || "";
+            return r.split(", ").map(s=>s.trim()).includes(t);
+        }).length
+    })).filter(x=>x.val>0).sort((a,b)=>b.val-a.val);
     _estBarras("estDesempenoTareas", tareasCounts, ()=>"var(--accent2)");
 
     // ── Preventivos por técnico ──────────────────────
-    let prevCounts = tecnicos.map(t => ({ label: t, val: prevFilt.filter(p=>p.tecnico===t).length }))
+    let prevCounts = tecnicos.map(t => ({ label: t, val: prevFilt.filter(p=>p.tecnico===t||p.tecnico2===t).length }))
         .filter(x=>x.val>0).sort((a,b)=>b.val-a.val);
     _estBarras("estDesempenoPrev", prevCounts, ()=>"var(--accent)");
 
-    // ── Horas y Promedio por técnico (mes actual si filtro, si no todos) ──
+    // ── Horas y Promedio por técnico ──────────────────
     function _esExcluida(t){ let d=(t.desc||"").toLowerCase(); return d.includes("nivelar ra")||d.includes("excepcion")||d.includes("excepción"); }
     function _getMins(t){
         if(t.tiempoManualMins) return t.tiempoManualMins;
@@ -6889,7 +6894,10 @@ function _estRenderDesempeno() {
 
     let tareasConTiempo = tareasFilt.filter(t=>!_esExcluida(t));
     let horasData = tecnicos.map(t => {
-        let lst = tareasConTiempo.filter(x=>x.tecnico===t);
+        let lst = tareasConTiempo.filter(x => {
+            let r = x.realizadoPor || x.asignado || "";
+            return r.split(", ").map(s=>s.trim()).includes(t);
+        });
         let mins = lst.reduce((s,x)=>s+_getMins(x),0);
         let cant = lst.filter(x=>_getMins(x)>0).length;
         return { label: t, val: mins, cant };
@@ -6908,7 +6916,10 @@ function _estRenderDesempeno() {
     }
 
     let promData = tecnicos.map(t => {
-        let lst = tareasConTiempo.filter(x=>x.tecnico===t && _getMins(x)>0);
+        let lst = tareasConTiempo.filter(x => {
+            let r = x.realizadoPor || x.asignado || "";
+            return r.split(", ").map(s=>s.trim()).includes(t) && _getMins(x)>0;
+        });
         if(!lst.length) return null;
         let prom = Math.round(lst.reduce((s,x)=>s+_getMins(x),0)/lst.length);
         return { label: t, val: prom, cant: lst.length };
@@ -6976,8 +6987,8 @@ function _estRenderTiempos() {
         let fmtML=(m)=>m<60?m+"m":Math.floor(m/60)+"h "+(m%60)+"m";
         let tecMap={};
         lista.forEach(t=>{
-            let n=t.tecnico||"—"; if(!tecMap[n]) tecMap[n]={mins:0,cant:0};
-            tecMap[n].mins+=_getMinsT(t); tecMap[n].cant++;
+            let nombres = (t.realizadoPor||t.asignado||"—").split(", ").map(s=>s.trim()).filter(Boolean);
+            nombres.forEach(n=>{ if(!tecMap[n]) tecMap[n]={mins:0,cant:0}; tecMap[n].mins+=_getMinsT(t); tecMap[n].cant++; });
         });
         let tecList=Object.entries(tecMap).sort((a,b)=>b[1].mins-a[1].mins);
         let maxTecMins=Math.max(...tecList.map(([,d])=>d.mins),1);
