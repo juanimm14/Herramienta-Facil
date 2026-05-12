@@ -254,6 +254,10 @@ function _activarListenersTiempoReal() {
             cargarAniosPrev?.();
             renderIncidenciasPreventivos?.();
             renderPartesCriticas?.();
+            // Re-render estadísticas si está visible
+            if(document.getElementById("estadisticas")?.style.display !== "none"){
+                renderEstadisticas?.();
+            }
         }
     };
 
@@ -6425,7 +6429,21 @@ function mostrar(sec){
         if(acciones) acciones.style.display = esAdminOSuperAdmin() ? "flex" : "none";
         renderCronogramaEventos?.();
     }
-    if(sec === 'estadisticas'){ if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; } renderEstadisticas(); }
+    if(sec === 'estadisticas'){
+        if(!esAdminOSuperAdmin()){ mostrar('dashboard'); return; }
+        if(window._fbCargaCompleta){
+            renderEstadisticas();
+        } else {
+            // Esperar a que Firebase cargue
+            let t = setInterval(() => {
+                if(window._fbCargaCompleta){
+                    clearInterval(t);
+                    _sincronizarVariables?.();
+                    renderEstadisticas();
+                }
+            }, 300);
+        }
+    }
     if(sec === 'gestionUsuarios'){ renderGestionUsuarios(); }
     // Cerrar sidebar en mobile
     document.querySelector('.sidebar')?.classList.remove('open');
@@ -18491,6 +18509,8 @@ function estFiltrarPorAnio(arr, campo) {
 
 function renderEstadisticas() {
     if(!esAdminOSuperAdmin()) return;
+    // Asegurar que las variables globales estén sincronizadas con el cache de Firebase
+    if(typeof _sincronizarVariables === "function") _sincronizarVariables();
     estPoblarAnios();
     if(_estTabActivo === "islas")      _estRenderIslas();
     if(_estTabActivo === "tecnicos")   _estRenderTecnicos();
