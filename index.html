@@ -13932,11 +13932,17 @@ function _renderTareasConTurno(){
     let esTecnico = usuarioActual?.rol !== "Admin";
     let esVisitaRol = usuarioActual?.rol === "Visita";
     let miNombre  = usuarioActual?.nombre;
+    const TECNICOS_LIST = getTecnicos();
+
+    function mkItem(t){
         let dur = calcularDuracion(t);
         let acciones = "";
         let ppBadge = t._ppMesKey ? `<span style="font-size:10px;background:rgba(79,142,255,.2);border:1px solid var(--accent2);color:var(--accent2);padding:1px 7px;border-radius:5px;font-weight:700;">📅 PREV</span>` : "";
         let miTareaBadge = (esTecnico && t.asignado === miNombre) ? `<span style="font-size:10px;background:rgba(0,212,168,.15);border:1px solid var(--accent);color:var(--accent);padding:1px 7px;border-radius:5px;font-weight:700;">👤 MÍA</span>` : "";
-        let reasignar = `<select onchange="reasignarTarea(${t.id}, this.value)"
+        // Visita solo ve el nombre, no puede reasignar
+        let reasignar = esVisitaRol
+            ? `<span style="font-size:12px;color:var(--muted);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>`
+            : `<select onchange="reasignarTarea(${t.id}, this.value)"
             style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:11px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .2s;"
             title="Reasignar técnico">
             <option value="__turno_MANANA__" ${t.asignado==="__turno_MANANA__"?"selected":""}>☀️ Turno mañana</option>
@@ -13944,7 +13950,12 @@ function _renderTareasConTurno(){
                 ${TECNICOS_LIST.map(n=>`<option value="${n}" ${t.asignado===n?'selected':''}>${n}</option>`).join("")}
         </select>`;
 
-        if(t.estado === "pendiente"){
+        // Visita: solo puede ver detalle
+        if(esVisitaRol){
+            acciones = `<div class="tarea-actions">
+                <button class="btn-task-action" onclick="abrirDetalleTarea(${t.id})" style="border-color:var(--accent2);color:var(--accent2);">💬 Detalle</button>
+            </div>`;
+        } else if(t.estado === "pendiente"){
             acciones = `<div class="tarea-actions">
                 <button class="btn-task-action" onclick="avanzarTarea(${t.id})">▶ Tomar tarea</button>
                 <button class="btn-task-action" onclick="abrirDetalleTarea(${t.id})" style="border-color:var(--accent2);color:var(--accent2);">💬 Detalle</button>
