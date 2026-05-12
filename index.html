@@ -210,17 +210,30 @@ function _sincronizarVariables() {
 
 // ─── Carga inicial: descarga Firestore → cache → arranca app ──
 async function _cargarDatosFirebase() {
-    const snap = await _colRef().get();
-    snap.forEach(doc => {
-        if (_FB_KEYS.has(doc.id)) {
-            _cache[doc.id] = doc.data().data;
-            _localStorageOrig.setItem(doc.id, JSON.stringify(doc.data().data));
-        }
-    });
-
-    // Marcar que la carga inicial completó — a partir de aquí getUsersDB()
-    // y cargarIslas() pueden escribir defaults sin riesgo de pisar datos reales.
-    window._fbCargaCompleta = true;
+    try {
+        const snap = await _colRef().get();
+        snap.forEach(doc => {
+            if (_FB_KEYS.has(doc.id)) {
+                _cache[doc.id] = doc.data().data;
+                _localStorageOrig.setItem(doc.id, JSON.stringify(doc.data().data));
+            }
+        });
+        console.log("[HF] Datos cargados desde Firebase. usersDB:", Array.isArray(_cache["usersDB"]) ? _cache["usersDB"].length + " usuarios" : "no encontrado");
+    } catch(e) {
+        console.error("[HF] Error al cargar datos Firebase:", e);
+        // Intentar cargar usersDB individualmente si falló la carga general
+        try {
+            const uSnap = await _colRef().doc("usersDB").get();
+            if(uSnap.exists && Array.isArray(uSnap.data().data) && uSnap.data().data.length > 0){
+                _cache["usersDB"] = uSnap.data().data;
+                _localStorageOrig.setItem("usersDB", JSON.stringify(uSnap.data().data));
+                console.log("[HF] usersDB cargado individualmente:", _cache["usersDB"].length, "usuarios");
+            }
+        } catch(e2){ console.error("[HF] Error cargando usersDB individualmente:", e2); }
+    } finally {
+        // Siempre marcar como completo para no bloquear la app
+        window._fbCargaCompleta = true;
+    }
 
     // ── RESTAURACIÓN DE ISLAS ──────────────────────────────────────────────
     // Si Firestore tiene el default erróneo (islas 100-180 con 8 slots),
@@ -275,13 +288,22 @@ function _activarListenersTiempoReal() {
             // Ignorar si acabamos de escribir esta clave en los últimos 5 segundos
             if (window._fbWriteTs && window._fbWriteTs[clave] && (Date.now() - window._fbWriteTs[clave]) < 5000) return;
             if (snap.exists) {
-                // ⚠️ GUARDA usersDB: nunca pisar con array vacío o más chico si ya hay datos
+                // ⚠️ GUARDA usersDB: nunca pisar con array vacío, nulo, ni con menos usuarios que los actuales
                 let nuevoValor = snap.data().data;
                 if(clave === "usersDB"){
                     let actual = _cache["usersDB"];
-                    if(Array.isArray(actual) && actual.length > 0 && (!Array.isArray(nuevoValor) || nuevoValor.length === 0)){
-                        console.warn("[HF] onSnapshot usersDB bloqueado — snapshot vacío no puede pisar datos reales");
-                        return;
+                    if(Array.isArray(actual) && actual.length > 0){
+                        if(!Array.isArray(nuevoValor) || nuevoValor.length === 0){
+                            console.warn("[HF] onSnapshot usersDB bloqueado — snapshot vacío/nulo no puede pisar datos reales");
+                            return;
+                        }
+                        // Nunca reemplazar con un array que tenga menos usuarios reales (con email)
+                        let conEmailActual = actual.filter(u => u.email && u.email.trim() !== "").length;
+                        let conEmailNuevo  = nuevoValor.filter(u => u.email && u.email.trim() !== "").length;
+                        if(conEmailNuevo < conEmailActual){
+                            console.warn("[HF] onSnapshot usersDB bloqueado — snapshot tiene menos usuarios con cuenta (" + conEmailNuevo + " vs " + conEmailActual + ")");
+                            return;
+                        }
                     }
                 }
                 _cache[clave] = nuevoValor;
@@ -5194,8 +5216,9 @@ incidencias.forEach(i => {
         }
     }
 });
-// Persistir las reparaciones
-localStorage.setItem("incidencias", JSON.stringify(incidencias));
+// Persistir las reparaciones solo en el cache local del navegador (no disparar Firebase aquí —
+// Firebase aún no cargó; los datos reales llegarán vía _cargarDatosFirebase)
+_localStorageOrig.setItem("incidencias", JSON.stringify(incidencias));
 
 let tareas = JSON.parse(localStorage.getItem("tareas")) || [];
 // Normalizar tareas al nuevo sistema de estados
@@ -5278,7 +5301,12 @@ function saveUsersDB(db){
         }
     }
 
-    localStorage.setItem("usersDB", JSON.stringify(db));
+    // SIEMPRE escribir directo en Firebase (no pasar por el parche de localStorage
+    // que tiene la guarda _fbCargaCompleta y podría bloquear escrituras)
+    _cache["usersDB"] = db;
+    _localStorageOrig.setItem("usersDB", JSON.stringify(db));
+    _fbSet("usersDB", db);
+    console.log("[HF] saveUsersDB → Firebase:", db.length, "usuarios");
 }
 
 function getUserRecord(nombre){
@@ -11581,14 +11609,33 @@ _auth.onAuthStateChanged(async (firebaseUser) => {
         // splashCarga ya visible — no hace falta mostrar nada más
 
         // Usuario autenticado — cargar datos y arrancar app
-        try { await _cargarDatosFirebase(); } catch(e){ console.error(e); }
+        // _cargarDatosFirebase ya tiene try/catch/finally internos — siempre completa
+        await _cargarDatosFirebase();
         _activarListenersTiempoReal();
 
         // Buscar el perfil (nombre + rol) en usersDB
         // Estrategia 1: por email exacto
         // Estrategia 2: por parte local del email (juan@casino.com → "Juan")
         // Estrategia 3: usar el nombre guardado en localStorage de sesión previa
+        // Estrategia 4 (nueva): recargar usersDB directo de Firestore si el cache está vacío
         let db = getUsersDB();
+
+        // Si el cache de usersDB está vacío (dispositivo nuevo o error de red),
+        // intentar una carga directa específica de usersDB antes de continuar
+        let cacheEsDefault = db.every(u => !u.email && CONFIG_DEFAULTS.tecnicos.includes(u.nombre));
+        if(cacheEsDefault || db.length === 0){
+            console.warn("[HF] usersDB no en cache — recargando directo desde Firestore...");
+            try {
+                const uSnap = await _colRef().doc("usersDB").get();
+                if(uSnap.exists && Array.isArray(uSnap.data().data) && uSnap.data().data.length > 0){
+                    _cache["usersDB"] = uSnap.data().data;
+                    _localStorageOrig.setItem("usersDB", JSON.stringify(uSnap.data().data));
+                    db = _cache["usersDB"];
+                    console.log("[HF] usersDB recargado en login:", db.length, "usuarios");
+                }
+            } catch(e2){ console.warn("[HF] No se pudo recargar usersDB en login:", e2); }
+        }
+
         let rec = db.find(u => u.email && u.email.toLowerCase() === firebaseUser.email.toLowerCase());
         if(!rec){
             // Intentar por nombre local del email (ej: "juan.mucci@..." → buscar "Juan Mucci" o "Juan")
@@ -11597,16 +11644,21 @@ _auth.onAuthStateChanged(async (firebaseUser) => {
         }
         if(!rec){
             // Intentar con sesión previa guardada en localStorage
-            let prevUser = JSON.parse(localStorage.getItem("usuario") || "null");
-            if(prevUser?.nombre && prevUser?.rol) rec = { nombre: prevUser.nombre, rol: prevUser.rol };
+            let prevUser = JSON.parse(_localStorageOrig.getItem("usuario") || "null");
+            if(prevUser?.nombre && prevUser?.rol){
+                // Verificar que ese usuario aún exista en usersDB (no fue eliminado)
+                let existeEnDB = db.find(u => u.nombre === prevUser.nombre);
+                if(existeEnDB || cacheEsDefault) rec = { nombre: prevUser.nombre, rol: prevUser.rol };
+            }
         }
         if(rec){
             usuarioActual = { nombre: rec.nombre, rol: rec.rol };
         } else {
             // Fallback final: usar email como nombre (visible claramente como bug)
             usuarioActual = { nombre: firebaseUser.email, rol: "Tecnico" };
+            console.warn("[HF] Usuario no encontrado en usersDB para:", firebaseUser.email);
         }
-        localStorage.setItem("usuario", JSON.stringify(usuarioActual));
+        _localStorageOrig.setItem("usuario", JSON.stringify(usuarioActual));
 
         // Restaurar estado del botón si venía de login manual
         let btn = document.getElementById("btnLogin");
