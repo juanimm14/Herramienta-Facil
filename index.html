@@ -267,10 +267,24 @@ function _activarListenersTiempoReal() {
             // Ignorar si acabamos de escribir esta clave en los últimos 5 segundos
             if (window._fbWriteTs && window._fbWriteTs[clave] && (Date.now() - window._fbWriteTs[clave]) < 5000) return;
             if (snap.exists) {
-                _cache[clave] = snap.data().data;
-                _localStorageOrig.setItem(clave, JSON.stringify(snap.data().data));
+                // ⚠️ GUARDA usersDB: nunca pisar con array vacío o más chico si ya hay datos
+                let nuevoValor = snap.data().data;
+                if(clave === "usersDB"){
+                    let actual = _cache["usersDB"];
+                    if(Array.isArray(actual) && actual.length > 0 && (!Array.isArray(nuevoValor) || nuevoValor.length === 0)){
+                        console.warn("[HF] onSnapshot usersDB bloqueado — snapshot vacío no puede pisar datos reales");
+                        return;
+                    }
+                }
+                _cache[clave] = nuevoValor;
+                _localStorageOrig.setItem(clave, JSON.stringify(nuevoValor));
             } else {
                 // El documento fue eliminado o quedó vacío → limpiar cache y localStorage
+                // ⚠️ EXCEPCIÓN: nunca borrar usersDB si ya tiene datos en cache
+                if(clave === "usersDB" && Array.isArray(_cache["usersDB"]) && _cache["usersDB"].length > 0){
+                    console.warn("[HF] onSnapshot usersDB: doc no existe pero el cache tiene datos — ignorando borrado");
+                    return;
+                }
                 delete _cache[clave];
                 _localStorageOrig.removeItem(clave);
             }
@@ -4946,14 +4960,16 @@ let islasActivas = cargarIslas();
 // ──────────────────────────────────────────────
 function getUsersDB(){
     // 1) Primero intentar desde el cache de Firebase (fuente de verdad)
-    if(_cache["usersDB"] !== undefined && _cache["usersDB"] !== null && _cache["usersDB"].length > 0){
+    if(_cache["usersDB"] !== undefined && _cache["usersDB"] !== null && Array.isArray(_cache["usersDB"]) && _cache["usersDB"].length > 0){
         return _cache["usersDB"];
     }
     // 2) Fallback: localStorage (misma sesión, mismo dispositivo)
-    let raw = localStorage.getItem("usersDB");
+    let raw = _localStorageOrig.getItem("usersDB");
     if(raw){
-        let parsed = JSON.parse(raw);
-        if(Array.isArray(parsed) && parsed.length > 0) return parsed;
+        try {
+            let parsed = JSON.parse(raw);
+            if(Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch(e) {}
     }
     // 3) Firebase aún cargando — devolver defaults SOLO en memoria, NUNCA escribir en Firestore
     //    Esto evita que un dispositivo sin caché pise los usuarios reales.
@@ -4964,14 +4980,29 @@ function getUsersDB(){
 }
 
 function saveUsersDB(db){
-    // ⚠️ GUARDA CRÍTICA: nunca persistir los defaults (nombres cortos sin email)
-    // Si todos los usuarios no tienen email y usan nombres del CONFIG_DEFAULTS, son defaults — no guardar
+    // ⚠️ GUARDA CRÍTICA 1: nunca guardar array vacío o nulo
     if(!db || db.length === 0) return;
+
+    // ⚠️ GUARDA CRÍTICA 2: nunca persistir los defaults (nombres cortos sin email)
     let sonDefaults = db.every(u => !u.email && CONFIG_DEFAULTS.tecnicos.includes(u.nombre));
     if(sonDefaults){
         console.warn("[HF] saveUsersDB bloqueado — detectados defaults, no se escriben en Firestore");
         return;
     }
+
+    // ⚠️ GUARDA CRÍTICA 3: nunca pisar con menos usuarios de los que ya hay en Firestore
+    // Esto evita que un login desde dispositivo sin caché borre usuarios reales
+    let cacheActual = _cache["usersDB"];
+    if(Array.isArray(cacheActual) && cacheActual.length > db.length){
+        // Verificar que los usuarios del cache que no están en db no se pierdan
+        let nombresNuevos = new Set(db.map(u => u.nombre));
+        let faltantes = cacheActual.filter(u => !nombresNuevos.has(u.nombre));
+        if(faltantes.length > 0){
+            console.warn("[HF] saveUsersDB bloqueado — el nuevo array tiene menos usuarios que el cache (" + db.length + " vs " + cacheActual.length + "). Posible corrupción.");
+            return;
+        }
+    }
+
     localStorage.setItem("usersDB", JSON.stringify(db));
 }
 
