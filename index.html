@@ -118,7 +118,7 @@ const _FB_KEYS = new Set([
     "mgiCronogramas","mgiPlanes",
     "ppPreventivos","ppTareas",
     "evaIncidencias","evaDiarios",
-    "fdsData","contadorasData","cartelesData","listaContadoras","chippersData","listaChippers",
+    "fdsData","contadorasData","cartelesData","listaContadoras","chippersData","listaChippers","barajadorasData","listaBarajadoras",
     "validadoresData","indicesAceptacion",
     "auditLog","usersDB",
     "equiposAVP","equiposChipper","equiposPC",
@@ -187,6 +187,8 @@ function _sincronizarVariables() {
         if (_cache["listaContadoras"]  !== undefined) listaContadoras  = _cache["listaContadoras"]  ?? [..._CNT_DEFAULT];
         if (_cache["chippersData"]     !== undefined) chippersData     = _cache["chippersData"]     ?? [];
         if (_cache["listaChippers"]    !== undefined) listaChippers    = _cache["listaChippers"]    ?? [..._CHPR_DEFAULT];
+        if (_cache["barajadorasData"]  !== undefined) barajadorasData  = _cache["barajadorasData"]  ?? [];
+        if (_cache["listaBarajadoras"] !== undefined) listaBarajadoras = _cache["listaBarajadoras"] ?? [..._BRAJ_DEFAULT];
         if (_cache["equiposEVA"]       !== undefined) listaKioscosEva  = _cache["equiposEVA"]       ?? ["EVA1","EVA2","EVA3","EVA4"];
         if (_cache["cartelesData"]     !== undefined) cartelesData     = _cache["cartelesData"]     ?? [];
         if (_cache["auditLog"]         !== undefined) auditLog         = _cache["auditLog"]         ?? [];
@@ -2015,6 +2017,9 @@ setTimeout(function(){
             <button class="menu-btn" id="nav-chippers" onclick="mostrar('chippers')">
                 <span class="icon">🎰</span> Chippers
             </button>
+            <button class="menu-btn" id="nav-barajadoras" onclick="mostrar('barajadoras')">
+                <span class="icon">🃏</span> Barajadoras
+            </button>
 
             <div class="sidebar-section" style="margin-top:4px;">📌 Gestión</div>
             <button class="menu-btn" id="nav-partes-criticas" onclick="mostrar('partes-criticas')">
@@ -2879,6 +2884,30 @@ setTimeout(function(){
                         <span class="badge-count" id="badgeChprTotal">0</span>
                     </div>
                     <div id="listaChippersTodas">
+                        <div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ BARAJADORAS ═══ -->
+            <div id="barajadoras" class="section">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🃏 Barajadoras</div>
+                        <div class="page-subtitle">Correctivos, preventivos y seguimiento de barajadoras</div>
+                    </div>
+                    <div class="action-bar">
+                        <button id="btnEditarBarajadoras" class="btn-secondary" onclick="abrirModalEditarListaBarajadoras()" style="background:var(--bg3);border:1px solid var(--border);color:var(--white);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:none;align-items:center;gap:6px;">✏️ Editar Barajadoras</button>
+                        <button class="btn-primary" onclick="abrirModalBarajadoraNuevaIncidencia()">➕ Nueva Incidencia</button>
+                    </div>
+                </div>
+
+                <div class="card-box">
+                    <div class="card-box-title">
+                        <span>📋 Historial de Incidencias</span>
+                        <span class="badge-count" id="badgeBrajTotal">0</span>
+                    </div>
+                    <div id="listaBarajadorasTodas">
                         <div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>
                     </div>
                 </div>
@@ -4781,6 +4810,197 @@ setTimeout(function(){
     </div>
 </div>
 
+<!-- ═══ MODAL BARAJADORAS — NUEVA INCIDENCIA ═══ -->
+<div id="modalBarajadoraNuevaIncidencia" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🃏 Nueva Incidencia — Barajadoras</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="brajFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="brajTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="brajTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="brajTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="brajEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Barajadoras Intervenidas</label>
+            <div id="brajIncChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada barajadora?</label>
+            <div id="brajIncDetallesPorBrajadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="brajNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save" onclick="guardarBarajadoraIncidencia()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalBarajadoraNuevaIncidencia()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BARAJADORAS — PREVENTIVO ═══ -->
+<div id="modalBarajadoraPreventivo" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🔧 Nuevo Preventivo — Barajadoras</div>
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="brajPrevFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="brajPrevTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="brajPrevTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="brajPrevTipo" class="form-select">
+                <option value="Preventivo">Preventivo</option>
+                <option value="Correctivo">Correctivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="brajPrevEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Barajadoras Intervenidas</label>
+            <div id="brajPrevChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada barajadora?</label>
+            <div id="brajPrevDetallesPorBrajadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado / Observaciones generales</label>
+            <textarea id="brajPrevNota" class="form-textarea" placeholder="Observaciones generales..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarBarajadoraPreventivo()">💾 Guardar</button>
+            <button class="btn-modal-cancel" onclick="cerrarModalBarajadoraPreventivo()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BARAJADORA — EDITAR ═══ -->
+<div id="modalBrajEditar" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">✏️ Editar Incidencia — Barajadoras</div>
+        <input type="hidden" id="brajEditId">
+        <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="brajEditFecha" class="form-input">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="brajEditTipo" class="form-select">
+                <option value="Correctivo">Correctivo</option>
+                <option value="Preventivo">Preventivo</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
+            <input type="text" id="brajEditTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Técnico Casino</label>
+            <select id="brajEditTecnicoCasino" class="form-select">
+                <option value="">— Ninguno —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select id="brajEditEstado" class="form-select">
+                <option value="Realizado">Realizado</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Curso">En Curso</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Barajadoras Intervenidas</label>
+            <div id="brajEditChkContainer" style="display:flex;flex-direction:column;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Qué se hizo en cada barajadora?</label>
+            <div id="brajEditDetallesPorBrajadora" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción / Nota general</label>
+            <textarea id="brajEditNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal-save blue" onclick="guardarEdicionBarajadora()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalBrajEditar').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL BARAJADORA — DETALLE ═══ -->
+<div id="modalBrajDetalle" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-title">🃏 Detalle de Incidencia</div>
+        <div id="brajDetalleContenido"></div>
+        <div class="modal-footer" style="margin-top:14px;">
+            <button class="btn-modal-cancel" onclick="cerrarDetalleBarajadora()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ MODAL EDITAR LISTA DE BARAJADORAS ═══ -->
+<div id="modalEditarListaBarajadoras" class="modal">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="modal-title">✏️ Editar Lista de Barajadoras</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Agregá o quitá barajadoras de la lista. Los cambios aplican a todos los formularios.</p>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Barajadoras actuales</div>
+            <div id="listaEditarBarajadoras" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--accent);border-radius:10px;padding:12px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;">➕ Agregar barajadora</div>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="nuevaBarajadoraInput" class="form-input" placeholder="Nombre / descripción de la barajadora..." style="flex:1;margin-bottom:0;">
+                <button onclick="agregarBarajadoraLista()" style="background:var(--accent);color:var(--bg);border:none;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">Agregar</button>
+            </div>
+        </div>
+        <div class="modal-footer" style="margin-top:18px;">
+            <button class="btn-modal-save blue" onclick="guardarListaBarajadoras()">💾 Guardar cambios</button>
+            <button class="btn-modal-cancel" onclick="document.getElementById('modalEditarListaBarajadoras').classList.remove('open')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ MODAL FUERA DE SERVICIO ═══ -->
 <div id="modalFds" class="modal">
     <div class="modal-box wide">
@@ -5175,7 +5395,7 @@ function iniciarApp(){
 
     // Botones solo para Admin/SuperAdmin: Editar Kioscos EVA, Editar Contadoras, Enviar a Tareas, Regenerar
     const _adminDisplay = esAdminOSuperAdmin() ? "flex" : "none";
-    ["btnEditarKioscosEva","btnEditarContadoras","btnEditarChippers","btnPpEnviarTareas","btnPpRegenerar"].forEach(id => {
+    ["btnEditarKioscosEva","btnEditarContadoras","btnEditarChippers","btnEditarBarajadoras","btnPpEnviarTareas","btnPpRegenerar"].forEach(id => {
         let el = document.getElementById(id);
         if(el) el.style.display = _adminDisplay;
     });
@@ -5268,6 +5488,7 @@ const SIDEBAR_ITEMS_CONFIG = [
     { id: "nav-kioscos-eva",      label: "🎫 Kioscos EVA",           group: "Otros Equipos" },
     { id: "nav-contadoras",       label: "🔢 Contadoras",            group: "Otros Equipos" },
     { id: "nav-chippers",          label: "🎰 Chippers",              group: "Otros Equipos" },
+    { id: "nav-barajadoras",       label: "🃏 Barajadoras",            group: "Otros Equipos" },
     { id: "nav-plan-preventivo",  label: "📅 Plan Preventivo",       group: "Gestión" },
     { id: "nav-partes-criticas",  label: "🚨 Partes Críticas",        group: "Gestión" },
 ];
@@ -5475,6 +5696,7 @@ async function importHandleFile(file) {
         "EVA_EstadosSensor":   "evaDiarios",
         "Contadoras":          "contadoras",
         "Chippers":            "chippers",
+        "Barajadoras":         "barajadoras",
         "Validadores":         "validadores",
         "Control_PPT":         "controlPPT",
         "Partes_Criticas":     "partesCriticas",
@@ -5539,6 +5761,7 @@ async function importHandleFile(file) {
         evaDiarios:       "📡 EVA — Estados Sensor",
         contadoras:       "🔢 Contadoras",
         chippers:         "🎰 Chippers",
+        barajadoras:      "🃏 Barajadoras",
         validadores:      "💳 Validadores",
         controlPPT:       "📊 Control PPT",
         partesCriticas:   "🚨 Partes Críticas",
@@ -5620,6 +5843,7 @@ async function importEjecutar() {
         evaDiarios:       "📡 EVA Estados Sensor",
         contadoras:       "🔢 Contadoras",
         chippers:         "🎰 Chippers",
+        barajadoras:      "🃏 Barajadoras",
         validadores:      "💳 Validadores",
         controlPPT:       "📊 Control PPT",
         partesCriticas:   "🚨 Partes Críticas",
@@ -5885,6 +6109,34 @@ async function importProcesarHoja(clave, rows, modo) {
         localStorage.setItem("chippersData", JSON.stringify(chippersData));
         _fbSet("chippersData", chippersData);
 
+    } else if (clave === "barajadoras") {
+        let nuevos = [];
+        rows.forEach(r => {
+            if (!r.fecha || !r.tipo || !r.equipo) { omitidos++; return; }
+            nuevos.push({
+                id: ahora + importados,
+                tipo: r.tipo || "Correctivo",
+                fecha: _normFecha(r.fecha),
+                equipo: String(r.equipo),
+                tecnico: r.tecnicoCasino || r.tecnicoPQ || "—",
+                tecnicoCasino: r.tecnicoCasino || "",
+                tecnicoPQ: r.tecnicoPQ || "",
+                detallesPorBrajadora: {},
+                estado: r.estado || "Realizado",
+                nota: r.nota || "",
+                comentarios: []
+            });
+            importados++;
+        });
+        if (modo === "reemplazar") barajadorasData = [];
+        let keySetBRAJ = new Set(barajadorasData.map(e=>`${e.fecha}|${e.equipo}|${e.tipo}`));
+        let sinDupBRAJ = nuevos.filter(n => !keySetBRAJ.has(`${n.fecha}|${n.equipo}|${n.tipo}`));
+        omitidos += (nuevos.length - sinDupBRAJ.length);
+        importados -= (nuevos.length - sinDupBRAJ.length);
+        barajadorasData.unshift(...sinDupBRAJ);
+        localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+        _fbSet("barajadorasData", barajadorasData);
+
     } else if (clave === "validadores") {
         // Agrupar por periodo
         let porPeriodo = {};
@@ -6137,6 +6389,7 @@ function mostrar(sec){
     if(sec === 'estados-eva') renderEstadosEva();
     if(sec === 'contadoras') renderContadoras();
     if(sec === 'chippers') renderChippers();
+    if(sec === 'barajadoras') renderBarajadoras();
     if(sec === 'fuera-servicio') renderFds();
     if(sec === 'validadores') renderValidadores();
     if(sec === 'control-ppt') initPpt();
@@ -10426,6 +10679,381 @@ function guardarIslasDirecto(){
     renderDashboard();
     generarIslas();
     toast.success("Guardado",`Islas guardadas — ${islasActivas.length} islas activas`);
+}
+
+// ──────────────────────────────────────────────
+//  BARAJADORAS
+// ──────────────────────────────────────────────
+let barajadorasData = JSON.parse(localStorage.getItem("barajadorasData")) || [];
+
+// ─── LISTA DINÁMICA DE BARAJADORAS ────────────────
+const _BRAJ_DEFAULT = [
+    "Barajadora 1",
+    "Barajadora 2",
+    "Barajadora 3",
+    "Barajadora 4",
+    "Barajadora 5"
+];
+let listaBarajadoras = (_cache["listaBarajadoras"]) ? [..._cache["listaBarajadoras"]] : [..._BRAJ_DEFAULT];
+
+// Renderiza los checkboxes dinámicamente en un contenedor
+function _brajRenderChks(containerId, chkClass, onChangeCallback, preselected=[]) {
+    let cont = document.getElementById(containerId);
+    if(!cont) return;
+    if(!listaBarajadoras.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Sin barajadoras configuradas. Usá "Editar Barajadoras" para agregar.</span>';
+        return;
+    }
+    cont.innerHTML = listaBarajadoras.map((nombre, i) => `
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--white);">
+            <input type="checkbox" id="${chkClass}_${i}" value="${nombre.replace(/"/g,'&quot;')}" class="${chkClass}"
+                   style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;"
+                   ${preselected.includes(nombre) ? 'checked' : ''}>
+            <span>${nombre}</span>
+        </label>
+    `).join('<div style="height:1px;background:var(--border);margin:2px 0;"></div>');
+    document.querySelectorAll('.'+chkClass).forEach(chk => {
+        chk.onchange = onChangeCallback;
+    });
+}
+
+// ─── MODAL EDITAR LISTA DE BARAJADORAS ────────────
+function abrirModalEditarListaBarajadoras(){
+    _renderListaEditarBarajadoras();
+    document.getElementById("nuevaBarajadoraInput").value = "";
+    document.getElementById("modalEditarListaBarajadoras").classList.add("open");
+}
+
+function _renderListaEditarBarajadoras(){
+    let cont = document.getElementById("listaEditarBarajadoras");
+    if(!listaBarajadoras.length){
+        cont.innerHTML = '<span style="font-size:13px;color:var(--muted);">Lista vacía</span>';
+        return;
+    }
+    cont.innerHTML = listaBarajadoras.map((nombre, i) => `
+        <div id="_braj_row_${i}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;">
+            <span id="_braj_label_${i}" style="flex:1;font-size:13px;color:var(--white);">${nombre}</span>
+            <input id="_braj_input_${i}" type="text" value="${nombre.replace(/"/g,'&quot;')}" style="display:none;flex:1;background:var(--bg3);border:1px solid var(--accent);border-radius:6px;padding:5px 8px;font-size:13px;color:var(--white);outline:none;">
+            <button id="_braj_btn_edit_${i}" onclick="_editarBarajadoraLista(${i})" style="background:rgba(0,200,150,.12);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✏️</button>
+            <button id="_braj_btn_save_${i}" onclick="_guardarNombreBarajadora(${i})" style="display:none;background:rgba(0,200,150,.2);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✔</button>
+            <button onclick="_eliminarBarajadoraLista(${i})" style="background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕</button>
+        </div>
+    `).join('');
+}
+
+function _editarBarajadoraLista(idx){
+    document.getElementById(`_braj_label_${idx}`).style.display = 'none';
+    document.getElementById(`_braj_input_${idx}`).style.display = 'block';
+    document.getElementById(`_braj_btn_edit_${idx}`).style.display = 'none';
+    document.getElementById(`_braj_btn_save_${idx}`).style.display = 'block';
+    document.getElementById(`_braj_input_${idx}`).focus();
+}
+
+function _guardarNombreBarajadora(idx){
+    let nuevoNombre = document.getElementById(`_braj_input_${idx}`).value.trim();
+    if(!nuevoNombre){ toast.warning("El nombre no puede estar vacío",""); return; }
+    if(listaBarajadoras.some((n,i) => n === nuevoNombre && i !== idx)){ toast.warning("Ese nombre ya existe en la lista",""); return; }
+    listaBarajadoras[idx] = nuevoNombre;
+    _renderListaEditarBarajadoras();
+}
+
+function _eliminarBarajadoraLista(idx){
+    listaBarajadoras.splice(idx, 1);
+    _renderListaEditarBarajadoras();
+}
+
+function agregarBarajadoraLista(){
+    let input = document.getElementById("nuevaBarajadoraInput");
+    let nombre = input.value.trim();
+    if(!nombre){ toast.warning("Ingresá un nombre para la barajadora",""); return; }
+    if(listaBarajadoras.includes(nombre)){ toast.warning("Esa barajadora ya existe en la lista",""); return; }
+    listaBarajadoras.push(nombre);
+    input.value = "";
+    _renderListaEditarBarajadoras();
+}
+
+function guardarListaBarajadoras(){
+    _fbSet("listaBarajadoras", listaBarajadoras);
+    _localStorageOrig.setItem("listaBarajadoras", JSON.stringify(listaBarajadoras));
+    document.getElementById("modalEditarListaBarajadoras").classList.remove("open");
+    toast.success("Lista de barajadoras actualizada ✅","");
+}
+
+// ─── helpers para checkboxes + detalles ─────────
+function _brajActualizarDetalles(chkClass, contId){
+    let cont = document.getElementById(contId);
+    if(!cont) return;
+    let checks = document.querySelectorAll("."+chkClass);
+    let html = "";
+    checks.forEach(chk => {
+        if(chk.checked){
+            let label = chk.closest("label")?.querySelector("span")?.innerText || chk.value;
+            let safeId = contId + "_det_" + chk.id;
+            let existing = document.getElementById(safeId);
+            let prev = existing ? existing.value : "";
+            html += `<div style="background:var(--bg3);border:1px solid var(--accent);border-radius:9px;padding:10px 12px;">
+                <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">${label}</div>
+                <textarea id="${safeId}" class="form-textarea" style="min-height:60px;" placeholder="¿Qué se hizo en ${label.split('·')[0].trim()}?">${prev}</textarea>
+            </div>`;
+        }
+    });
+    cont.innerHTML = html || "";
+}
+
+function _brajRecogerDetalles(chkClass, contId){
+    let detalles = {};
+    document.querySelectorAll("."+chkClass).forEach(chk => {
+        if(chk.checked){
+            let ta = document.getElementById(contId + "_det_" + chk.id);
+            detalles[chk.value] = ta ? ta.value.trim() : "";
+        }
+    });
+    return detalles;
+}
+
+function _brajRecogerSeleccionadas(chkClass){
+    let sel = [];
+    document.querySelectorAll("."+chkClass).forEach(chk => { if(chk.checked) sel.push(chk.value); });
+    return sel;
+}
+
+function _brajPoblarCasino(selectId){
+    let sel = document.getElementById(selectId);
+    if(!sel) return;
+    let tecnicos = getTecnicos();
+    sel.innerHTML = '<option value="">— Ninguno —</option>' + tecnicos.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+// ─── NUEVA INCIDENCIA ────────────────────────────
+function abrirModalBarajadoraNuevaIncidencia(){
+    if(esVisita()) return;
+    document.getElementById("brajFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("brajNota").value = "";
+    document.getElementById("brajTipo").value = "Correctivo";
+    document.getElementById("brajEstado").value = "Realizado";
+    document.getElementById("brajTecnicoPQ").value = "";
+    _brajPoblarCasino("brajTecnicoCasino");
+    let sel = document.getElementById("brajTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    _brajRenderChks("brajIncChkContainer","brajIncChk",()=>_brajActualizarDetalles("brajIncChk","brajIncDetallesPorBrajadora"));
+    document.getElementById("brajIncDetallesPorBrajadora").innerHTML = "";
+    document.getElementById("modalBarajadoraNuevaIncidencia").classList.add("open");
+}
+function cerrarModalBarajadoraNuevaIncidencia(){
+    document.getElementById("modalBarajadoraNuevaIncidencia").classList.remove("open");
+}
+function guardarBarajadoraIncidencia(){
+    if(esVisita()) return;
+    let seleccionadas = _brajRecogerSeleccionadas("brajIncChk");
+    let detalles = _brajRecogerDetalles("brajIncChk","brajIncDetallesPorBrajadora");
+    let tecPQ = document.getElementById("brajTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("brajTecnicoCasino").value;
+    let equipo = seleccionadas.length > 0 ? seleccionadas.join(", ") : "(sin especificar)";
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("brajTipo").value,
+        fecha: document.getElementById("brajFecha").value,
+        equipo,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorBrajadora: detalles,
+        estado: document.getElementById("brajEstado").value,
+        nota: document.getElementById("brajNota").value.trim(),
+        comentarios: []
+    };
+    barajadorasData.unshift(obj);
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    cerrarModalBarajadoraNuevaIncidencia();
+    renderBarajadoras();
+    toast.success("Incidencia guardada ✅","");
+}
+
+// ─── PREVENTIVO ──────────────────────────────────
+function _brajPrevActualizarDetalles(){
+    _brajActualizarDetalles("brajPrevChk","brajPrevDetallesPorBrajadora");
+}
+
+function abrirModalBarajadoraPreventivo(){
+    if(esVisita()) return;
+    document.getElementById("brajPrevFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("brajPrevNota").value = "";
+    document.getElementById("brajPrevTecnicoPQ").value = "";
+    document.getElementById("brajPrevTipo").value = "Preventivo";
+    document.getElementById("brajPrevEstado").value = "Realizado";
+    _brajPoblarCasino("brajPrevTecnicoCasino");
+    let sel = document.getElementById("brajPrevTecnicoCasino");
+    if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
+    _brajRenderChks("brajPrevChkContainer","brajPrevChk",_brajPrevActualizarDetalles);
+    document.getElementById("brajPrevDetallesPorBrajadora").innerHTML = "";
+    document.getElementById("modalBarajadoraPreventivo").classList.add("open");
+}
+function cerrarModalBarajadoraPreventivo(){
+    document.getElementById("modalBarajadoraPreventivo").classList.remove("open");
+}
+function guardarBarajadoraPreventivo(){
+    if(esVisita()) return;
+    let seleccionadas = _brajRecogerSeleccionadas("brajPrevChk");
+    let detalles = _brajRecogerDetalles("brajPrevChk","brajPrevDetallesPorBrajadora");
+    if(seleccionadas.length === 0){ toast.warning("Seleccioná al menos una barajadora",""); return; }
+    let tecPQ = document.getElementById("brajPrevTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("brajPrevTecnicoCasino").value;
+    let obj = {
+        id: Date.now(),
+        tipo: document.getElementById("brajPrevTipo").value,
+        fecha: document.getElementById("brajPrevFecha").value,
+        equipo: seleccionadas.join(", "),
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorBrajadora: detalles,
+        estado: document.getElementById("brajPrevEstado").value,
+        nota: document.getElementById("brajPrevNota").value.trim(),
+        comentarios: []
+    };
+    barajadorasData.unshift(obj);
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    cerrarModalBarajadoraPreventivo();
+    renderBarajadoras();
+    toast.success("Preventivo guardado ✅", `${seleccionadas.length} barajadora(s) registradas`);
+}
+
+// ─── EDICIÓN (solo Admin) ─────────────────────────
+function abrirEditarBarajadora(id){
+    let e = barajadorasData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    document.getElementById("brajEditId").value = e.id;
+    document.getElementById("brajEditFecha").value = e.fecha || "";
+    document.getElementById("brajEditTipo").value = e.tipo || "Correctivo";
+    document.getElementById("brajEditTecnicoPQ").value = e.tecnicoPQ || e.tecnico || "";
+    document.getElementById("brajEditEstado").value = e.estado || "Realizado";
+    document.getElementById("brajEditNota").value = e.nota || "";
+    _brajPoblarCasino("brajEditTecnicoCasino");
+    let selC = document.getElementById("brajEditTecnicoCasino");
+    if(e.tecnicoCasino){ let op = [...selC.options].find(o=>o.value===e.tecnicoCasino); if(op) selC.value=e.tecnicoCasino; }
+    let equipoList = e.equipo ? e.equipo.split(", ") : [];
+    _brajRenderChks("brajEditChkContainer","brajEditChk",()=>_brajActualizarDetalles("brajEditChk","brajEditDetallesPorBrajadora"), equipoList);
+    document.getElementById("brajEditDetallesPorBrajadora").innerHTML = "";
+    _brajActualizarDetalles("brajEditChk","brajEditDetallesPorBrajadora");
+    if(e.detallesPorBrajadora){
+        setTimeout(()=>{
+            document.querySelectorAll(".brajEditChk").forEach(chk => {
+                if(chk.checked && e.detallesPorBrajadora[chk.value]){
+                    let ta = document.getElementById("brajEditDetallesPorBrajadora_det_"+chk.id);
+                    if(ta) ta.value = e.detallesPorBrajadora[chk.value];
+                }
+            });
+        }, 30);
+    }
+    document.getElementById("modalBrajDetalle").classList.remove("open");
+    document.getElementById("modalBrajEditar").classList.add("open");
+}
+
+function guardarEdicionBarajadora(){
+    let id = document.getElementById("brajEditId").value;
+    let idx = barajadorasData.findIndex(c => String(c.id) === String(id));
+    if(idx === -1) return;
+    let seleccionadas = _brajRecogerSeleccionadas("brajEditChk");
+    let detalles = _brajRecogerDetalles("brajEditChk","brajEditDetallesPorBrajadora");
+    let tecPQ = document.getElementById("brajEditTecnicoPQ").value.trim();
+    let tecCasino = document.getElementById("brajEditTecnicoCasino").value;
+    barajadorasData[idx] = {
+        ...barajadorasData[idx],
+        tipo: document.getElementById("brajEditTipo").value,
+        fecha: document.getElementById("brajEditFecha").value,
+        equipo: seleccionadas.length > 0 ? seleccionadas.join(", ") : barajadorasData[idx].equipo,
+        tecnico: tecPQ || tecCasino || "—",
+        tecnicoPQ: tecPQ,
+        tecnicoCasino: tecCasino,
+        detallesPorBrajadora: detalles,
+        estado: document.getElementById("brajEditEstado").value,
+        nota: document.getElementById("brajEditNota").value.trim(),
+    };
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    document.getElementById("modalBrajEditar").classList.remove("open");
+    renderBarajadoras();
+    toast.success("Incidencia actualizada ✅","");
+}
+
+// ─── DETALLE ──────────────────────────────────────
+function abrirDetalleBarajadora(id){
+    let e = barajadorasData.find(c => String(c.id) === String(id));
+    if(!e) return;
+    let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+    let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+    let tecInfo = "";
+    if(e.tecnicoPQ) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🔑 Técnico PQ: <strong style="color:var(--white);">${e.tecnicoPQ}</strong></div>`;
+    if(e.tecnicoCasino) tecInfo += `<div style="font-size:12px;color:var(--muted);margin-bottom:2px;">🏠 Técnico Casino: <strong style="color:var(--white);">${e.tecnicoCasino}</strong></div>`;
+    if(!e.tecnicoPQ && !e.tecnicoCasino && e.tecnico) tecInfo += `<div style="font-size:12px;color:var(--muted);">Técnico: <strong style="color:var(--white);">${e.tecnico}</strong></div>`;
+    let detallesHtml = "";
+    if(e.detallesPorBrajadora && Object.keys(e.detallesPorBrajadora).some(k=>e.detallesPorBrajadora[k])){
+        detallesHtml = `<div style="margin-top:10px;"><div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;">Detalle por barajadora:</div>`;
+        for(let [k,v] of Object.entries(e.detallesPorBrajadora)){
+            if(v) detallesHtml += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:5px;">
+                <div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:2px;">${k}</div>
+                <div style="font-size:12px;color:var(--white);">${v}</div>
+            </div>`;
+        }
+        detallesHtml += `</div>`;
+    }
+    let adminBtns = usuarioActual?.rol==="Admin" ? `
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="abrirEditarBarajadora('${e.id}')" style="flex:1;background:var(--accent2);border:none;color:var(--white);border-radius:8px;padding:8px 0;cursor:pointer;font-size:13px;font-weight:600;">✏️ Editar</button>
+            <button onclick="if(confirm('¿Eliminar?')){eliminarBarajadoraItem('${e.id}');cerrarDetalleBarajadora();}" style="background:none;border:1px solid var(--muted);color:var(--muted);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;">🗑️</button>
+        </div>` : "";
+    document.getElementById("brajDetalleContenido").innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <span style="font-size:14px;">${tipoIcon} <strong>${e.tipo}</strong></span>
+            <span class="pill ${estadoCls}">${e.estado}</span>
+            <span style="font-size:12px;color:var(--muted);">📅 ${e.fecha}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;">${e.equipo}</div>
+        ${tecInfo}
+        ${e.nota ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:8px 10px;">${e.nota}</div>` : ""}
+        ${detallesHtml}
+        ${adminBtns}
+    `;
+    document.getElementById("modalBrajDetalle").classList.add("open");
+}
+function cerrarDetalleBarajadora(){
+    document.getElementById("modalBrajDetalle").classList.remove("open");
+}
+
+// ─── RENDER ───────────────────────────────────────
+function renderBarajadoras(){
+    let todos = [...barajadorasData].sort((a,b) => (b.fecha || "").localeCompare(a.fecha || "") || b.id - a.id);
+    let badge = document.getElementById("badgeBrajTotal");
+    if(badge) badge.textContent = todos.length;
+
+    function mkRow(e){
+        let estadoCls = e.estado === "Realizado" || e.estado === "Resuelto" ? "resuelto" : e.estado === "Pendiente" ? "pendiente" : "en-curso";
+        let tipoColor = e.tipo === "Preventivo" ? "var(--accent2)" : "#f87171";
+        let tipoIcon = e.tipo === "Preventivo" ? "🔧" : "🔴";
+        return `<div onclick="abrirDetalleBarajadora('${e.id}')" style="padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${tipoColor};border-radius:9px;margin-bottom:7px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg2)'">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:700;color:${tipoColor};">${tipoIcon} ${e.tipo}</span>
+                <span class="pill ${estadoCls}" style="font-size:10px;">${e.estado}</span>
+                <span style="font-size:11px;color:var(--muted);margin-left:auto;">📅 ${e.fecha}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-top:4px;">${e.equipo}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${e.tecnicoPQ ? '🔑 '+e.tecnicoPQ : ''}${e.tecnicoPQ && e.tecnicoCasino ? ' · ' : ''}${e.tecnicoCasino ? '🏠 '+e.tecnicoCasino : ''}</div>
+            ${e.nota ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${e.nota}</div>` : ""}
+        </div>`;
+    }
+
+    let cont = document.getElementById("listaBarajadorasTodas");
+    if(cont) cont.innerHTML = todos.length ? todos.map(mkRow).join("") : '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin incidencias</p></div>';
+}
+
+function eliminarBarajadoraItem(id){
+    if(esVisita()) return;
+    barajadorasData = barajadorasData.filter(c => String(c.id) !== String(id));
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    renderBarajadoras();
 }
 
 // ──────────────────────────────────────────────
