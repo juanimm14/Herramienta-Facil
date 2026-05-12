@@ -2149,6 +2149,7 @@ setTimeout(function(){
 
                 <!-- VISTA ADMIN: grid normal con todos los cuadros -->
                 <div id="dashGridAdmin">
+                    <div id="dashBtnLimpiezaRodillos" style="margin-bottom:16px;"></div>
                     <div class="grid2">
                         <div class="card-box">
                             <div class="card-box-title">
@@ -2186,6 +2187,7 @@ setTimeout(function(){
 
                 <!-- VISTA TÉCNICO: solo Tareas + Actividad Reciente -->
                 <div id="dashGridTecnico" style="display:none;">
+                    <div id="dashBtnLimpiezaRodillosTec" style="margin-bottom:16px;"></div>
                     <!-- Mis Tareas — full width, destacadas -->
                     <div class="card-box" style="margin-bottom:16px;border-color:rgba(0,212,168,.35);background:linear-gradient(135deg,rgba(0,212,168,.05) 0%,var(--bg2) 100%);">
                         <div class="card-box-title" style="font-size:15px;">
@@ -6681,11 +6683,77 @@ function renderDashboard(){
         if(document.getElementById("statsRowUser")) document.getElementById("statsRowUser").style.display = "none";
         if(dashGridAdmin) dashGridAdmin.style.display = "none";
         if(dashGridTec) dashGridTec.style.display = "block";
+
+        // ── BOTÓN LIMPIEZA DIARIA RODILLOS (técnico) ──────────────
+        let btnBoxT = document.getElementById("dashBtnLimpiezaRodillosTec");
+        if(btnBoxT){
+            let hoyISO = new Date().toISOString().split("T")[0];
+            let yaRegistrado = barajadorasData.some(b =>
+                b.tipo === "Preventivo" &&
+                b.fecha === hoyISO &&
+                (b.nota || "").toLowerCase().includes("limpieza diaria rodillos")
+            );
+            if(yaRegistrado){
+                btnBoxT.innerHTML = `
+                <div class="card-box" style="border-color:rgba(0,212,168,.4);background:linear-gradient(135deg,rgba(0,212,168,.07) 0%,var(--bg2) 100%);padding:14px 18px;display:flex;align-items:center;gap:14px;">
+                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(0,212,168,.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">✅</div>
+                    <div>
+                        <div style="font-weight:700;font-size:14px;color:var(--accent);">Limpieza diaria de rodillos registrada</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Ya fue completada hoy — ¡gracias!</div>
+                    </div>
+                </div>`;
+            } else {
+                btnBoxT.innerHTML = `
+                <div class="card-box" style="border-color:rgba(255,201,71,.4);background:linear-gradient(135deg,rgba(255,201,71,.07) 0%,var(--bg2) 100%);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;" onclick="confirmarLimpiezaRodillos()"
+                    onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(255,201,71,.15)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,201,71,.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🃏</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:14px;color:var(--yellow);">Limpieza diaria de rodillos Barajadoras</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Pendiente hoy — tocá para registrar</div>
+                    </div>
+                    <button class="btn-primary" style="background:var(--yellow);color:var(--bg);border:none;font-weight:700;flex-shrink:0;" onclick="event.stopPropagation();confirmarLimpiezaRodillos()">✔ Registrar</button>
+                </div>`;
+            }
+        }
     } else {
         if(dashBoxPom) dashBoxPom.style.display = "block";
         if(dashFdsBox2) dashFdsBox2.style.display = "block";
         if(dashGridAdmin) dashGridAdmin.style.display = "block";
         if(dashGridTec) dashGridTec.style.display = "none";
+
+        // ── BOTÓN LIMPIEZA DIARIA RODILLOS (admin) ──────────────
+        let btnBoxA = document.getElementById("dashBtnLimpiezaRodillos");
+        if(btnBoxA){
+            let hoyISO = new Date().toISOString().split("T")[0];
+            let yaRegistrado = barajadorasData.some(b =>
+                b.tipo === "Preventivo" &&
+                b.fecha === hoyISO &&
+                (b.nota || "").toLowerCase().includes("limpieza diaria rodillos")
+            );
+            if(yaRegistrado){
+                btnBoxA.innerHTML = `
+                <div class="card-box" style="border-color:rgba(0,212,168,.4);background:linear-gradient(135deg,rgba(0,212,168,.07) 0%,var(--bg2) 100%);padding:14px 18px;display:flex;align-items:center;gap:14px;">
+                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(0,212,168,.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">✅</div>
+                    <div>
+                        <div style="font-weight:700;font-size:14px;color:var(--accent);">Limpieza diaria de rodillos registrada</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Ya fue completada hoy — ¡gracias!</div>
+                    </div>
+                </div>`;
+            } else {
+                btnBoxA.innerHTML = `
+                <div class="card-box" style="border-color:rgba(255,201,71,.4);background:linear-gradient(135deg,rgba(255,201,71,.07) 0%,var(--bg2) 100%);padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;" onclick="confirmarLimpiezaRodillos()"
+                    onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(255,201,71,.15)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,201,71,.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🃏</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:14px;color:var(--yellow);">Limpieza diaria de rodillos Barajadoras</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Pendiente hoy — tocá para registrar</div>
+                    </div>
+                    <button class="btn-primary" style="background:var(--yellow);color:var(--bg);border:none;font-weight:700;flex-shrink:0;" onclick="event.stopPropagation();confirmarLimpiezaRodillos()">✔ Registrar</button>
+                </div>`;
+            }
+        }
     }
 
 
@@ -10981,6 +11049,58 @@ function abrirModalBarajadoraPreventivo(){
 function cerrarModalBarajadoraPreventivo(){
     document.getElementById("modalBarajadoraPreventivo").classList.remove("open");
 }
+
+// ── LIMPIEZA DIARIA DE RODILLOS — botón rápido del dashboard ──
+function confirmarLimpiezaRodillos(){
+    if(esVisita()) return;
+    let overlay = document.createElement("div");
+    overlay.id = "modalLimpiezaRodillos";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    overlay.innerHTML = `
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 28px 24px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+            <div style="font-size:32px;text-align:center;margin-bottom:12px;">🃏</div>
+            <div style="font-size:17px;font-weight:700;color:var(--white);text-align:center;margin-bottom:8px;">Limpieza diaria de rodillos Barajadoras</div>
+            <div style="font-size:14px;color:var(--muted);text-align:center;margin-bottom:24px;line-height:1.5;">¿Realizaste hoy la limpieza de rodillos en las barajadoras?</div>
+            <div style="display:flex;gap:10px;">
+                <button onclick="document.getElementById('modalLimpiezaRodillos').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;">No</button>
+                <button onclick="_registrarLimpiezaRodillos()" style="flex:2;padding:11px;border-radius:9px;border:none;background:var(--yellow);color:var(--bg);font-size:14px;font-weight:700;cursor:pointer;">Sí, registrar ✔</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener("click", e => { if(e.target === overlay) overlay.remove(); });
+}
+
+function _registrarLimpiezaRodillos(){
+    let overlay = document.getElementById("modalLimpiezaRodillos");
+    if(overlay) overlay.remove();
+    let hoyISO = new Date().toISOString().split("T")[0];
+    let yaExiste = barajadorasData.some(b =>
+        b.tipo === "Preventivo" &&
+        b.fecha === hoyISO &&
+        (b.nota || "").toLowerCase().includes("limpieza diaria rodillos")
+    );
+    if(yaExiste){ toast.warning("Ya registrado", "La limpieza de rodillos ya fue registrada hoy."); return; }
+    let obj = {
+        id: Date.now(),
+        tipo: "Preventivo",
+        fecha: hoyISO,
+        equipo: "Todas las barajadoras",
+        tecnico: usuarioActual?.nombre || "—",
+        tecnicoPQ: "",
+        tecnicoCasino: usuarioActual?.nombre || "—",
+        detallesPorBrajadora: {},
+        estado: "Realizado",
+        nota: "Limpieza diaria rodillos",
+        comentarios: []
+    };
+    barajadorasData.unshift(obj);
+    localStorage.setItem("barajadorasData", JSON.stringify(barajadorasData));
+    _fbSet("barajadorasData", barajadorasData);
+    renderDashboard();
+    try { renderBarajadoras?.(); } catch(e){}
+    toast.success("¡Limpieza registrada! ✅", `Preventivo cargado por ${obj.tecnico} — ${hoyISO}`);
+}
+
 function guardarBarajadoraPreventivo(){
     if(esVisita()) return;
     let seleccionadas = _brajRecogerSeleccionadas("brajPrevChk");
