@@ -11266,6 +11266,13 @@ function eliminarBarajadoraItem(id){
 }
 
 // ──────────────────────────────────────────────
+//  HELPER: _save — wrapper de localStorage.setItem
+// ──────────────────────────────────────────────
+function _save(clave, valor) {
+    localStorage.setItem(clave, JSON.stringify(valor));
+}
+
+// ──────────────────────────────────────────────
 //  CARTELES DE RECORDATORIO
 // ──────────────────────────────────────────────
 let cartelesData = JSON.parse(localStorage.getItem("cartelesData")) || [];
