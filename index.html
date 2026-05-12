@@ -4799,10 +4799,6 @@ setTimeout(function(){
             </select>
         </div>
         <div class="form-group">
-            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
-            <input type="text" id="chprTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
-        </div>
-        <div class="form-group">
             <label class="form-label">Técnico Casino</label>
             <select id="chprTecnicoCasino" class="form-select">
                 <option value="">— Ninguno —</option>
@@ -4823,10 +4819,6 @@ setTimeout(function(){
         <div class="form-group">
             <label class="form-label">¿Qué se hizo en cada chipper?</label>
             <div id="chprIncDetallesPorChipper" style="display:flex;flex-direction:column;gap:8px;"></div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Descripción / Nota general</label>
-            <textarea id="chprNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
         </div>
         <div class="modal-footer">
             <button class="btn-modal-save" onclick="guardarChipperIncidencia()">💾 Guardar</button>
@@ -4903,10 +4895,6 @@ setTimeout(function(){
             </select>
         </div>
         <div class="form-group">
-            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
-            <input type="text" id="brajTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
-        </div>
-        <div class="form-group">
             <label class="form-label">Técnico Casino</label>
             <select id="brajTecnicoCasino" class="form-select">
                 <option value="">— Ninguno —</option>
@@ -4927,10 +4915,6 @@ setTimeout(function(){
         <div class="form-group">
             <label class="form-label">¿Qué se hizo en cada barajadora?</label>
             <div id="brajIncDetallesPorBrajadora" style="display:flex;flex-direction:column;gap:8px;"></div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Descripción / Nota general</label>
-            <textarea id="brajNota" class="form-textarea" placeholder="Describí el problema o la acción..."></textarea>
         </div>
         <div class="modal-footer">
             <button class="btn-modal-save" onclick="guardarBarajadoraIncidencia()">💾 Guardar</button>
@@ -10006,11 +9990,9 @@ function _bngPoblarCasino(selectId){
 function abrirModalBingueraNuevaIncidencia(){
     if(esVisita()) return;
     document.getElementById("bngFecha").value = new Date().toISOString().split("T")[0];
-    document.getElementById("bngNota").value = "";
     document.getElementById("bngDetalle").value = "";
     document.getElementById("bngTipo").value = "Correctivo";
     document.getElementById("bngEstado").value = "Realizado";
-    document.getElementById("bngTecnicoPQ").value = "";
     _bngPoblarCasino("bngTecnicoCasino");
     let sel = document.getElementById("bngTecnicoCasino");
     if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
@@ -10021,19 +10003,19 @@ function cerrarModalBingueraNuevaIncidencia(){
 }
 function guardarBingueraIncidencia(){
     if(esVisita()) return;
-    let tecPQ = document.getElementById("bngTecnicoPQ").value.trim();
+    let tecPQ = "";
     let tecCasino = document.getElementById("bngTecnicoCasino").value;
     let obj = {
         id: Date.now(),
         tipo: document.getElementById("bngTipo").value,
         fecha: document.getElementById("bngFecha").value,
         equipo: "Binguera",
-        tecnico: tecPQ || tecCasino || "—",
+        tecnico: tecCasino || "—",
         tecnicoPQ: tecPQ,
         tecnicoCasino: tecCasino,
         detalle: document.getElementById("bngDetalle").value.trim(),
         estado: document.getElementById("bngEstado").value,
-        nota: document.getElementById("bngNota").value.trim(),
+        nota: "",
         comentarios: []
     };
     bingueraData.unshift(obj);
@@ -10292,10 +10274,8 @@ function _chprPoblarCasino(selectId){
 function abrirModalChipperNuevaIncidencia(){
     if(esVisita()) return;
     document.getElementById("chprFecha").value = new Date().toISOString().split("T")[0];
-    document.getElementById("chprNota").value = "";
     document.getElementById("chprTipo").value = "Correctivo";
     document.getElementById("chprEstado").value = "Realizado";
-    document.getElementById("chprTecnicoPQ").value = "";
     _chprPoblarCasino("chprTecnicoCasino");
     let sel = document.getElementById("chprTecnicoCasino");
     if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
@@ -10310,7 +10290,7 @@ function guardarChipperIncidencia(){
     if(esVisita()) return;
     let seleccionadas = _chprRecogerSeleccionadas("chprIncChk");
     let detalles = _chprRecogerDetalles("chprIncChk","chprIncDetallesPorChipper");
-    let tecPQ = document.getElementById("chprTecnicoPQ").value.trim();
+    let tecPQ = "";
     let tecCasino = document.getElementById("chprTecnicoCasino").value;
     let equipo = seleccionadas.length > 0 ? seleccionadas.join(", ") : "(sin especificar)";
     let obj = {
@@ -10318,12 +10298,12 @@ function guardarChipperIncidencia(){
         tipo: document.getElementById("chprTipo").value,
         fecha: document.getElementById("chprFecha").value,
         equipo,
-        tecnico: tecPQ || tecCasino || "—",
+        tecnico: tecCasino || "—",
         tecnicoPQ: tecPQ,
         tecnicoCasino: tecCasino,
         detallesPorChipper: detalles,
         estado: document.getElementById("chprEstado").value,
-        nota: document.getElementById("chprNota").value.trim(),
+        nota: "",
         comentarios: []
     };
     chippersData.unshift(obj);
@@ -10943,10 +10923,8 @@ function _brajPoblarCasino(selectId){
 function abrirModalBarajadoraNuevaIncidencia(){
     if(esVisita()) return;
     document.getElementById("brajFecha").value = new Date().toISOString().split("T")[0];
-    document.getElementById("brajNota").value = "";
     document.getElementById("brajTipo").value = "Correctivo";
     document.getElementById("brajEstado").value = "Realizado";
-    document.getElementById("brajTecnicoPQ").value = "";
     _brajPoblarCasino("brajTecnicoCasino");
     let sel = document.getElementById("brajTecnicoCasino");
     if(usuarioActual?.nombre){ let op = [...sel.options].find(o=>o.value===usuarioActual.nombre); if(op) sel.value=usuarioActual.nombre; }
@@ -10961,7 +10939,7 @@ function guardarBarajadoraIncidencia(){
     if(esVisita()) return;
     let seleccionadas = _brajRecogerSeleccionadas("brajIncChk");
     let detalles = _brajRecogerDetalles("brajIncChk","brajIncDetallesPorBrajadora");
-    let tecPQ = document.getElementById("brajTecnicoPQ").value.trim();
+    let tecPQ = "";
     let tecCasino = document.getElementById("brajTecnicoCasino").value;
     let equipo = seleccionadas.length > 0 ? seleccionadas.join(", ") : "(sin especificar)";
     let obj = {
@@ -10969,12 +10947,12 @@ function guardarBarajadoraIncidencia(){
         tipo: document.getElementById("brajTipo").value,
         fecha: document.getElementById("brajFecha").value,
         equipo,
-        tecnico: tecPQ || tecCasino || "—",
+        tecnico: tecCasino || "—",
         tecnicoPQ: tecPQ,
         tecnicoCasino: tecCasino,
         detallesPorBrajadora: detalles,
         estado: document.getElementById("brajEstado").value,
-        nota: document.getElementById("brajNota").value.trim(),
+        nota: "",
         comentarios: []
     };
     barajadorasData.unshift(obj);
@@ -15261,10 +15239,6 @@ function confirmarQuienRealizoMulti(){
             </select>
         </div>
         <div class="form-group">
-            <label class="form-label">Técnico PQ <span style="color:var(--muted);font-weight:400;">(texto libre)</span></label>
-            <input type="text" id="bngTecnicoPQ" class="form-input" placeholder="Nombre del técnico PQ...">
-        </div>
-        <div class="form-group">
             <label class="form-label">Técnico Casino</label>
             <select id="bngTecnicoCasino" class="form-select">
                 <option value="">— Ninguno —</option>
@@ -15281,10 +15255,6 @@ function confirmarQuienRealizoMulti(){
         <div class="form-group">
             <label class="form-label">¿Qué se hizo en la binguera?</label>
             <textarea id="bngDetalle" class="form-textarea" placeholder="Describí el trabajo realizado..."></textarea>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Descripción / Nota general</label>
-            <textarea id="bngNota" class="form-textarea" placeholder="Observaciones adicionales..."></textarea>
         </div>
         <div class="modal-footer">
             <button class="btn-modal-save" onclick="guardarBingueraIncidencia()">💾 Guardar</button>
