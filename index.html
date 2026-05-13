@@ -7540,6 +7540,13 @@ function guardarTarea(){
         maquina: (document.getElementById("tareaMaquina")?.value||"").trim() || tareaEditando?.maquina || "",
         isla:    (document.getElementById("tareaIsla")?.value||"").trim()    || tareaEditando?.isla    || ""
     };
+    // ── Preservar tiempo acumulado y tramo activo al editar ──
+    // Si venimos de una tarea existente, conservar tiempoAcumuladoMs y tramoInicioMs
+    // para no perder el tiempo real que estuvo en curso.
+    if(tareaEditando){
+        if(tareaEditando.tiempoAcumuladoMs) obj.tiempoAcumuladoMs = tareaEditando.tiempoAcumuladoMs;
+        if(tareaEditando.tramoInicioMs)     obj.tramoInicioMs     = tareaEditando.tramoInicioMs;
+    }
     if(_tiempoManualMins > 0) obj.tiempoManualMins = _tiempoManualMins;
 
     if(tareaEditando){
@@ -7573,7 +7580,12 @@ function avanzarTarea(id){
         t.done = true;
         // Sumar el último tramo al acumulado
         // Soporte para ambos nombres (tramoInicioMs nuevo, _tramoInicioMs legado en memoria)
+        // Fallback: si no hay tramoInicioMs pero hay iniciadoEn y aún no hay acumulado,
+        // usar iniciadoEn como inicio del tramo (compatibilidad con sesiones anteriores)
         let _tramoStart = t.tramoInicioMs || t._tramoInicioMs || null;
+        if(!_tramoStart && !t.tiempoAcumuladoMs && t.iniciadoEn){
+            _tramoStart = t.iniciadoEn;
+        }
         let _tramoMs = _tramoStart ? (ahora - _tramoStart) : 0;
         t.tiempoAcumuladoMs = (t.tiempoAcumuladoMs || 0) + Math.max(0, _tramoMs);
         delete t.tramoInicioMs;
