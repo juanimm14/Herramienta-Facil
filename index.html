@@ -7708,17 +7708,19 @@ function volverTarea(id){
 
 function calcularDuracion(t){
     let totalMs = 0;
-    if(t.tiempoAcumuladoMs){
-        // Nueva lógica: usa el acumulado de sesiones
+    // ── Prioridad 1: tiempo manual (sistema/evento) ──
+    if(t.tiempoManualMins && t.tiempoManualMins > 0){
+        totalMs = t.tiempoManualMins * 60000;
+    } else if(t.tiempoAcumuladoMs){
+        // ── Prioridad 2: acumulado de sesiones ──
         totalMs = t.tiempoAcumuladoMs;
         // Si está en-curso ahora mismo, sumar el tramo activo
-        // Sumar tramo activo: soporte tramoInicioMs (persistido) y _tramoInicioMs (legado)
         let _activoStart = t.tramoInicioMs || t._tramoInicioMs || null;
         if(t.estado === "en-curso" && _activoStart){
             totalMs += Date.now() - _activoStart;
         }
     } else if(t.iniciadoEn && t.finalizadoEn){
-        // Compatibilidad hacia atrás: tareas viejas sin tiempoAcumuladoMs
+        // ── Prioridad 3: compatibilidad tareas viejas ──
         totalMs = t.finalizadoEn - t.iniciadoEn;
     } else {
         return null;
