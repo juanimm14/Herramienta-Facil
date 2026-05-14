@@ -7786,8 +7786,16 @@ function mostrarAlertas(){
         mensajes.push("⚠️ Recordatorio: Verificar NIVELACIÓN o ROTACIÓN de ruleta RA si corresponde");
     }
 
-    // TODOS LOS DÍAS → turno tarde
-    mensajes.push("🧹 Turno tarde: LIMPIAR BARAJADORAS SIN FALTA");
+    // TODOS LOS DÍAS → turno tarde: solo si aún no fue registrada la limpieza hoy
+    let hoyISO = hoy.toISOString().split("T")[0];
+    let limpiezaHecha = (barajadorasData || []).some(b =>
+        b.tipo === "Preventivo" &&
+        b.fecha === hoyISO &&
+        (b.nota || "").toLowerCase().includes("limpieza diaria rodillos")
+    );
+    if(!limpiezaHecha){
+        mensajes.push("🧹 Turno tarde: LIMPIAR BARAJADORAS SIN FALTA");
+    }
 
     if(mensajes.length){
         mensajes.forEach((msg, i) => {
@@ -9516,7 +9524,7 @@ function abrirDetalleTarea(id){
                 <span class="tarea-estado ${t.estado}">${estadoLabel}</span>
                 <span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span>
                 <span style="font-size:12px;color:var(--muted);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>
-                ${t.fecha ? `<span style="font-size:12px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
+                ${t.estado === "realizado" && t.finalizadoEn ? `<span style="font-size:12px;color:var(--accent);">✔ ${new Date(t.finalizadoEn).toLocaleDateString("es-AR")}</span>` : (t.fecha ? `<span style="font-size:12px;color:var(--muted);">📅 ${t.fecha}</span>` : "")}
             </div>
             ${(t.maquina || t.isla) ? `
             <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
@@ -12683,7 +12691,7 @@ function renderTareasRealizadas(){
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;">
                 <span style="font-size:12px;color:var(--accent2);">👤 ${t.realizadoPor || mostrarAsignado(t.asignado)}</span>
-                ${t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : ""}
+                ${t.finalizadoEn ? `<span style="font-size:11px;color:var(--accent);">✔ ${new Date(t.finalizadoEn).toLocaleDateString("es-AR")}</span>` : (t.fecha ? `<span style="font-size:11px;color:var(--muted);">📅 ${t.fecha}</span>` : "")}
                 ${comentarios.length > 0 ? `<span style="font-size:11px;color:var(--muted);">💬 ${comentarios.length} comentario${comentarios.length>1?"s":""}</span>` : ""}
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -17343,9 +17351,26 @@ function renderCronogramaEventos(){
 // y solo genera si hoy no se generaron ya.
 function cronogramaEventosAutoInit(){
     let hoy = new Date().toISOString().split("T")[0];
-    let yaGenerado = eventosGenerados[hoy] !== undefined;
-    if(!yaGenerado){
+    // Verificar tanto en el cache de Firebase como en localStorage nativo,
+    // para evitar regenerar cuando eventosGenerados se perdió del cache
+    // pero sí hay tareas de tipo "evento" con fecha de hoy en 'tareas'.
+    let yaGeneradoEnRegistro = eventosGenerados[hoy] !== undefined;
+    let yaGeneradoEnTareas   = (tareas || []).some(t =>
+        (t._eventoId || t.tipo === "evento") && t.fecha === hoy
+    );
+    if(!yaGeneradoEnRegistro && !yaGeneradoEnTareas){
         generarTareasEventosHoy(false);
+    } else if(!yaGeneradoEnRegistro && yaGeneradoEnTareas){
+        // Las tareas ya existen pero el registro se perdió: reconstruirlo
+        // para que futuras llamadas no regeneren
+        if(!eventosGenerados[hoy]) eventosGenerados[hoy] = [];
+        (tareas || []).filter(t => (t._eventoId || t.tipo === "evento") && t.fecha === hoy)
+            .forEach(t => {
+                if(t._eventoId && !eventosGenerados[hoy].includes(t._eventoId)){
+                    eventosGenerados[hoy].push(t._eventoId);
+                }
+            });
+        _saveEventosConfig();
     }
 }
 
