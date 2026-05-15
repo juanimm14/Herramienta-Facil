@@ -15,6 +15,21 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+// ─── ZONA HORARIA ARGENTINA (UTC-3, sin cambio estacional) ───────
+function nowAR() {
+    // Devuelve un objeto Date ajustado a Argentina (UTC-3)
+    return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+}
+function hoyAR() {
+    // Devuelve "YYYY-MM-DD" en hora argentina
+    const d = nowAR();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+}
+// ─────────────────────────────────────────────────────────────────
+
 // ─── REEMPLAZÁ ESTOS VALORES CON LOS DE TU PROYECTO FIREBASE ───
 const firebaseConfig = {
     apiKey:            "AIzaSyC7uA8R4fZnIDNMbO3th8uRxmWiDAsxA84",
@@ -1989,7 +2004,7 @@ setTimeout(function(){
         function actualizarFecha() {
             var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
             var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-            var hoy = new Date();
+            var hoy = nowAR();
             var texto = dias[hoy.getDay()] + ', ' + hoy.getDate() + ' ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear();
             var el = document.getElementById('topbarFecha');
             if (el) el.textContent = texto;
@@ -3237,6 +3252,16 @@ setTimeout(function(){
                             <span class="badge-count" id="estDesempenoAniosBadge">—</span>
                         </div>
                         <div id="estDesempenoAniosChart"></div>
+                    </div>
+
+                    <!-- Top 10 slots con más correctivos -->
+                    <div class="card-box" style="padding:16px;margin-bottom:16px;">
+                        <div class="card-box-title" style="margin-bottom:6px;">
+                            <span>🎰 Top 10 Slots con más Correctivos</span>
+                            <span class="badge-count" id="estTopSlotsBadge">0</span>
+                        </div>
+                        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Máquinas con mayor cantidad de correctivos en el período — solo islas activas</div>
+                        <div id="estTopSlotsChart" style="display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto;"></div>
                     </div>
                 </div>
 
@@ -6239,7 +6264,7 @@ async function importProcesarHoja(clave, rows, modo) {
                 periodo: p,
                 tecnico1: r.tecnico1||"",
                 tecnico2: r.tecnico2||"",
-                fechaCreacion: _normFecha(r.fechaCreacion) || new Date().toISOString().slice(0,10),
+                fechaCreacion: _normFecha(r.fechaCreacion) || hoyAR(),
                 tareaId: ahora,
                 items: []
             };
@@ -6269,7 +6294,7 @@ async function importProcesarHoja(clave, rows, modo) {
                 id:            idNuevo,
                 cantidad:      parseInt(r.cantidad) || 1,
                 insumo:        String(r.insumo).trim(),
-                fechaPedido:   _normFecha(r.fechaPedido) || new Date().toISOString().slice(0,10),
+                fechaPedido:   _normFecha(r.fechaPedido) || hoyAR(),
                 destino:       String(r.destino || "").trim(),
                 isla:          String(r.isla || "").trim(),
                 observaciones: String(r.observaciones || "").trim(),
@@ -6526,7 +6551,7 @@ function renderDashboard(){
     if(fdsBox){
         if(fdsActivos.length > 0){
             if(fdsSideBadge){ fdsSideBadge.style.display="inline-block"; fdsSideBadge.textContent=fdsActivos.length; }
-            let hoy = new Date();
+            let hoy = nowAR();
             // Card clickeable que abre modal con detalle
             fdsBox.innerHTML = `
                 <div class="card-box fds-card" onclick="abrirModalFdsDetalle()" style="border-color:var(--red);background:linear-gradient(135deg,rgba(255,77,109,.08) 0%,rgba(255,77,109,.03) 100%);cursor:pointer;transition:all .2s;"
@@ -6592,7 +6617,7 @@ function renderDashboard(){
     }, 0);
 
     // Máquinas preventivadas HOY
-    let hoyStr = new Date().toISOString().split("T")[0];
+    let hoyStr = hoyAR();
     let prevHoy = preventivos.filter(p => p.fecha === hoyStr);
     let maqHoy = prevHoy.reduce((sum, p) => {
         return sum + calcMaq(getIslasEfectivas(p));
@@ -6687,7 +6712,7 @@ function renderDashboard(){
         // ── BOTÓN LIMPIEZA DIARIA RODILLOS (técnico) ──────────────
         let btnBoxT = document.getElementById("dashBtnLimpiezaRodillosTec");
         if(btnBoxT){
-            let hoyISO = new Date().toISOString().split("T")[0];
+            let hoyISO = hoyAR();
             let yaRegistrado = barajadorasData.some(b =>
                 b.tipo === "Preventivo" &&
                 b.fecha === hoyISO &&
@@ -6725,7 +6750,7 @@ function renderDashboard(){
         // ── BOTÓN LIMPIEZA DIARIA RODILLOS (admin) ──────────────
         let btnBoxA = document.getElementById("dashBtnLimpiezaRodillos");
         if(btnBoxA){
-            let hoyISO = new Date().toISOString().split("T")[0];
+            let hoyISO = hoyAR();
             let yaRegistrado = barajadorasData.some(b =>
                 b.tipo === "Preventivo" &&
                 b.fecha === hoyISO &&
@@ -7067,7 +7092,7 @@ function _estRenderDesempeno() {
 }
 
 function _estRenderTiempos() {
-    let _ahora = new Date();
+    let _ahora = nowAR();
     let _mesActual = String(_ahora.getMonth()+1).padStart(2,"0");
     let _anioActual = String(_ahora.getFullYear());
     let _mesKey = `${_anioActual}-${_mesActual}`;
@@ -7222,7 +7247,7 @@ function abrirModalCorrectivo(){
     if(esVisita()) return;
     indiceEditando = null;
     document.getElementById("tituloModalCorrectivo").textContent = "Nueva Incidencia";
-    document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("fecha").value = hoyAR();
     document.getElementById("maquina").value = "";
     document.getElementById("isla").value = "";
     document.getElementById("nota").value = "";
@@ -7614,7 +7639,7 @@ function avanzarTarea(id){
             } else {
                 incidencias.push({
                     tipo: "Correctivo",
-                    fecha: t.fecha || new Date().toISOString().split("T")[0],
+                    fecha: t.fecha || hoyAR(),
                     maquina: t.maquina || t.desc,
                     isla: t.isla || "",
                     tecnico: tecnico,
@@ -7640,7 +7665,7 @@ function avanzarTarea(id){
                 incidencias.push({
                     tipo: "Preventivo",
                     subTipo: "plan",
-                    fecha: t.fecha || new Date().toISOString().split("T")[0],
+                    fecha: t.fecha || hoyAR(),
                     islas: [],
                     islasMaquinas: {},
                     totalMaquinas: 0,
@@ -7776,7 +7801,7 @@ const toast = {
 };
 
 function mostrarAlertas(){
-    let hoy = new Date();
+    let hoy = nowAR();
     let dia = hoy.getDay(); // 0 domingo - 4 jueves
 
     let mensajes = [];
@@ -7787,7 +7812,7 @@ function mostrarAlertas(){
     }
 
     // TODOS LOS DÍAS → turno tarde: solo si aún no fue registrada la limpieza hoy
-    let hoyISO = hoy.toISOString().split("T")[0];
+    let hoyISO = hoyAR();
     let limpiezaHecha = (barajadorasData || []).some(b =>
         b.tipo === "Preventivo" &&
         b.fecha === hoyISO &&
@@ -8060,7 +8085,7 @@ function renderTareas(){
         // ── Detección de tarea vencida ──
         let vencida = false;
         if(t.fecha && t.estado !== "realizado"){
-            let hoyV = new Date(); hoyV.setHours(0,0,0,0);
+            let hoyV = nowAR(); hoyV.setHours(0,0,0,0);
             let limV  = new Date(t.fecha + "T00:00:00");
             vencida = limV < hoyV;
         }
@@ -8131,7 +8156,7 @@ function reasignarTarea(id, nuevoTecnico){
 function abrirModalLIMPIEZADEISLAS(){
     if(esVisita()) return;
     document.getElementById("modalLIMPIEZADEISLAS").classList.add("open");
-    document.getElementById("fechaPrev").value = new Date().toISOString().split("T")[0];
+    document.getElementById("fechaPrev").value = hoyAR();
     // Pre-seleccionar técnico logueado
     let selTec = document.getElementById("tecnicoPrev");
     if(selTec && usuarioActual?.nombre) selTec.value = usuarioActual.nombre;
@@ -8810,7 +8835,7 @@ function abrirModalGenerico(tipo){
     let cfg = PREV_CONFIG[tipo];
     document.getElementById("tituloModalGenerico").textContent = cfg.titulo;
     document.getElementById("labelEquiposGen").textContent = cfg.label;
-    document.getElementById("fechaGen").value = new Date().toISOString().split("T")[0];
+    document.getElementById("fechaGen").value = hoyAR();
     document.getElementById("notaGen").value = "";
     // Pre-seleccionar técnico logueado
     let selTecGen = document.getElementById("tecnicoGen");
@@ -9196,7 +9221,7 @@ function volverVistaEva(){
 
 function abrirModalEvaNuevaIncidencia(){
     if(esVisita()) return;
-    document.getElementById("evaFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("evaFecha").value = hoyAR();
     // Pre-seleccionar técnico logueado
     let selTecEva = document.getElementById("evaTecnico");
     if(selTecEva && usuarioActual?.nombre) selTecEva.value = usuarioActual.nombre;
@@ -9264,7 +9289,7 @@ function abrirModalEvaEstadoDiario(){
             toast.warning("Error", "No se pudo abrir el formulario. Intentá desde la sección Kioscos EVA.");
             return;
         }
-        fechaEl.value = new Date().toISOString().split("T")[0];
+        fechaEl.value = hoyAR();
         // Pre-seleccionar el técnico logueado
         if(usuarioActual?.nombre){
             let opt = Array.from(tecEl.options).find(o => o.value === usuarioActual.nombre || o.text === usuarioActual.nombre);
@@ -9643,7 +9668,7 @@ function guardarComentarioTarea(){
     if(!texto){ toast.warning("Campo requerido","Escribí un comentario o detalle"); return; }
     let pendiente = document.getElementById("tareaQuedaPendiente").checked;
     let comentario = {
-        fecha: new Date().toISOString().split("T")[0],
+        fecha: hoyAR(),
         autor: usuarioActual?.nombre || "—",
         texto,
         pendiente
@@ -9832,7 +9857,7 @@ function _cntPoblarCasino(selectId){
 // ─── NUEVA INCIDENCIA ────────────────────────────
 function abrirModalContadoraNuevaIncidencia(){
     if(esVisita()) return;
-    document.getElementById("cntFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("cntFecha").value = hoyAR();
     document.getElementById("cntNota").value = "";
     document.getElementById("cntTipo").value = "Correctivo";
     document.getElementById("cntEstado").value = "Realizado";
@@ -9881,7 +9906,7 @@ function _cntPrevActualizarDetalles(){
 
 function abrirModalContadoraPreventivo(){
     if(esVisita()) return;
-    document.getElementById("cntPrevFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("cntPrevFecha").value = hoyAR();
     document.getElementById("cntPrevNota").value = "";
     document.getElementById("cntPrevTecnicoPQ").value = "";
     document.getElementById("cntPrevTipo").value = "Preventivo";
@@ -10075,7 +10100,7 @@ function _bngPoblarCasino(selectId){
 
 function abrirModalBingueraNuevaIncidencia(){
     if(esVisita()) return;
-    document.getElementById("bngFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("bngFecha").value = hoyAR();
     document.getElementById("bngDetalle").value = "";
     document.getElementById("bngTipo").value = "Correctivo";
     document.getElementById("bngEstado").value = "Realizado";
@@ -10359,7 +10384,7 @@ function _chprPoblarCasino(selectId){
 // ─── NUEVA INCIDENCIA ────────────────────────────
 function abrirModalChipperNuevaIncidencia(){
     if(esVisita()) return;
-    document.getElementById("chprFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("chprFecha").value = hoyAR();
     document.getElementById("chprTipo").value = "Correctivo";
     document.getElementById("chprEstado").value = "Realizado";
     _chprPoblarCasino("chprTecnicoCasino");
@@ -10407,7 +10432,7 @@ function _chprPrevActualizarDetalles(){
 
 function abrirModalChipperPreventivo(){
     if(esVisita()) return;
-    document.getElementById("chprPrevFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("chprPrevFecha").value = hoyAR();
     document.getElementById("chprPrevNota").value = "";
     document.getElementById("chprPrevTecnicoPQ").value = "";
     document.getElementById("chprPrevTipo").value = "Preventivo";
@@ -10602,7 +10627,7 @@ function abrirModalFds(){
     document.getElementById("fdsFalla").value = "";
     document.getElementById("fdsRepuesto").value = "";
     document.getElementById("fdsObservacion").value = "";
-    document.getElementById("fdsFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("fdsFecha").value = hoyAR();
     document.getElementById("fdsEstado").value = "FDS";
     document.getElementById("fdsRetorno").value = "";
     document.getElementById("modalFds").classList.add("open");
@@ -10668,7 +10693,7 @@ function renderFds(){
     let tbody = document.querySelector("#tablaFds tbody");
     if(!tbody) return;
 
-    let hoy = new Date();
+    let hoy = nowAR();
     tbody.innerHTML = datos.map((f) => {
         let realIdx = fdsData.indexOf(f);
         let fechaFin = f.fechaRetorno ? new Date(f.fechaRetorno) : hoy;
@@ -10731,7 +10756,7 @@ function abrirModalFdsDetalle(){
     let fdsActivos = fdsData.filter(f => f.estado !== "Habilitado");
     if(fdsActivos.length === 0) return;
 
-    let hoy = new Date();
+    let hoy = nowAR();
     let html = fdsActivos.map((f, idx) => {
         let dias = f.fechaSalida ? Math.floor((hoy - new Date(f.fechaSalida)) / 86400000) : 0;
         let estadoColor = f.estado === "Para Habilitar" ? "var(--yellow)" : "var(--red)";
@@ -11008,7 +11033,7 @@ function _brajPoblarCasino(selectId){
 // ─── NUEVA INCIDENCIA ────────────────────────────
 function abrirModalBarajadoraNuevaIncidencia(){
     if(esVisita()) return;
-    document.getElementById("brajFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("brajFecha").value = hoyAR();
     document.getElementById("brajTipo").value = "Correctivo";
     document.getElementById("brajEstado").value = "Realizado";
     _brajPoblarCasino("brajTecnicoCasino");
@@ -11056,7 +11081,7 @@ function _brajPrevActualizarDetalles(){
 
 function abrirModalBarajadoraPreventivo(){
     if(esVisita()) return;
-    document.getElementById("brajPrevFecha").value = new Date().toISOString().split("T")[0];
+    document.getElementById("brajPrevFecha").value = hoyAR();
     document.getElementById("brajPrevNota").value = "";
     document.getElementById("brajPrevTecnicoPQ").value = "";
     document.getElementById("brajPrevTipo").value = "Preventivo";
@@ -11095,7 +11120,7 @@ function confirmarLimpiezaRodillos(){
 function _registrarLimpiezaRodillos(){
     let overlay = document.getElementById("modalLimpiezaRodillos");
     if(overlay) overlay.remove();
-    let hoyISO = new Date().toISOString().split("T")[0];
+    let hoyISO = hoyAR();
     let yaExiste = barajadorasData.some(b =>
         b.tipo === "Preventivo" &&
         b.fecha === hoyISO &&
@@ -11338,7 +11363,7 @@ function abrirModalNuevoCartel(){
     document.getElementById("cartelTipo").value = "manual";
     document.getElementById("cartelTitulo").value = "";
     document.getElementById("cartelMensaje").value = "";
-    document.getElementById("cartelFechaInicio").value = new Date().toISOString().split("T")[0];
+    document.getElementById("cartelFechaInicio").value = hoyAR();
     document.getElementById("cartelFechaCaducidad").value = "";
     document.getElementById("cartelColor").value = "accent";
     document.getElementById("cartelDiasInactividad").value = "4";
@@ -11353,7 +11378,7 @@ function cerrarModalNuevoCartel(){
 
 function guardarCartel(){
     let tipo = document.getElementById("cartelTipo")?.value || "manual";
-    let hoy  = new Date().toISOString().split("T")[0];
+    let hoy  = hoyAR();
 
     if(tipo === "inactividad"){
         let dias = parseInt(document.getElementById("cartelDiasInactividad").value) || 4;
@@ -11464,7 +11489,7 @@ function toggleActivoCartel(id){
 }
 
 function estaCartelActivo(cartel){
-    let hoy = new Date().toISOString().split("T")[0];
+    let hoy = hoyAR();
     if(!cartel.activo) return false;
     if(cartel.tipo === "inactividad") return true; // la lógica de inactividad no depende de fechas
     if(cartel.fechaInicio && cartel.fechaInicio > hoy) return false;
@@ -11476,7 +11501,7 @@ function estaCartelActivo(cartel){
 // Devuelve array de técnicos que no cargaron correctivos en los últimos `dias` días.
 // Solo considera técnicos con cuenta activa (excluye Visita y AdminOSuperAdmin si se quiere).
 function getTecnicosInactivos(dias){
-    let ahora = new Date();
+    let ahora = nowAR();
     ahora.setHours(0,0,0,0);
     let limite = new Date(ahora);
     limite.setDate(limite.getDate() - dias);
@@ -11546,7 +11571,7 @@ function renderCartelesAdmin(){
         return;
     }
 
-    let hoy = new Date().toISOString().split("T")[0];
+    let hoy = hoyAR();
 
     cont.innerHTML = cartelesData.map(c => {
         // ── Tarjeta de inactividad ──
@@ -11676,7 +11701,7 @@ function renderCartelesDashboard(){
 // ──────────────────────────────────────────────
 function crearCartelBarajadora(){
     if(esVisita()) return;
-    let hoy = new Date().toISOString().split("T")[0];
+    let hoy = hoyAR();
     let existe = cartelesData.find(c => c.titulo === "🃏 Limpiar Barajadora" && c.activo);
     if(existe){
         if(!confirm("Ya existe un cartel activo de 'Limpiar Barajadora'. ¿Querés crear otro igual?")) return;
@@ -12043,10 +12068,10 @@ function ppGuardarNombre(idx){
 }
 
 function ppRenderMes(mesIdx){
-    let mesKey = `${new Date().getFullYear()}-${mesIdx}`;
+    let mesKey = `${nowAR().getFullYear()}-${mesIdx}`;
     let mesNombre = PP_MESES[mesIdx];
     let titulo = document.getElementById("ppMesTitulo");
-    if(titulo) titulo.textContent = `Preventivos — ${mesNombre} ${new Date().getFullYear()}`;
+    if(titulo) titulo.textContent = `Preventivos — ${mesNombre} ${nowAR().getFullYear()}`;
 
     // Tareas que corresponden a este mes
     let tareasDelMes = ppTareas.filter(t => t.meses.includes(mesIdx));
@@ -12303,7 +12328,7 @@ function ppRenderMes(mesIdx){
 function ppGenerarMes(){
     if(esVisita()) return;
     if(ppTabActivo === "todos") return;
-    let mesKey = `${new Date().getFullYear()}-${ppTabActivo}`;
+    let mesKey = `${nowAR().getFullYear()}-${ppTabActivo}`;
     delete ppPreventivos[mesKey];
     ppGuardarPreventivos();
     ppRenderMes(ppTabActivo);
@@ -12322,7 +12347,7 @@ function ppCambiarEstado(mesKey, idx, estado){
     const estadoAnterior = p.estado;
     p.estado = estado;
     if(estado === "realizado"){
-        p.fechaRealizado = new Date().toLocaleDateString("es-AR");
+        p.fechaRealizado = nowAR().toLocaleDateString("es-AR");
 
         // Registrar en Historial de Preventivos si no había registro previo para esta tarea+mes
         const yaRegistrado = incidencias.some(i =>
@@ -12336,7 +12361,7 @@ function ppCambiarEstado(mesKey, idx, estado){
                 _ppMesKey:    mesKey,
                 _ppTareaId:   p.tareaId,
                 _ppMesNombre: p.mesNombre || "",
-                _ppAnio:      parseInt(mesKey.split("-")[0]) || new Date().getFullYear(),
+                _ppAnio:      parseInt(mesKey.split("-")[0]) || nowAR().getFullYear(),
                 _ppIslas:     [],
                 asignado:     p.tecnico || (usuarioActual?.nombre || ""),
                 realizadoPor: p.tecnico || (usuarioActual?.nombre || ""),
@@ -12355,7 +12380,7 @@ function ppCambiarEstado(mesKey, idx, estado){
 function ppEnviarATareas(){
     if(esVisita()) return;
     if(ppTabActivo === "todos") return;
-    let mesKey = `${new Date().getFullYear()}-${ppTabActivo}`;
+    let mesKey = `${nowAR().getFullYear()}-${ppTabActivo}`;
     let prevs = ppPreventivos[mesKey] || [];
     let pendientes = prevs.filter(p => p.estado !== "realizado");
 
@@ -12367,8 +12392,8 @@ function ppEnviarATareas(){
     let yaEnviados = tareas.filter(t => t._ppMesKey === mesKey).map(t => t._ppTareaId + (t._ppDia ? `-dia${t._ppDia}` : ""));
     let ahora = Date.now();
     let mesNombre = PP_MESES[ppTabActivo];
-    let anio = new Date().getFullYear();
-    let fechaHoy = new Date().toISOString().split("T")[0];
+    let anio = nowAR().getFullYear();
+    let fechaHoy = hoyAR();
     let nuevasCreadas = 0;
 
     pendientes.forEach((p, i) => {
@@ -12539,7 +12564,7 @@ function ppRegistrarEnHistorial(t){
     incidencias.push({
         tipo: "Preventivo",
         subTipo,
-        fecha: new Date().toISOString().split("T")[0],
+        fecha: hoyAR(),
         islas: islasArr,
         islasMaquinas,
         totalMaquinas,
@@ -12549,7 +12574,7 @@ function ppRegistrarEnHistorial(t){
         validado: false,
         _ppMesKey: t._ppMesKey,
         _ppMesNombre: t._ppMesNombre || "",
-        _ppAnio: t._ppAnio || new Date().getFullYear(),
+        _ppAnio: t._ppAnio || nowAR().getFullYear(),
         _ppTareaId: t._ppTareaId || null,
         _ppDia: t._ppDia || null,
         _fromTareaId: t.id
@@ -12573,7 +12598,7 @@ function auditRegistrar(tipo, icono, mensaje, detalle){
         mensaje,
         detalle: detalle || "",
         usuario: usuarioActual?.nombre || "—",
-        fecha: new Date().toISOString().split("T")[0],
+        fecha: hoyAR(),
         hora: new Date().toLocaleTimeString("es-AR", {hour:"2-digit", minute:"2-digit"})
     });
     if(auditLog.length > 500) auditLog = auditLog.slice(0, 500);
@@ -12760,7 +12785,7 @@ function editPrevGuardar(){
     p.nota     = document.getElementById("editPrevNota").value.trim();
 
     if(p.estado === "realizado" && !p.fechaRealizado){
-        p.fechaRealizado = new Date().toLocaleDateString("es-AR");
+        p.fechaRealizado = nowAR().toLocaleDateString("es-AR");
     } else if(p.estado !== "realizado"){
         p.fechaRealizado = null;
     }
@@ -12784,10 +12809,10 @@ function editPrevGuardar(){
 // Redefinimos ppRenderMes para incluir edición y técnico 2
 const _ppRenderMesOrig = ppRenderMes;
 ppRenderMes = function(mesIdx){
-    let mesKey = `${new Date().getFullYear()}-${mesIdx}`;
+    let mesKey = `${nowAR().getFullYear()}-${mesIdx}`;
     let mesNombre = PP_MESES[mesIdx];
     let titulo = document.getElementById("ppMesTitulo");
-    if(titulo) titulo.textContent = `Preventivos — ${mesNombre} ${new Date().getFullYear()}`;
+    if(titulo) titulo.textContent = `Preventivos — ${mesNombre} ${nowAR().getFullYear()}`;
 
     let tareasDelMes = ppTareas.filter(t => t.meses.includes(mesIdx));
 
@@ -13169,7 +13194,7 @@ function ppMgiGenerarDias(cronExistente){
     let cant = Math.min(10, Math.max(1, parseInt(document.getElementById("ppMgiCantDias").value) || 1));
     let container = document.getElementById("ppMgiDiasContainer");
     let tecnicos = getTecnicos();
-    let hoy = new Date().toISOString().split("T")[0];
+    let hoy = hoyAR();
     let islasDisp = cargarIslas();
 
     let html = "";
@@ -13214,7 +13239,7 @@ function ppMgiGuardarCronograma(){
     let dias   = [];
 
     for(let i = 1; i <= cant; i++){
-        let fecha   = document.getElementById(`ppMgiDia${i}Fecha`)?.value || new Date().toISOString().split("T")[0];
+        let fecha   = document.getElementById(`ppMgiDia${i}Fecha`)?.value || hoyAR();
         let tecnico = document.getElementById(`ppMgiDia${i}Tecnico`)?.value || "Juan";
         let chips   = document.querySelectorAll(`#ppMgiDia${i}Islas .mgi-isla-chip.on`);
         let islas   = Array.from(chips).map(c => parseInt(c.dataset.id));
@@ -13514,7 +13539,7 @@ function mgiGenerarDias(){
     let cant = Math.min(10, Math.max(1, parseInt(document.getElementById("mgiPlanCantDias").value) || 1));
     let container = document.getElementById("mgiPlanDiasContainer");
     let tecnicos = getTecnicos();
-    let hoy = new Date().toISOString().split("T")[0];
+    let hoy = hoyAR();
 
     let html = "";
     for(let i = 1; i <= cant; i++){
@@ -13552,7 +13577,7 @@ function mgiGuardarNuevoPlan(){
 
     let dias = [];
     for(let i = 1; i <= cant; i++){
-        let fecha   = document.getElementById(`mgiDia${i}Fecha`)?.value || new Date().toISOString().split("T")[0];
+        let fecha   = document.getElementById(`mgiDia${i}Fecha`)?.value || hoyAR();
         let tecnico = document.getElementById(`mgiDia${i}Tecnico`)?.value || "Juan";
         let chips   = document.querySelectorAll(`#mgiDia${i}Islas .mgi-isla-chip.on`);
         let islas   = Array.from(chips).map(c => parseInt(c.dataset.id));
@@ -13563,7 +13588,7 @@ function mgiGuardarNuevoPlan(){
         id: Date.now(),
         nombre,
         creadoPor: usuarioActual?.nombre || "Admin",
-        fechaCreacion: new Date().toLocaleDateString("es-AR"),
+        fechaCreacion: nowAR().toLocaleDateString("es-AR"),
         dias
     };
 
@@ -13893,7 +13918,7 @@ function ccbCerrarControl(){
 
     data.nota = document.getElementById("ccbChecklistNota").value.trim();
     data.cerrado = true;
-    data.fechaCierre = new Date().toLocaleDateString("es-AR");
+    data.fechaCierre = nowAR().toLocaleDateString("es-AR");
 
     // Marcar todas como hechas al cerrar (opcional: solo las que no se hicieron quedan como estaban)
     ccbGuardarStorage();
@@ -13903,7 +13928,7 @@ function ccbCerrarControl(){
     incidencias.push({
         tipo: "Preventivo",
         subTipo: "pp-31",
-        fecha: new Date().toISOString().split("T")[0],
+        fecha: hoyAR(),
         islas: islasHechas,
         tecnico: usuarioActual?.nombre || "Técnico",
         nota: `[CCB ${mesKey}] ${hecho}/${total} islas — ${data.nota || "Sin notas"}`,
@@ -14354,7 +14379,7 @@ function pchkCerrarControl(){
 
     data.nota = document.getElementById("pchkChecklistNota").value.trim();
     data.cerrado    = true;
-    data.fechaCierre = new Date().toLocaleDateString("es-AR");
+    data.fechaCierre = nowAR().toLocaleDateString("es-AR");
     pchkGuardarStorage();
 
     let islasHechas = data.islas.filter(x=>x.hecho).map(x=>String(x.id));
@@ -14364,7 +14389,7 @@ function pchkCerrarControl(){
     incidencias.push({
         tipo:    "Preventivo",
         subTipo: `pp-${tid}`,
-        fecha:   new Date().toISOString().split("T")[0],
+        fecha:   hoyAR(),
         islas:   islasHechas,
         tecnico: tecPchkLabel,
         nota:    `[${meta.label} ${mesKey}] ${hecho}/${total} islas — ${data.nota || "Sin notas"}`,
@@ -14799,7 +14824,7 @@ function _renderTareasConTurno(){
 
     function esVencida(t){
         if(!t.fecha || t.estado === "realizado") return false;
-        let hoyV = new Date(); hoyV.setHours(0,0,0,0);
+        let hoyV = nowAR(); hoyV.setHours(0,0,0,0);
         return new Date(t.fecha + "T00:00:00") < hoyV;
     }
 
@@ -14985,7 +15010,7 @@ function _renderTareasConTurno(){
         // ── Detección de tarea vencida ──
         let vencida = false;
         if(t.fecha && t.estado !== "realizado"){
-            let hoyV = new Date(); hoyV.setHours(0,0,0,0);
+            let hoyV = nowAR(); hoyV.setHours(0,0,0,0);
             let limV  = new Date(t.fecha + "T00:00:00");
             vencida = limV < hoyV;
         }
@@ -15225,7 +15250,7 @@ function confirmarQuienRealizoMulti(){
         } else {
             incidencias.push({
                 tipo: "Correctivo",
-                fecha: t.fecha || new Date().toISOString().split("T")[0],
+                fecha: t.fecha || hoyAR(),
                 maquina: t.maquina || t.desc,
                 isla: t.isla || "",
                 tecnico: tecnico,
@@ -15261,7 +15286,7 @@ function confirmarQuienRealizoMulti(){
             incidencias.push({
                 tipo: "Preventivo",
                 subTipo: "plan",
-                fecha: t.fecha || new Date().toISOString().split("T")[0],
+                fecha: t.fecha || hoyAR(),
                 islas: islasSeleccionadas,
                 islasMaquinas: islasMaquinasMap,
                 totalMaquinas: totalMaq,
@@ -15751,7 +15776,7 @@ async function valProcesarExcel(file) {
             let data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
 
             // Detectar año del archivo (buscar en nombre o en celdas)
-            let anio = new Date().getFullYear();
+            let anio = nowAR().getFullYear();
             // Intentar detectar el año desde el nombre del archivo
             let matchAnio = file.name.match(/20\d\d/);
             if (matchAnio) anio = parseInt(matchAnio[0]);
@@ -16161,7 +16186,7 @@ function _renderBannerTareaValidadores() {
 function abrirModalCargaValidadores() {
     if(esVisita()) return;
     // Prellenar período con mes actual
-    let ahora = new Date();
+    let ahora = nowAR();
     let meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
     let periodo = meses[ahora.getMonth()] + "*" + String(ahora.getFullYear()).slice(2);
     document.getElementById("valPeriodoInput").value = periodo;
@@ -16414,7 +16439,7 @@ function pptDescargarPDF() {
         const COL_W_FALLA = PAGE_W - MARGIN - 48;
 
         let titulo = periodo ? "Control PPT — " + periodo : "Control PPT — Todos los períodos";
-        let fecha  = new Date().toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
+        let fecha  = nowAR().toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
         let y = 18;
 
         // Fondo blanco (para impresión)
@@ -16637,7 +16662,7 @@ function pptGuardarRelevamiento() {
         desc: `Revisar PPT — ${periodo}`,
         asignado: tecnicos.length === 1 ? tecnicos[0] : "__todos__",
         prioridad: "alta",
-        fecha: new Date().toISOString().slice(0,10),
+        fecha: hoyAR(),
         notas: `Relevamiento PPT ${periodo}. ${items.length} máquinas a revisar. Técnico(s): ${tecnicos.join(", ")}.`,
         estado: "pendiente",
         done: false,
@@ -16649,7 +16674,7 @@ function pptGuardarRelevamiento() {
     tareas.push(tarea);
     localStorage.setItem("tareas", JSON.stringify(tareas));
 
-    let lote = { periodo, tecnico1, tecnico2: tecnico2||"", fechaCreacion: new Date().toISOString().slice(0,10), tareaId: ahora, items };
+    let lote = { periodo, tecnico1, tecnico2: tecnico2||"", fechaCreacion: hoyAR(), tareaId: ahora, items };
     pptData.push(lote);
     pptGuardar();
 
@@ -16679,7 +16704,7 @@ function pptAbrirRealizado(loteIdx, itemIdx) {
     document.getElementById("pptRegMtm").textContent      = item.mtm;
     document.getElementById("pptRegIsla").textContent     = item.isla || "—";
     document.getElementById("pptRegProblema").textContent = item.problema;
-    document.getElementById("pptRegFecha").value          = new Date().toISOString().slice(0,10);
+    document.getElementById("pptRegFecha").value          = hoyAR();
     document.getElementById("pptRegObservaciones").value  = "";
 
     let sel = document.getElementById("pptRegTecnico");
@@ -16837,7 +16862,7 @@ function guardarCargaValidadores() {
         desc: `Revisar Validadores — ${periodo}`,
         asignado: "Todos",
         prioridad: "alta",
-        fecha: new Date().toISOString().slice(0,10),
+        fecha: hoyAR(),
         notas: `Lista de ${items.length} validadores a revisar para el período ${periodo}.`,
         estado: "pendiente",
         done: false,
@@ -16878,7 +16903,7 @@ function valAbrirRegistrar(loteIdx, itemIdx) {
     document.getElementById("valRegIsla").textContent   = item.isla;
     document.getElementById("valRegModelo").textContent = item.modelo;
     document.getElementById("valRegDetalle").value      = item.detalle || "";
-    document.getElementById("valRegFecha").value        = new Date().toISOString().slice(0,10);
+    document.getElementById("valRegFecha").value        = hoyAR();
 
     // Poblar técnicos
     let sel = document.getElementById("valRegTecnico");
@@ -17224,9 +17249,9 @@ function toggleEventoActivo(id){
 // Para cada evento activo cuyos días[] incluyan el día actual,
 // genera una tarea si no existe ya una generada hoy para ese evento.
 function generarTareasEventosHoy(forzar){
-    let hoy = new Date();
+    let hoy = nowAR();
     let diaSemana = hoy.getDay(); // 0=dom … 6=sab
-    let fechaStr  = hoy.toISOString().split("T")[0];
+    let fechaStr  = hoyAR();
 
     if(!eventosGenerados[fechaStr]) eventosGenerados[fechaStr] = [];
 
@@ -17350,7 +17375,7 @@ function renderCronogramaEventos(){
 // Se ejecuta una vez cuando la carga de Firebase termina,
 // y solo genera si hoy no se generaron ya.
 function cronogramaEventosAutoInit(){
-    let hoy = new Date().toISOString().split("T")[0];
+    let hoy = hoyAR();
     // Verificar tanto en el cache de Firebase como en localStorage nativo,
     // para evitar regenerar cuando eventosGenerados se perdió del cache
     // pero sí hay tareas de tipo "evento" con fecha de hoy en 'tareas'.
@@ -17529,7 +17554,7 @@ function abrirModalEventoUnico(id){
     let ev = id ? eventosUnicos.find(e => e.id === id) : null;
     document.getElementById("tituloModalEventoUnico").textContent = ev ? "Editar Evento Único" : "Nuevo Evento Único";
     document.getElementById("eventoUnicoNombre").value    = ev?.nombre   || "";
-    document.getElementById("eventoUnicoFecha").value     = ev?.fecha    || new Date().toISOString().split("T")[0];
+    document.getElementById("eventoUnicoFecha").value     = ev?.fecha    || hoyAR();
     document.getElementById("eventoUnicoAsignado").value  = ev?.asignado || "__todos__";
     document.getElementById("eventoUnicoPrioridad").value = ev?.prioridad|| "media";
     document.getElementById("eventoUnicoNotas").value     = ev?.notas    || "";
@@ -17589,7 +17614,7 @@ function renderEventosUnicos(){
         cont.innerHTML = `<div class="empty-state" style="padding:24px;"><div class="empty-icon" style="font-size:32px;">🗓️</div><p>No hay eventos únicos programados todavía</p></div>`;
         return;
     }
-    let hoy = new Date().toISOString().split("T")[0];
+    let hoy = hoyAR();
     cont.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead><tr style="border-bottom:1px solid var(--border);">
             <th style="text-align:left;padding:8px 12px;color:var(--muted);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Evento</th>
@@ -17627,7 +17652,7 @@ function renderEventosUnicos(){
 }
 
 function generarTareasEventosUnicosHoy(forzar){
-    let hoy = new Date().toISOString().split("T")[0];
+    let hoy = hoyAR();
     let generadas = 0;
     eventosUnicos.forEach(ev => {
         if(!ev.activo || ev.fecha > hoy) return;
@@ -17779,8 +17804,8 @@ function cerrarModalExport(){
 }
 
 function _exportSetRango(tipo){
-    let hoy = new Date();
-    let desde, hasta = hoy.toISOString().split("T")[0];
+    let hoy = nowAR();
+    let desde, hasta = hoyAR();
     if(tipo === 'mes'){
         desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split("T")[0];
     } else if(tipo === 'trim'){
@@ -17963,7 +17988,7 @@ async function generarExcelCompleto(){
             ["Herramienta Fácil — Reporte exportado", "", "", ""],
             [`Casino: ${casino}`, "", "", ""],
             [`Período: ${rangoLabel}`, "", "", ""],
-            [`Generado: ${new Date().toLocaleString("es-AR")}`, "", "", ""],
+            [`Generado: ${nowAR().toLocaleString("es-AR")}`, "", "", ""],
             ["", "", "", ""],
             ["Sección", "Total", "Pendientes / En Curso", "Resueltos / Realizados"],
             ["Correctivos Slots", corrFilt.length,
@@ -18314,7 +18339,7 @@ function ppAbrirModalEnviarTareas(){
     if(esVisita()) return;
     if(ppTabActivo === "todos") return;
 
-    let mesKey = `${new Date().getFullYear()}-${ppTabActivo}`;
+    let mesKey = `${nowAR().getFullYear()}-${ppTabActivo}`;
     let prevs   = ppPreventivos[mesKey] || [];
     let pendientes = prevs.filter(p => p.estado !== "realizado");
 
@@ -18366,7 +18391,7 @@ function ppAbrirModalEnviarTareas(){
     });
 
     // Render lista
-    document.getElementById("ppModalSubtitulo").textContent = `${mesNombre} ${new Date().getFullYear()} · ${_ppModalPendientes.length} preventivo${_ppModalPendientes.length!==1?"s":""} pendiente${_ppModalPendientes.length!==1?"s":""}`;
+    document.getElementById("ppModalSubtitulo").textContent = `${mesNombre} ${nowAR().getFullYear()} · ${_ppModalPendientes.length} preventivo${_ppModalPendientes.length!==1?"s":""} pendiente${_ppModalPendientes.length!==1?"s":""}`;
     ppModalRenderLista();
 
     document.getElementById("modalEnviarPP").style.display = "flex";
@@ -18434,8 +18459,8 @@ function ppConfirmarEnvioSeleccionado(){
     }
 
     let ahora = Date.now();
-    let anio  = new Date().getFullYear();
-    let fechaHoy = new Date().toISOString().split("T")[0];
+    let anio  = nowAR().getFullYear();
+    let fechaHoy = hoyAR();
     let nuevasCreadas = 0;
 
     seleccionados.forEach((item, i) => {
@@ -18511,7 +18536,7 @@ function abrirModalNuevaParte(id = null) {
     document.getElementById("tituloModalParte").textContent = "Nuevo Pedido";
     document.getElementById("pcCantidad").value = "1";
     document.getElementById("pcInsumo").value = "";
-    document.getElementById("pcFechaPedido").value = new Date().toISOString().split("T")[0];
+    document.getElementById("pcFechaPedido").value = hoyAR();
     document.getElementById("pcDestino").value = "";
     document.getElementById("pcIsla").value = "";
     document.getElementById("pcObservaciones").value = "";
@@ -18547,7 +18572,7 @@ function pcToggleFechaRecibido() {
     let grp = document.getElementById("pcFechaRecibidoGrp");
     grp.style.display = est === "Recibido" ? "block" : "none";
     if (est === "Recibido" && !document.getElementById("pcFechaRecibido").value) {
-        document.getElementById("pcFechaRecibido").value = new Date().toISOString().split("T")[0];
+        document.getElementById("pcFechaRecibido").value = hoyAR();
     }
 }
 
@@ -18602,7 +18627,7 @@ function marcarRecibido(id) {
     let p = partesCriticas.find(x => x.id === id);
     if (!p) return;
     p.estado = "Recibido";
-    p.fechaRecibido = new Date().toISOString().split("T")[0];
+    p.fechaRecibido = hoyAR();
     localStorage.setItem("partesCriticas", JSON.stringify(partesCriticas));
     renderPartesCriticas();
     toast.success("Marcado como recibido", p.insumo);
@@ -19047,6 +19072,9 @@ function _estRenderIslas() {
     let prevFilt = estFiltrarPorAnio(incidencias.filter(i => i.tipo === "Preventivo"), "fecha");
     let fdsFilt  = estFiltrarPorAnio(fdsData || [], "fechaSalida");
 
+    // Conjunto de IDs de islas activas (como strings para comparar uniformemente)
+    const _idsActivos = new Set((islasActivas || []).map(i => String(typeof i === "object" ? i.id : i)));
+
     // — Correctivos por isla —
     let corrPorIsla = {};
     corrFilt.forEach(i => {
@@ -19055,6 +19083,7 @@ function _estRenderIslas() {
     });
     document.getElementById("estTotalCorr").textContent = corrFilt.length;
     let corrIslaItems = Object.entries(corrPorIsla)
+        .filter(([label]) => label !== "Sin isla" && _idsActivos.has(label))
         .map(([label, val]) => ({label, val}))
         .sort((a,b) => b.val - a.val).slice(0, 15);
     _estBarras("estCorrIsla", corrIslaItems, x => {
@@ -19075,7 +19104,7 @@ function _estRenderIslas() {
 
     // Solo islas con al menos 1 correctivo — ordenadas de peor ratio (mas urgente) a mejor
     let ratioItems = [...todasIslas]
-        .filter(k => k !== "Sin isla" && k !== "")
+        .filter(k => k !== "Sin isla" && k !== "" && _idsActivos.has(k))
         .map(k => {
             let c = corrPorIsla[k] || 0;
             let p = prevPorIsla[k] || 0;
@@ -19121,6 +19150,7 @@ function _estRenderIslas() {
             tendEl.innerHTML = '<div class="empty-state"><p>Sin datos de correctivos</p></div>';
         } else {
             let maxM = Math.max(...mesesKeys.map(k => mesesMap[k]), 1);
+            let maxKey = mesesKeys.find(k => mesesMap[k] === maxM);
             let BAR_W = 38, GAP = 6;
             let totalW = mesesKeys.length * (BAR_W + GAP);
             let MESES_CORTO = {
@@ -19128,17 +19158,19 @@ function _estRenderIslas() {
                 "07":"Jul","08":"Ago","09":"Sep","10":"Oct","11":"Nov","12":"Dic"
             };
             tendEl.innerHTML = `
-            <div style="display:flex;align-items:flex-end;gap:${GAP}px;min-width:${totalW}px;height:120px;padding:0 4px;">
+            <div style="display:flex;align-items:flex-end;gap:${GAP}px;min-width:${totalW}px;height:130px;padding:0 4px;padding-top:18px;">
                 ${mesesKeys.map(k => {
                     let v = mesesMap[k];
                     let h = Math.max(Math.round(v / maxM * 100), 4);
-                    let color = v === maxM ? "var(--red)" : v > maxM * 0.6 ? "var(--yellow)" : "var(--accent2)";
+                    let isMax = k === maxKey;
+                    let color = isMax ? "#e05252" : "var(--yellow)";
+                    let numColor = isMax ? "#ff7070" : color;
                     let label = MESES_CORTO[k.slice(5)] || k.slice(5);
                     return `
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;width:${BAR_W}px;">
-                        <div style="font-size:10px;font-weight:700;color:${color};">${v}</div>
-                        <div style="width:${BAR_W}px;height:${h}px;background:${color};border-radius:4px 4px 0 0;opacity:.85;"></div>
-                        <div style="font-size:9px;color:var(--muted);white-space:nowrap;">${label} ${k.slice(0,4)}</div>
+                    <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:${BAR_W}px;">
+                        <div style="font-size:11px;font-weight:700;color:${numColor};margin-bottom:4px;line-height:1;">${v}</div>
+                        <div style="width:${BAR_W}px;height:${h}px;background:${color};border-radius:4px 4px 0 0;opacity:.9;"></div>
+                        <div style="font-size:9px;color:var(--muted);white-space:nowrap;margin-top:4px;">${label} ${k.slice(0,4)}</div>
                     </div>`;
                 }).join("")}
             </div>`;
@@ -19152,7 +19184,7 @@ function _estRenderIslas() {
         if(!k) return;
         let dias = 0;
         if(f.fechaSalida) {
-            let hasta = f.fechaRetorno || new Date().toISOString().slice(0,10);
+            let hasta = f.fechaRetorno || hoyAR();
             dias = Math.max(0, Math.round((new Date(hasta) - new Date(f.fechaSalida)) / 86400000));
         }
         diasFdsPorIsla[k] = (diasFdsPorIsla[k] || 0) + dias;
@@ -19162,7 +19194,7 @@ function _estRenderIslas() {
         ...Object.keys(corrPorIsla),
         ...Object.keys(prevPorIsla),
         ...Object.keys(diasFdsPorIsla)
-    ])].filter(k => k !== "Sin isla" && k !== "");
+    ])].filter(k => k !== "Sin isla" && k !== "" && _idsActivos.has(k));
 
     // Score de salud: penaliza correctivos y dias FDS, premia preventivos
     // Puntos negativos: cada correctivo resta 4 pts, cada dia FDS resta 0.5 pts (cap 20)
@@ -19243,6 +19275,46 @@ function _estRenderIslas() {
                         (critica ? '<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:600;">&gt;10 corr/período</div>' : '') +
                     '</div>' +
                     '</div>';
+            }).join("");
+        }
+    }
+
+    // — Top 10 slots con más correctivos —
+    let slotMap = {};
+    corrFilt.forEach(i => {
+        if (!i.maquina) return;
+        let islaKey = String(i.isla || "");
+        // Solo contar si la isla es activa (o si no tiene isla asignada, incluir igual)
+        if (islaKey && !_idsActivos.has(islaKey)) return;
+        let k = String(i.maquina).trim();
+        if (!slotMap[k]) slotMap[k] = { count: 0, isla: islaKey };
+        slotMap[k].count++;
+    });
+    let topSlots = Object.entries(slotMap)
+        .map(([maq, d]) => ({ maq, count: d.count, isla: d.isla }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+    let topSlotsEl = document.getElementById("estTopSlotsChart");
+    let topSlotsBadge = document.getElementById("estTopSlotsBadge");
+    if (topSlotsBadge) topSlotsBadge.textContent = topSlots.length;
+    if (topSlotsEl) {
+        if (!topSlots.length) {
+            topSlotsEl.innerHTML = '<div class="empty-state"><p>Sin correctivos registrados</p></div>';
+        } else {
+            let maxC = topSlots[0].count;
+            topSlotsEl.innerHTML = topSlots.map((x, idx) => {
+                let pct = Math.max(Math.round(x.count / maxC * 100), 3);
+                let color = idx === 0 ? "var(--red)" : idx <= 2 ? "var(--yellow)" : "var(--accent2)";
+                let islaTxt = x.isla ? `<span style="font-size:10px;color:var(--muted);margin-left:6px;">Isla ${x.isla}</span>` : "";
+                let medalla = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `<span style="font-size:10px;color:var(--muted);font-weight:700;">${idx+1}</span>`;
+                return `<div class="est-bar-row">
+                    <div style="width:20px;text-align:center;flex-shrink:0;">${medalla}</div>
+                    <div class="est-bar-label" style="width:110px;" title="${x.maq}">${x.maq}${islaTxt}</div>
+                    <div class="est-bar-bg"><div class="est-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+                    <div class="est-bar-val" style="color:${color};width:32px;">${x.count}</div>
+                    <div style="font-size:10px;color:var(--muted);white-space:nowrap;">${x.count === 1 ? "1 corr." : x.count + " corr."}</div>
+                </div>`;
             }).join("");
         }
     }
@@ -19581,12 +19653,14 @@ function _estRenderPartes() {
     }
 
     // Islas con más consumo de repuestos
+    const _idsActivosPartes = new Set((islasActivas || []).map(i => String(typeof i === "object" ? i.id : i)));
     let islaPartesMap = {};
     lista.forEach(p => {
         let k = (p.isla || p.destino || "Sin isla/destino").trim();
         islaPartesMap[k] = (islaPartesMap[k] || 0) + (p.cantidad || 1);
     });
     let islaPartesItems = Object.entries(islaPartesMap)
+        .filter(([label]) => label !== "Sin isla/destino" && _idsActivosPartes.has(label))
         .map(([label, val]) => ({label, val}))
         .sort((a,b) => b.val - a.val).slice(0, 15);
     _estBarras("estIslaPartes", islaPartesItems, x => "var(--accent2)");
