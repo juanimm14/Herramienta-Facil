@@ -7577,6 +7577,7 @@ function avanzarTarea(id){
     let ahora = Date.now();
     if(t.estado === "pendiente"){
         t.estado = "en-curso";
+        t.fijada = false; // auto-desfijar al tomar la tarea
         // Guardar el inicio del tramo actual (puede ser la primera toma o un retome)
         // Se guarda SIN underscore para que se persista en Firebase/localStorage
         t.tramoInicioMs = ahora;
@@ -7812,6 +7813,17 @@ function mostrarAlertas(){
         });
     }
 }
+function fijarTarea(id){
+    if(!esAdminOSuperAdmin()) return;
+    let t = tareas.find(t => t.id === id);
+    if(!t) return;
+    t.fijada = !t.fijada;
+    _fbSet("tareas", tareas);
+    renderTareas();
+    toast.info(t.fijada ? "📌 Tarea fijada" : "📌 Tarea desfijada",
+               t.fijada ? "Aparecerá arriba hasta que la tomen" : "Ya no está fijada");
+}
+
 function eliminarTarea(id){
     if(esVisita()) return;
     if(!confirm("¿Eliminar esta tarea?")) return;
@@ -7879,8 +7891,14 @@ function renderTareas(){
 
     // Orden: las tareas del técnico logueado van primero
     function sortMisTareasArriba(lista){
-        if(esAdminOSuperAdmin()) return lista.sort((a,b) => b.id - a.id);
+        if(esAdminOSuperAdmin()) return lista.sort((a,b) => {
+            let aF = a.fijada ? 0 : 1, bF = b.fijada ? 0 : 1;
+            if(aF !== bF) return aF - bF;
+            return b.id - a.id;
+        });
         return lista.sort((a,b) => {
+            let aF = a.fijada ? 0 : 1, bF = b.fijada ? 0 : 1;
+            if(aF !== bF) return aF - bF;
             let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
             let bMia = b.asignado === usuarioActual?.nombre ? 0 : 1;
             if(aMia !== bMia) return aMia - bMia;
@@ -8080,12 +8098,16 @@ function renderTareas(){
             </div>` : "";
 
         let esMiTarea = esTecnico && t.asignado === miNombre;
+        let fijadaBadge = t.fijada ? `<span style="font-size:10px;background:rgba(255,201,71,.18);border:1px solid rgba(255,201,71,.6);color:var(--yellow);padding:1px 7px;border-radius:5px;font-weight:700;">📌 FIJADA</span>` : "";
+        let fijadaStyle = t.fijada ? 'border-color:rgba(255,201,71,.7);box-shadow:0 0 0 1px rgba(255,201,71,.25);' : vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : '';
+        let pinBtn = (!esTecnico && !esVisitaRol && t.estado === "pendiente") ? `<button onclick="fijarTarea(${t.id})" style="background:none;border:none;cursor:pointer;font-size:16px;flex-shrink:0;opacity:${t.fijada?'1':'0.4'};transition:opacity .2s;" title="${t.fijada?'Desfijar tarea':'Fijar arriba'}">📌</button>` : "";
         return `
-        <div class="tarea-row" style="${vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
+        <div class="tarea-row" style="${fijadaStyle}">
             <div class="item-main" style="width:100%">
                 <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
                     <div class="tarea-text ${t.estado==="realizado"?"done-text":""}" style="flex:1;">${t.desc}</div>
                     <div style="display:flex;gap:6px;align-items:center;">
+                        ${fijadaBadge}
                         ${miTareaBadge}
                         ${vencida ? '<span style="font-size:10px;background:rgba(255,50,50,.2);border:1px solid rgba(255,80,80,.5);color:#ff6b6b;padding:1px 7px;border-radius:5px;font-weight:700;">🔴 VENCIDA</span>' : ''}
                         ${tipoBadge}
@@ -8105,7 +8127,10 @@ function renderTareas(){
                 ${pchkInlineHtml}
                 ${acciones}
             </div>
-            ${(!esTecnico && !esVisitaRol) ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
+                ${pinBtn}
+                ${(!esTecnico && !esVisitaRol) ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;" title="Eliminar">🗑️</button>` : ""}
+            </div>
         </div>`;
     }
 
@@ -14853,12 +14878,17 @@ function _renderTareasConTurno(){
 
     function sortMisTareasArriba(lista){
         if(esAdminOSuperAdmin()) return lista.sort((a,b) => {
-            // Vencidas primero
+            // Fijadas primero
+            let aF = a.fijada ? 0 : 1, bF = b.fijada ? 0 : 1;
+            if(aF !== bF) return aF - bF;
+            // Vencidas después
             let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
             if(aV !== bV) return aV - bV;
             return b.id - a.id;
         });
         return lista.sort((a,b) => {
+            let aF = a.fijada ? 0 : 1, bF = b.fijada ? 0 : 1;
+            if(aF !== bF) return aF - bF;
             let aV = esVencida(a) ? 0 : 1, bV = esVencida(b) ? 0 : 1;
             if(aV !== bV) return aV - bV;
             let aMia = a.asignado === usuarioActual?.nombre ? 0 : 1;
@@ -15005,11 +15035,14 @@ function _renderTareasConTurno(){
             </div>` : "";
 
         let esMiTarea = esTecnico && t.asignado === miNombre;
-        return `<div class="tarea-row" style="${vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : ''}">
+        let fijadaBadge = t.fijada ? `<span style="font-size:10px;background:rgba(255,201,71,.18);border:1px solid rgba(255,201,71,.6);color:var(--yellow);padding:1px 7px;border-radius:5px;font-weight:700;">📌 FIJADA</span>` : "";
+        let fijadaStyle = t.fijada ? 'border-color:rgba(255,201,71,.7);box-shadow:0 0 0 1px rgba(255,201,71,.25);' : vencida ? 'border-color:rgba(255,80,80,.6);box-shadow:0 0 0 1px rgba(255,50,50,.2);' : esMiTarea ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,168,.18);' : '';
+        let pinBtn = (!esTecnico && !esVisitaRol && t.estado === "pendiente") ? `<button onclick="fijarTarea(${t.id})" style="background:none;border:none;cursor:pointer;font-size:16px;flex-shrink:0;opacity:${t.fijada?'1':'0.4'};transition:opacity .2s;" title="${t.fijada?'Desfijar tarea':'Fijar arriba'}">${t.fijada?'📌':'📌'}</button>` : "";
+        return `<div class="tarea-row" style="${fijadaStyle}">
             <div class="item-main" style="width:100%">
                 <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap;">
                     <div class="tarea-text ${t.estado==='realizado'?'done-text':''}" style="flex:1;">${t.desc}</div>
-                    <div style="display:flex;gap:6px;align-items:center;">${miTareaBadge}${ppBadge}${vencida ? '<span style="font-size:10px;background:rgba(255,50,50,.2);border:1px solid rgba(255,80,80,.5);color:#ff6b6b;padding:1px 7px;border-radius:5px;font-weight:700;">🔴 VENCIDA</span>' : ''}<span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span></div>
+                    <div style="display:flex;gap:6px;align-items:center;">${fijadaBadge}${miTareaBadge}${ppBadge}${vencida ? '<span style="font-size:10px;background:rgba(255,50,50,.2);border:1px solid rgba(255,80,80,.5);color:#ff6b6b;padding:1px 7px;border-radius:5px;font-weight:700;">🔴 VENCIDA</span>' : ''}<span class="tarea-prioridad ${t.prioridad}">${t.prioridad}</span></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
                     ${reasignar}
@@ -15023,7 +15056,10 @@ function _renderTareasConTurno(){
                 ${pchkInlineHtml}
                 ${acciones}
             </div>
-            ${(!esTecnico && !esVisitaRol) ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;flex-shrink:0;" title="Eliminar">🗑️</button>` : ""}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
+                ${pinBtn}
+                ${(!esTecnico && !esVisitaRol) ? `<button onclick="eliminarTarea(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;" title="Eliminar">🗑️</button>` : ""}
+            </div>
         </div>`;
     }
 
